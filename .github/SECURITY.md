@@ -15,6 +15,7 @@ Include what you found, how to reproduce it, and what an attacker could do with 
 
 - Anything that sends chats, files, voice or other personal data off the device without the user choosing a cloud model.
 - The Quo apps (Android, iOS), Quo Web, the desktop app, and Quo's API (accounts, credits, cloud chat).
+- Quo Sync: its encryption and key handling (anything that lets someone, including us, read synced chats or memories without the recovery key), and sign-in and sessions (the design is in [apps/web/SYNC.md](../apps/web/SYNC.md)).
 - Release and update integrity (desktop builds, auto-update, model downloads and their validation).
 
 Third-party models are out of scope unless Quo's handling of them causes the problem.

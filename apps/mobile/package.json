@@ -71,6 +71,7 @@
     "whisper.rn": "^0.7.4"
   },
   "overrides": {
+    "shell-quote": "^1.11.0",
     "react-native-markdown-display": {
       "markdown-it": "$markdown-it"
     }
