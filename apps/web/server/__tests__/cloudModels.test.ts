@@ -53,3 +53,16 @@ describe('the cloud model catalog', () => {
     expect(cost('anthropic/claude-sonnet-5.5')).toBeGreaterThan(cost('anthropic/claude-haiku-5.5'));
   });
 });
+
+describe('the prices behind the estimates', () => {
+  // These reserve credits before a reply and tell people what a message costs, so they must not undershoot.
+  // Models served by many hosts are priced at about the median host: OpenRouter's own listing shows the cheapest.
+  it('are not set at the cheapest host for the open models many hosts serve', () => {
+    const price = (id: string) => cloudModels().find(model => model.id === id)!;
+    expect(price('moonshotai/kimi-k3').usdIn).toBeGreaterThanOrEqual(2.5);
+    expect(price('moonshotai/kimi-k3').usdOut).toBeGreaterThanOrEqual(14);
+    expect(price('deepseek/deepseek-v4-pro-0813').usdOut).toBeGreaterThanOrEqual(3);
+    expect(price('deepseek/deepseek-v4.1-flash').usdOut).toBeGreaterThanOrEqual(0.78);
+    expect(price('qwen/qwen3.8-27b').usdOut).toBeGreaterThanOrEqual(2.33);
+  });
+});

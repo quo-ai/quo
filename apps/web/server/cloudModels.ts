@@ -30,8 +30,11 @@ export interface CloudModel {
   maxOutput: number;
 }
 
-// Listed in the order people see them. Prices are OpenRouter's, checked 18 Oct 2026.
-// Every id must exist on OpenRouter (server/__tests__/cloudModels.test.ts checks the shape, not the ids).
+// Listed in the order people see them, checked against OpenRouter on 18 Oct 2026. Every id must exist there
+// (server/__tests__/cloudModels.test.ts checks the shape, not the ids). Prices: a closed model's list price;
+// a model many hosts serve (the open ones) at about the median host's price, never the cheapest, because
+// these figures reserve credits before a reply and tell people what a message costs. Too low a figure would
+// have Quo covering the difference.
 const CATALOG: CloudModel[] = [
   { id: 'openai/gpt-6-luna', name: 'GPT-6 Luna', provider: 'OpenAI', description: 'Fast and capable for everyday questions.', tier: 'everyday', released: '2026-09-22', usdIn: 0.1, usdOut: 0.5, supportsThinking: true, maxOutput: 4096 },
 
@@ -42,19 +45,19 @@ const CATALOG: CloudModel[] = [
   { id: 'anthropic/claude-opus-5.5', name: 'Claude Opus 5.5', provider: 'Anthropic', description: 'Anthropic’s most capable model for deep work.', tier: 'frontier', released: '2026-09-22', usdIn: 4, usdOut: 20, supportsThinking: true, maxOutput: 8192 },
   { id: 'openai/gpt-6.1-sol', name: 'GPT-6.1 Sol', provider: 'OpenAI', description: 'Strong all-round reasoning and writing.', tier: 'frontier', released: '2026-09-29', usdIn: 2, usdOut: 10, supportsThinking: true, maxOutput: 8192 },
   { id: 'anthropic/claude-sonnet-5.5', name: 'Claude Sonnet 5.5', provider: 'Anthropic', description: 'Excellent writing, analysis and code.', tier: 'frontier', released: '2026-09-28', usdIn: 2, usdOut: 10, supportsThinking: true, maxOutput: 8192 },
-  { id: 'x-ai/grok-4.7', name: 'Grok 4.7', provider: 'xAI', description: 'Sharp, direct reasoning with a very long memory.', tier: 'frontier', released: '2026-09-21', usdIn: 2, usdOut: 6, supportsThinking: true, maxOutput: 8192 },
+  { id: 'x-ai/grok-4.7', name: 'Grok 4.7', provider: 'xAI', description: 'Sharp, direct reasoning with a very long memory.', tier: 'frontier', released: '2026-09-21', usdIn: 2.2, usdOut: 6.6, supportsThinking: true, maxOutput: 8192 },
   { id: 'qwen/qwen3.8-max-prime', name: 'Qwen3.8 Max Prime', provider: 'Qwen', description: 'Alibaba’s flagship, strong at code and languages.', tier: 'frontier', released: '2026-09-23', usdIn: 4, usdOut: 12, supportsThinking: true, maxOutput: 8192 },
   { id: 'z-ai/glm-5.3-prime', name: 'GLM 5.3 Prime', provider: 'Z.ai', description: 'Z.ai’s flagship for long, multi-step tasks and code.', tier: 'frontier', released: '2026-09-23', usdIn: 2.8, usdOut: 8.8, supportsThinking: true, maxOutput: 8192 },
-  { id: 'moonshotai/kimi-k3', name: 'Kimi K3', provider: 'Moonshot', description: 'Open model with long, careful answers.', tier: 'frontier', released: '2026-07-16', usdIn: 0.25, usdOut: 12, supportsThinking: true, maxOutput: 8192 },
-  { id: 'mistralai/mistral-large-4-0', name: 'Mistral Large 4', provider: 'Mistral', description: 'Mistral’s flagship: precise, multilingual and good value.', tier: 'frontier', released: '2026-10-06', usdIn: 0.68, usdOut: 2.09, supportsThinking: true, maxOutput: 8192 },
-  { id: 'deepseek/deepseek-v4-pro-0813', name: 'DeepSeek V4 Pro', provider: 'DeepSeek', description: 'Open model with top-tier reasoning and code, at a fraction of the price.', tier: 'frontier', released: '2026-08-12', usdIn: 0.66, usdOut: 1.98, supportsThinking: true, maxOutput: 8192 },
+  { id: 'moonshotai/kimi-k3', name: 'Kimi K3', provider: 'Moonshot', description: 'Open model with long, careful answers.', tier: 'frontier', released: '2026-07-16', usdIn: 2.6, usdOut: 15, supportsThinking: true, maxOutput: 8192 },
+  { id: 'mistralai/mistral-large-4-0', name: 'Mistral Large 4', provider: 'Mistral', description: 'Mistral’s flagship: precise, multilingual and good value.', tier: 'frontier', released: '2026-10-06', usdIn: 0.7, usdOut: 2.1, supportsThinking: true, maxOutput: 8192 },
+  { id: 'deepseek/deepseek-v4-pro-0813', name: 'DeepSeek V4 Pro', provider: 'DeepSeek', description: 'Open model with top-tier reasoning and code, at a fraction of the price.', tier: 'frontier', released: '2026-08-12', usdIn: 0.96, usdOut: 3.2, supportsThinking: true, maxOutput: 8192 },
 
   // Everyday
   { id: 'anthropic/claude-haiku-5.5', name: 'Claude Haiku 5.5', provider: 'Anthropic', description: 'Quick, thoughtful replies at a very low cost.', tier: 'everyday', released: '2026-10-07', usdIn: 0.1, usdOut: 0.5, supportsThinking: true, maxOutput: 8192 },
   // Priced at its 2027 rate (it doubles on 1 Jan 2027).
   { id: 'google/gemini-3.8-flash', name: 'Gemini 3.8 Flash', provider: 'Google', description: 'Fast, multilingual and great value.', tier: 'everyday', released: '2026-09-02', usdIn: 1.65, usdOut: 8.25, supportsThinking: true, maxOutput: 8192 },
-  { id: 'deepseek/deepseek-v4.1-flash', name: 'DeepSeek V4.1 Flash', provider: 'DeepSeek', description: 'Open model, quick and very low cost.', tier: 'everyday', released: '2026-09-10', usdIn: 0.0608, usdOut: 0.144, supportsThinking: true, maxOutput: 8192 },
-  { id: 'qwen/qwen3.8-27b', name: 'Qwen3.8 27B', provider: 'Qwen', description: 'Open model, strong at code and languages.', tier: 'everyday', released: '2026-08-14', usdIn: 0.24, usdOut: 2.2, supportsThinking: true, maxOutput: 8192 },
+  { id: 'deepseek/deepseek-v4.1-flash', name: 'DeepSeek V4.1 Flash', provider: 'DeepSeek', description: 'Open model, quick and very low cost.', tier: 'everyday', released: '2026-09-10', usdIn: 0.3, usdOut: 1.2, supportsThinking: true, maxOutput: 8192 },
+  { id: 'qwen/qwen3.8-27b', name: 'Qwen3.8 27B', provider: 'Qwen', description: 'Open model, strong at code and languages.', tier: 'everyday', released: '2026-08-14', usdIn: 0.425, usdOut: 2.55, supportsThinking: true, maxOutput: 8192 },
   { id: 'google/gemma-4-31b-it', name: 'Gemma 4 31B', provider: 'Google', description: 'Open model, light and efficient.', tier: 'everyday', released: '2026-04-02', usdIn: 0.2, usdOut: 0.4, supportsThinking: false, maxOutput: 8192 },
 ];
 
