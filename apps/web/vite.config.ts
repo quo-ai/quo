@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { defineConfig, type Plugin, type ViteDevServer } from 'vite';
+import { defineConfig, type Plugin, type ViteDevServer } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 import { sendWebResponse, setIsolationHeaders, toWebRequest } from './server/node';
@@ -109,6 +109,8 @@ export default defineConfig({
     }),
   ],
   build: { target: 'esnext' },
+  // The API tests start an in-memory Postgres and stream simulated replies; a shared CI runner needs more than the 5 s default.
+  test: { testTimeout: 30_000, hookTimeout: 30_000 },
   worker: { format: 'es' },
   // wllama ships its own wasm + worker code; let it load them as-is.
   optimizeDeps: { exclude: ['@wllama/wllama'] },

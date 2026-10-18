@@ -9,6 +9,6 @@ build/*
 !build/icon-mac.png
 
 # llama.cpp builds fetched by scripts/fetch-engine.js (pinned in engine.lock.json)
-engine/
-.engine-cache/
+/engine/
+/.engine-cache/
 !build/entitlements.mac.plist
