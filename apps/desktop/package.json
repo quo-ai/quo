@@ -1,7 +1,7 @@
 {
   "name": "quo-desktop",
   "productName": "Quo",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "private": true,
   "description": "Quo, private AI that runs on your computer and works offline.",
   "author": {
