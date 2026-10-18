@@ -55,9 +55,10 @@ function memoryTracking(device: { tracked: Map<string, Tracked>; seq: number }):
   };
 }
 
-/** The web or desktop app: chats in the web app's shape, WebCrypto, the web adapters. No memories feature. */
+/** The web or desktop app: chats in the web app's shape, WebCrypto, the web adapters. */
 class WebDevice {
   chats = new Map<string, Conversation>();
+  memories = new Map<string, WireMemory>();
   tracked = new Map<string, Tracked>();
   seq = 0;
   engine: SyncEngine;
@@ -68,7 +69,21 @@ class WebDevice {
       remove: async id => void this.chats.delete(id),
       all: async () => [...this.chats.values()].map(toWire),
     };
-    this.engine = new SyncEngine({ api, codec: webCodec(key), stores: [chatKind(storage)], tracking: memoryTracking(this), newId: () => randomUUID() });
+    const memoryStorage: Storage<WireMemory> = {
+      get: async id => this.memories.get(id),
+      put: async memory => void this.memories.set(memory.id, structuredClone(memory)),
+      remove: async id => void this.memories.delete(id),
+      all: async () => [...this.memories.values()],
+    };
+    this.engine = new SyncEngine({ api, codec: webCodec(key), stores: [chatKind(storage), memoryKind(memoryStorage)], tracking: memoryTracking(this), newId: () => randomUUID() });
+  }
+  async remember(id: string, content: string, at: number) {
+    this.memories.set(id, { id, content, createdAt: 1000, updatedAt: at });
+    await this.engine.markChanged('memory', id, false);
+  }
+  async forget(id: string) {
+    this.memories.delete(id);
+    await this.engine.markChanged('memory', id, true);
   }
   async save(chat: Conversation) {
     this.chats.set(chat.id, structuredClone(chat));
@@ -238,27 +253,50 @@ describe('Quo Sync between the Android app and the web and desktop apps', () => 
     expect(phone.chats.has(chat.id)).toBe(false);
   });
 
-  it('keeps a phone’s memories between phones, invisible to and untouched by a web app that has none', async () => {
+  it('keeps memories in step between phones and the web app, the later edit winning', async () => {
     const phoneA = new Phone(phoneKey);
     const phoneB = new Phone(phoneKey);
     const web = new WebDevice(webKey);
-    await phoneA.remember('mem_1760000000010_aaaaaa', 'My name is Sam', 10);
-    await phoneA.engine.run();
-    const report = await web.engine.run();
-    expect(report.skipped).toBe(0); // the web app never even receives them
-    await web.save({ id: 'web-only-chat-1', title: 'From the web', createdAt: 1, updatedAt: 2, messages: [{ id: 'w1', role: 'user', content: 'hi' }] });
-    await web.engine.run();
-    await phoneB.engine.run();
-    expect(phoneB.memories.get('mem_1760000000010_aaaaaa')?.content).toBe('My name is Sam');
-    expect(phoneB.chats.get('web-only-chat-1')?.messages[0].content).toBe('hi');
+    const id = 'mem_1760000000010_aaaaaa';
 
-    await phoneB.remember('mem_1760000000010_aaaaaa', 'My name is Samantha', 50);
-    await phoneA.remember('mem_1760000000010_aaaaaa', 'My name is Sam J', 30); // earlier
+    // Made on a phone, they reach the other phone and the web app.
+    await phoneA.remember(id, 'My name is Sam', 10);
+    await phoneA.engine.run();
+    expect(await web.engine.run()).toMatchObject({ skipped: 0 });
     await phoneB.engine.run();
+    expect(web.memories.get(id)?.content).toBe('My name is Sam');
+    expect(phoneB.memories.get(id)?.content).toBe('My name is Sam');
+
+    // Made in the web app, they reach the phones.
+    await web.remember('mem_1760000000011_bbbbbb', 'I prefer metric units', 20);
+    await web.engine.run();
+    await phoneA.engine.run();
+    expect(phoneA.memories.get('mem_1760000000011_bbbbbb')?.content).toBe('I prefer metric units');
+
+    // The same one edited on a phone and on the web at once: the later edit wins everywhere.
+    await phoneB.remember(id, 'My name is Samantha', 50);
+    await web.remember(id, 'My name is Sam J', 30); // earlier
+    for (const device of [phoneB, web, phoneB, phoneA, web]) await device.engine.run();
+    for (const device of [phoneA, phoneB, web]) expect(device.memories.get(id)?.content).toBe('My name is Samantha');
+
+    // Forgotten on the web, forgotten on the phones.
+    await web.forget(id);
+    await web.engine.run();
     await phoneA.engine.run();
     await phoneB.engine.run();
-    expect(phoneA.memories.get('mem_1760000000010_aaaaaa')?.content).toBe('My name is Samantha');
-    expect(phoneB.memories.get('mem_1760000000010_aaaaaa')?.content).toBe('My name is Samantha');
+    expect(phoneA.memories.has(id)).toBe(false);
+    expect(phoneB.memories.has(id)).toBe(false);
+    expect(phoneA.memories.has('mem_1760000000011_bbbbbb')).toBe(true);
+  });
+
+  it('leaves memories alone for an older web or desktop app that has no memories feature', async () => {
+    const phone = new Phone(phoneKey);
+    await phone.remember('mem_1760000000020_cccccc', 'Likes tea', 10);
+    await phone.engine.run();
+    // Desktop 1.1 only knows chats: it never asks for memories, so it can't mishandle them.
+    const response = await (await call('GET', 'sync/pull?since=0&limit=500')).json();
+    expect(response.records.some((r: { kind: string }) => r.kind === 'memory')).toBe(false);
+    expect((await (await call('GET', 'sync/pull?since=0&limit=500&kinds=chat,memory')).json()).records.some((r: { kind: string }) => r.kind === 'memory')).toBe(true);
   });
 
   it('sign the phone in with a bearer token and no cookie', async () => {

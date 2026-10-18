@@ -2,6 +2,7 @@ import { forwardRef, useEffect, useImperativeHandle, useLayoutEffect, useRef, us
 import { AlertCircle, ArrowUp, Brain, Check, Cloud, Copy, HardDrive, Loader2, Mic, Paperclip, RotateCcw, Square, Volume2, VolumeX } from 'lucide-react';
 import { ACCEPT_DOCUMENTS, ACCEPT_IMAGES, AttachmentError, MAX_ATTACHMENTS, readAttachment } from '../attachments';
 import { buildContext } from '../chat/context';
+import { listMemories, memoryPrompt } from '../memory/store';
 import { titleFrom } from '../chat/store';
 import { newId, type Attachment, type Conversation, type Message } from '../chat/types';
 import { ApiError } from '../cloud/api';
@@ -165,7 +166,10 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
         update({ content: result.content, reasoning: result.reasoning || undefined, stopped: result.stopped || undefined, charged: result.charged }, true);
       } else {
         const model = choice.model;
-        const history = buildContext(LOCAL_PROMPT, prior, model.contextSize, model.maxTokens);
+        // What the user asked Quo to remember goes to offline models only (never a cloud model), using up to ~10% of the context.
+        const memories = await listMemories().catch(() => []);
+        const instructions = LOCAL_PROMPT + memoryPrompt(memories, Math.min(1500, Math.floor(model.contextSize * 0.35)));
+        const history = buildContext(instructions, prior, model.contextSize, model.maxTokens);
         if (localEngine.modelId !== model.id) setStatus('loading');
         await localEngine.load(model);
         setStatus('generating');

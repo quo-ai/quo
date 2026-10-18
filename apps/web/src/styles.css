@@ -514,3 +514,18 @@ code.path { padding: 1px 6px; border-radius: 6px; background: rgba(14, 14, 40, 0
 .danger-zone .btn-link { color: var(--text-3); font-weight: 500; font-size: 13px; }
 .danger-zone .btn-link:hover { color: var(--error); }
 .danger-zone p { margin: 0 0 10px; }
+
+/* Memories */
+.memory-add { display: flex; gap: 10px; align-items: center; margin: 16px 0 14px; }
+.memory-add .field-wrap { flex: 1; min-width: 0; height: 46px; }
+.memory-add .btn { flex: none; }
+.memory-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.memory-list li { display: flex; align-items: center; gap: 4px; padding: 8px 8px 8px 14px; border-radius: 14px; background: rgba(255, 255, 255, 0.55); box-shadow: 0 0 0 0.5px rgba(14, 14, 60, 0.08); }
+.memory-text { flex: 1; min-width: 0; font-size: 14.5px; color: var(--ink); overflow-wrap: anywhere; line-height: 1.4; padding: 2px 0; }
+.memory-edit { display: flex; align-items: center; gap: 4px; flex: 1; min-width: 0; }
+.memory-edit-field { height: 34px; padding: 0 4px; font-size: 14.5px; }
+.memory-empty { margin: 8px 2px; }
+.memory-foot { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; }
+.memory-confirm { display: flex; gap: 14px; }
+.btn-link.muted { color: var(--text-3); font-weight: 500; font-size: 13px; }
+.btn-link.muted:hover, .btn-link.danger { color: var(--error); }

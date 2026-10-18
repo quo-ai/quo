@@ -16,7 +16,7 @@ interface SyncSheetProps {
 
 const POINTS = [
   [Lock, 'End-to-end encrypted. Your chats are scrambled on your device with a key only you hold, so Quo can’t read them.'],
-  [RefreshCw, 'Chats, new messages and deletions follow you between Quo Web and the desktop app.'],
+  [RefreshCw, 'Chats and memories follow you between Quo Web, the desktop app and the Android app.'],
   [ShieldCheck, 'Photos and files stay on the device they were added on. Models are never synced.'],
 ] as const;
 
@@ -63,7 +63,7 @@ export function SyncSheet({ account, onClose, onOpenAccount }: SyncSheetProps) {
             ? <Connected cloud={cloud} onChanged={load} />
             : (
               <>
-                <p className="auth-lede">Keep your chats on all your computers, privately.</p>
+                <p className="auth-lede">Keep your chats and memories on all your devices, privately.</p>
                 <ul className="sync-points">
                   {POINTS.map(([Icon, text]) => <li key={text}><Icon size={16} /><span>{text}</span></li>)}
                 </ul>

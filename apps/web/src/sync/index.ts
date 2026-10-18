@@ -1,10 +1,11 @@
 import { useSyncExternalStore } from 'react';
 import { onConversationChange } from '../chat/store';
+import { onMemoryChange } from '../memory/store';
 import { api, ApiError } from '../cloud/api';
-import { webChatStorage } from './adapters';
+import { webChatStorage, webMemoryStorage } from './adapters';
 import { checkVerifier, deriveKey, makeVerifier, parseRecoveryKey, webCodec } from './crypto';
 import { SyncEngine, SyncStateError, type SyncApi } from './engine';
-import { chatKind } from './kinds';
+import { chatKind, memoryKind } from './kinds';
 import { clearSetup, loadSetup, saveSettings, saveSetup, trackingStore, type SyncSettings } from './storage';
 
 /**
@@ -99,7 +100,7 @@ function explain(error: unknown): { code: string; message: string } {
 }
 
 function makeEngine(key: CryptoKey): SyncEngine {
-  return new SyncEngine({ api: remoteApi, codec: webCodec(key), stores: [chatKind(webChatStorage)], tracking: trackingStore, newId: () => crypto.randomUUID() });
+  return new SyncEngine({ api: remoteApi, codec: webCodec(key), stores: [chatKind(webChatStorage), memoryKind(webMemoryStorage)], tracking: trackingStore, newId: () => crypto.randomUUID() });
 }
 
 function schedule(delay: number) {
@@ -150,11 +151,13 @@ export async function initSync(): Promise<void> {
   if (started) return;
   started = true;
 
-  onConversationChange((id, deleted) => {
+  const noteChange = (kind: 'chat' | 'memory') => (id: string, deleted: boolean) => {
     if (!engine) return;
     const active = engine;
-    pendingMarks = pendingMarks.then(() => active.markChanged('chat', id, deleted)).then(() => schedule(AFTER_CHANGE_MS), () => {});
-  });
+    pendingMarks = pendingMarks.then(() => active.markChanged(kind, id, deleted)).then(() => schedule(AFTER_CHANGE_MS), () => {});
+  };
+  onConversationChange(noteChange('chat'));
+  onMemoryChange(noteChange('memory'));
   const wake = () => {
     if (engine && !document.hidden && Date.now() - lastRunAt > MIN_GAP_MS) void syncNow();
   };

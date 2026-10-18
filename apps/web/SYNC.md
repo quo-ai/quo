@@ -9,7 +9,7 @@ End-to-end encrypted sync of chats and memories between a person's devices: Quo 
 | Syncs | Doesn't |
 |---|---|
 | Chats: title, messages, thinking, timestamps; new messages and deletions | Photos and documents attached to messages (their names are kept, contents stay on the device they were added on) |
-| Memories (the Android app keeps them today; Quo Web and desktop ignore them until they have the feature) | Models, settings, a long chat's rolling summary |
+| Memories (what a person has asked Quo to remember; every app keeps the same list) | Models, settings, a long chat's rolling summary |
 
 Syncing is a convenience on top of local storage. Every chat is always saved on the device first and works offline; sync only ever copies.
 
@@ -91,7 +91,6 @@ A malicious server could withhold changes, or replay an older version of a recor
 
 ## Not done yet
 
-- Memories in Quo Web and the desktop app (they ignore the kind today; the format and engine already support them).
 - Syncing attachments (would use object storage rather than the database).
 - Revoking a phone's sign-in token before it expires (sessions are stateless).
 - iOS: the phone code is shared React Native and nothing in it is Android-specific, but it has only been tested on Android's side of the build.

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Boxes, CloudAlert, Crown, MonitorDown, PanelLeftClose, Plus, RefreshCw, Search, Trash2, UserRound } from 'lucide-react';
+import { Boxes, Brain, CloudAlert, Crown, MonitorDown, PanelLeftClose, Plus, RefreshCw, Search, Trash2, UserRound } from 'lucide-react';
 import type { Account } from '../cloud/account';
 import { groupConversations } from '../chat/groups';
 import type { Conversation } from '../chat/types';
@@ -21,10 +21,11 @@ interface SidebarProps {
   onCollapse: () => void;
   onOpenModels: () => void;
   onOpenSync: () => void;
+  onOpenMemories: () => void;
   onGetApp: () => void;
 }
 
-export function Sidebar({ conversations, currentId, installedCount, account, onOpenAccount, onNewChat, onOpen, onDelete, onCollapse, onOpenModels, onOpenSync, onGetApp }: SidebarProps) {
+export function Sidebar({ conversations, currentId, installedCount, account, onOpenAccount, onNewChat, onOpen, onDelete, onCollapse, onOpenModels, onOpenSync, onOpenMemories, onGetApp }: SidebarProps) {
   const sync = useSyncStatus();
   const [query, setQuery] = useState('');
   const groups = useMemo(() => groupConversations(conversations, Date.now(), query), [conversations, query]);
@@ -74,6 +75,9 @@ export function Sidebar({ conversations, currentId, installedCount, account, onO
           <button className="footer-btn press" onClick={onOpenModels}>
             <Boxes size={18} /> Offline models
             <span className="count">{installedCount ? `${installedCount} on device` : 'None yet'}</span>
+          </button>
+          <button className="footer-btn press" onClick={onOpenMemories}>
+            <Brain size={18} /> Memories
           </button>
           <button className="footer-btn press" onClick={onOpenSync}>
             {sync.phase === 'error' && sync.error?.code !== 'offline' ? <CloudAlert size={18} /> : <RefreshCw size={18} className={sync.phase === 'syncing' ? 'spin' : undefined} />} Quo Sync

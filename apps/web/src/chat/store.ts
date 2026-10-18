@@ -1,30 +1,11 @@
-import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
+import { quoDb as db } from '../db';
 import type { Conversation } from './types';
 
 /**
- * Chats live in IndexedDB on this device only. One record per conversation;
- * writes happen per completed turn, never per streamed token.
+ * Chats live in IndexedDB on this device only (the database is opened in
+ * ../db.ts). One record per conversation; writes happen per completed turn,
+ * never per streamed token.
  */
-
-interface QuoDB extends DBSchema {
-  conversations: {
-    key: string;
-    value: Conversation;
-    indexes: { updatedAt: number };
-  };
-}
-
-let dbPromise: Promise<IDBPDatabase<QuoDB>> | null = null;
-
-function db(): Promise<IDBPDatabase<QuoDB>> {
-  dbPromise ??= openDB<QuoDB>('quo', 1, {
-    upgrade(database) {
-      const store = database.createObjectStore('conversations', { keyPath: 'id' });
-      store.createIndex('updatedAt', 'updatedAt');
-    },
-  });
-  return dbPromise;
-}
 
 /** Newest first. */
 export async function listConversations(): Promise<Conversation[]> {

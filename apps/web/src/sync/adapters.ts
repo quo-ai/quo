@@ -1,7 +1,8 @@
 import { getConversation, listConversations, putConversationFromSync, removeConversationFromSync } from '../chat/store';
 import type { Attachment, Conversation, Message } from '../chat/types';
+import { getMemory, listMemories, putMemoryFromSync, removeMemoryFromSync } from '../memory/store';
 import type { Storage } from './kinds';
-import type { WireAttachment, WireChat, WireMessage } from './wire';
+import type { WireAttachment, WireChat, WireMemory, WireMessage } from './wire';
 
 /**
  * The web app's chats in and out of the wire format (wire.ts). Going out,
@@ -62,4 +63,12 @@ export const webChatStorage: Storage<WireChat> = {
   put: async wire => putConversationFromSync(fromWire(wire, await getConversation(wire.id))),
   remove: removeConversationFromSync,
   all: async () => (await listConversations()).map(toWire),
+};
+
+/** The web app's memories, which are already stored in the wire shape. */
+export const webMemoryStorage: Storage<WireMemory> = {
+  get: getMemory,
+  put: putMemoryFromSync,
+  remove: removeMemoryFromSync,
+  all: listMemories,
 };

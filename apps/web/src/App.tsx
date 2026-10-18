@@ -23,6 +23,7 @@ import { ModelPicker } from './ui/ModelPicker';
 import { ModelsSheet } from './ui/ModelsSheet';
 import { OfflineModelCard } from './ui/OfflineModelCard';
 import { MOD_KEY, Sidebar } from './ui/Sidebar';
+import { MemorySheet } from './ui/MemorySheet';
 import { SyncSheet } from './ui/SyncSheet';
 import { toast, Toasts } from './ui/Toasts';
 import { Welcome } from './ui/Welcome';
@@ -69,6 +70,7 @@ export function App() {
   const [accountOpen, setAccountOpen] = useState(false);
   const [getAppOpen, setGetAppOpen] = useState(false);
   const [syncOpen, setSyncOpen] = useState(false);
+  const [memoriesOpen, setMemoriesOpen] = useState(false);
   const [noticeHidden, setNoticeHidden] = useState(false);
   const [collapsed, setCollapsed] = useState(() => isNarrow() || localStorage.getItem(SIDEBAR_KEY) === '1');
   const chatRef = useRef<ChatHandle>(null);
@@ -78,6 +80,7 @@ export function App() {
   const closeAccount = useCallback(() => setAccountOpen(false), []);
   const closeGetApp = useCallback(() => setGetAppOpen(false), []);
   const closeSync = useCallback(() => setSyncOpen(false), []);
+  const closeMemories = useCallback(() => setMemoriesOpen(false), []);
 
   const select = useCallback((key: string) => {
     localStorage.setItem(CHOICE_KEY, key);
@@ -274,6 +277,7 @@ export function App() {
           onCollapse={() => setSidebar(true)}
           onOpenModels={() => setModelsOpen(true)}
           onOpenSync={() => setSyncOpen(true)}
+          onOpenMemories={() => setMemoriesOpen(true)}
           onGetApp={() => setGetAppOpen(true)}
         />
         <div className="drawer-scrim" onClick={() => setSidebar(true)} />
@@ -341,6 +345,7 @@ export function App() {
         />
       )}
       {accountOpen && <AccountSheet account={account} onClose={closeAccount} />}
+      {memoriesOpen && <MemorySheet onClose={closeMemories} />}
       {syncOpen && <SyncSheet account={account} onClose={closeSync} onOpenAccount={() => { setSyncOpen(false); setAccountOpen(true); }} />}
       {getAppOpen && <GetAppSheet slowBrowser={slowBrowser} onClose={closeGetApp} />}
       <Toasts />
