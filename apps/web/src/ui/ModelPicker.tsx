@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
-import { Check, ChevronDown, Cloud, CreditCard, Download, HardDrive, Settings2 } from 'lucide-react';
+import { Check, ChevronDown, Cloud, CreditCard, Crown, Download, HardDrive, Lock, Settings2, Zap } from 'lucide-react';
 import { allLocalModels, modelSizeBytes } from '../catalog';
 import { useCustomModels } from '../customModels';
 import type { Account } from '../cloud/account';
-import type { CloudCatalog } from '../cloud/catalog';
+import { lockOf } from '../cloud/access';
+import { isNewModel, type CloudCatalog, type CloudModel } from '../cloud/catalog';
 import type { ModelChoice } from '../models';
 import type { DownloadState } from '../storage/downloads';
-import { formatBytes, percent } from './format';
+import { describeCost, formatBytes, percent } from './format';
 
 interface ModelPickerProps {
   choice: ModelChoice | null;
@@ -19,7 +20,11 @@ interface ModelPickerProps {
   onOpenAccount: () => void;
 }
 
-/** Toolbar pill: the current model; opens a menu to switch, download or buy credits. */
+/**
+ * Toolbar pill: the current model; opens a menu to switch, download or buy credits.
+ * Every cloud model is listed, the most capable ones included. The ones this
+ * person can't use yet are locked, and choosing one opens the paywall (App.choose).
+ */
 export function ModelPicker({ choice, catalog, account, downloads, onChoose, onManage, onOpenAccount }: ModelPickerProps) {
   const [open, setOpen] = useState(false);
   const anchor = useRef<HTMLDivElement>(null);
@@ -49,8 +54,37 @@ export function ModelPicker({ choice, catalog, account, downloads, onChoose, onM
   const models = allLocalModels();
   const installed = models.filter(m => downloads[m.id]?.status === 'installed');
   const notInstalled = models.filter(m => downloads[m.id]?.status !== 'installed' && !m.custom);
-  const cloudModels = catalog ? [...catalog.models].sort((a, b) => Number(b.free) - Number(a.free)) : [];
-  const signedIn = Boolean(account?.user);
+  const free = catalog?.models.filter(model => model.free) ?? [];
+  const frontier = catalog?.models.filter(model => !model.free && model.tier === 'frontier') ?? [];
+  const everyday = catalog?.models.filter(model => !model.free && model.tier !== 'frontier') ?? [];
+  const credits = account?.user ? Math.floor(account.credits ?? 0) : 0;
+
+  const cloudRow = (model: CloudModel) => {
+    const key = `cloud:${model.id}`;
+    const lock = lockOf(model, account);
+    const cost = `${describeCost(model.creditsPerMessage, '≈')} per message`;
+    const sub = model.free ? `Free · ${account ? `${account.free.remaining} left today` : 'every day'}` : cost;
+    return (
+      <button
+        key={key}
+        className={`menu-item press${lock ? ' locked' : ''}`}
+        role={lock ? 'menuitem' : 'menuitemradio'}
+        aria-checked={lock ? undefined : selected === key}
+        aria-label={lock ? `${model.name}, locked. ${model.provider}. ${cost}` : undefined}
+        onClick={() => pick(key)}
+      >
+        <span className="grow">
+          <span className="title">
+            {model.name}
+            {model.free && <span className="badge green">Free</span>}
+            {isNewModel(model) && <span className="badge new">New</span>}
+          </span>
+          <span className="sub">{model.provider} · {sub}</span>
+        </span>
+        {lock ? <Lock className="lock" size={16} /> : selected === key && <Check className="check" size={18} />}
+      </button>
+    );
+  };
 
   return (
     <div className="picker-anchor" ref={anchor}>
@@ -89,23 +123,14 @@ export function ModelPicker({ choice, catalog, account, downloads, onChoose, onM
                 </button>
               );
             })}
-            {cloudModels.length > 0 && <div className="popover-section"><Cloud size={13} /> Cloud</div>}
-            {cloudModels.map(model => {
-              const key = `cloud:${model.id}`;
-              const sub = model.free
-                ? `Free · ${account ? `${account.free.remaining} left today` : 'every day'}`
-                : `≈ ${model.creditsPerMessage < 1 ? model.creditsPerMessage.toFixed(1) : Math.round(model.creditsPerMessage)} credit${model.creditsPerMessage === 1 ? '' : 's'} per message${signedIn ? '' : ' · sign in'}`;
-              return (
-                <button key={key} className="menu-item press" role="menuitemradio" aria-checked={selected === key} onClick={() => pick(key)}>
-                  <span className="grow">
-                    <span className="title">{model.name} {model.free && <span className="badge green">Free</span>}</span>
-                    <span className="sub">{model.provider} · {sub}</span>
-                  </span>
-                  {selected === key && <Check className="check" size={18} />}
-                </button>
-              );
-            })}
-
+            {free.length > 0 && <div className="popover-section"><Cloud size={13} /> Cloud</div>}
+            {free.map(cloudRow)}
+            {frontier.length > 0 && (
+              <div className="popover-section"><Crown size={13} /> Frontier models <span className="section-note">{credits > 0 ? `${credits.toLocaleString()} credits` : 'Pro or credits'}</span></div>
+            )}
+            {frontier.map(cloudRow)}
+            {everyday.length > 0 && <div className="popover-section"><Zap size={13} /> Fast &amp; affordable <span className="section-note">credits</span></div>}
+            {everyday.map(cloudRow)}
           </div>
 
           <div className="menu-divider" />

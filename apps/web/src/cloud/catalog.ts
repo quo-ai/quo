@@ -7,6 +7,10 @@ export interface CloudModel {
   description: string;
   /** The default model: free within the daily allowance. */
   free: boolean;
+  /** `frontier`: the most capable models, locked until the person has credits. `everyday`: quick and cheap. */
+  tier: 'frontier' | 'everyday';
+  /** When the model came out (ISO date). */
+  released: string;
   supportsThinking: boolean;
   /** Credits for a typical message. */
   creditsPerMessage: number;
@@ -15,6 +19,15 @@ export interface CloudModel {
 export interface CloudCatalog {
   defaultModel: string;
   models: CloudModel[];
+}
+
+const NEW_FOR_DAYS = 14;
+
+/** Out for under two weeks: the picker marks it "New". */
+export function isNewModel(model: Pick<CloudModel, 'released'>, now = Date.now()): boolean {
+  const age = now - Date.parse(model.released);
+  // Release dates are whole days, so count whole days.
+  return age >= 0 && Math.floor(age / (24 * 60 * 60 * 1000)) <= NEW_FOR_DAYS;
 }
 
 const CACHE_KEY = 'quo.cloudCatalog';

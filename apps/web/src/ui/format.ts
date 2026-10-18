@@ -4,6 +4,17 @@ export function formatBytes(bytes: number): string {
   return `${Math.max(0, Math.round(bytes / 1e3))} KB`;
 }
 
+/**
+ * What a message costs, in words that stay readable from the cheapest models to
+ * the dearest: "less than 0.1 credits", "about 0.4 credits", "about 1 credit",
+ * "about 8 credits". `about` can be "≈" for tight spaces.
+ */
+export function describeCost(credits: number, about = 'about'): string {
+  if (credits < 0.1) return 'less than 0.1 credits';
+  const text = String(credits < 1 ? Number(credits.toFixed(1)) : Math.round(credits));
+  return `${about} ${text} ${text === '1' ? 'credit' : 'credits'}`;
+}
+
 export function percent(loaded: number, total: number): number {
   return total > 0 ? Math.min(100, Math.floor((loaded / total) * 100)) : 0;
 }

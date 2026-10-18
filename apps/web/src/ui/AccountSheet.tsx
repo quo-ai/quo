@@ -3,6 +3,7 @@ import { ArrowLeft, Check, Coins, Crown, LogOut, Mail, Sparkles, X } from 'lucid
 import {
   ApiError, checkout, deleteAccount, openBillingPortal, signOut, signOutEverywhere, startSignIn, verifySignIn, type Account, type ProductId,
 } from '../cloud/account';
+import { PRICES } from '../cloud/prices';
 import { disableSync } from '../sync';
 import { toast } from './Toasts';
 
@@ -217,8 +218,8 @@ function SignedIn({ account, onClose }: { account: Account; onClose: () => void 
             <li><Check size={15} /> Offline models stay free and unlimited</li>
           </ul>
           <div className="plan-actions">
-            <button className="btn btn-primary press" disabled={Boolean(busy)} onClick={() => void buy('pro_monthly')}>$12 / month</button>
-            <button className="btn btn-soft press" disabled={Boolean(busy)} onClick={() => void buy('pro_yearly')}>$99 / year <span className="save">Save 31%</span></button>
+            <button className="btn btn-primary press" disabled={Boolean(busy)} onClick={() => void buy('pro_monthly')}>{PRICES.proMonthly}</button>
+            <button className="btn btn-soft press" disabled={Boolean(busy)} onClick={() => void buy('pro_yearly')}>{PRICES.proYearly} <span className="save">Save 31%</span></button>
           </div>
         </div>
       )}

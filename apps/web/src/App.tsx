@@ -6,7 +6,8 @@ import { nativeBridge } from './native';
 import { deleteConversation, listConversations, saveConversation } from './chat/store';
 import type { Conversation } from './chat/types';
 import { getAccount, refreshAccount, subscribeAccount, type Account } from './cloud/account';
-import { cachedCatalog, loadCatalog, type CloudCatalog } from './cloud/catalog';
+import { isUnlocked } from './cloud/access';
+import { cachedCatalog, loadCatalog, type CloudCatalog, type CloudModel } from './cloud/catalog';
 import { deviceNotice, getDeviceProfile, type DeviceProfile } from './device';
 import { localEngine } from './engine/localEngine';
 import { isAppInstalled } from './install';
@@ -24,6 +25,7 @@ import { ModelsSheet } from './ui/ModelsSheet';
 import { OfflineModelCard } from './ui/OfflineModelCard';
 import { MOD_KEY, Sidebar } from './ui/Sidebar';
 import { MemorySheet } from './ui/MemorySheet';
+import { PaywallSheet } from './ui/PaywallSheet';
 import { SyncSheet } from './ui/SyncSheet';
 import { toast, Toasts } from './ui/Toasts';
 import { Welcome } from './ui/Welcome';
@@ -36,6 +38,28 @@ const CLOUD_UNTIL_OFFLINE_KEY = 'quo.cloudUntilOffline';
 const SIDEBAR_KEY = 'quo.sidebarCollapsed';
 const ACTIVE = ['downloading', 'waiting', 'verifying', 'moving'];
 const isNarrow = () => window.matchMedia('(max-width: 820px)').matches;
+
+const WANTED_KEY = 'quo.wantedModel';
+const WANTED_FOR_MS = 30 * 60 * 1000;
+
+/** The locked model someone chose and is going to unlock. Kept for a while, in case checkout leaves the page and comes back. */
+function storedWanted(): string | null {
+  try {
+    const saved = JSON.parse(sessionStorage.getItem(WANTED_KEY) ?? 'null') as { key: string; at: number } | null;
+    return saved && Date.now() - saved.at < WANTED_FOR_MS ? saved.key : null;
+  } catch {
+    return null;
+  }
+}
+
+function storeWanted(key: string | null): void {
+  try {
+    if (key) sessionStorage.setItem(WANTED_KEY, JSON.stringify({ key, at: Date.now() }));
+    else sessionStorage.removeItem(WANTED_KEY);
+  } catch {
+    // Private mode and the like: it just won't survive a reload.
+  }
+}
 
 function storedChoiceKey(): string | null {
   const key = localStorage.getItem(CHOICE_KEY);
@@ -71,13 +95,19 @@ export function App() {
   const [getAppOpen, setGetAppOpen] = useState(false);
   const [syncOpen, setSyncOpen] = useState(false);
   const [memoriesOpen, setMemoriesOpen] = useState(false);
+  const [paywall, setPaywall] = useState<CloudModel | null>(null);
+  const [wantedKey, setWanted] = useState<string | null>(storedWanted);
   const [noticeHidden, setNoticeHidden] = useState(false);
   const [collapsed, setCollapsed] = useState(() => isNarrow() || localStorage.getItem(SIDEBAR_KEY) === '1');
   const chatRef = useRef<ChatHandle>(null);
   const previousStatus = useRef<Record<string, string>>({});
 
   const closeModels = useCallback(() => setModelsOpen(false), []);
-  const closeAccount = useCallback(() => setAccountOpen(false), []);
+  const closeAccount = useCallback(() => {
+    setAccountOpen(false);
+    setWanted(null);
+    storeWanted(null);
+  }, []);
   const closeGetApp = useCallback(() => setGetAppOpen(false), []);
   const closeSync = useCallback(() => setSyncOpen(false), []);
   const closeMemories = useCallback(() => setMemoriesOpen(false), []);
@@ -187,6 +217,14 @@ export function App() {
 
   function choose(key: string) {
     if (choice && key === choiceKey(choice)) return;
+    if (key.startsWith('cloud:')) {
+      // A model this person can't use yet: show what it takes, instead of switching to it.
+      const model = catalog?.models.find(m => `cloud:${m.id}` === key);
+      if (model && !isUnlocked(model, account)) {
+        setPaywall(model);
+        return;
+      }
+    }
     if (key.startsWith('local:') && !installed.some(m => `local:${m.id}` === key)) {
       setModelsOpen(true);
       return;
@@ -198,6 +236,25 @@ export function App() {
       ? catalog?.models.find(m => `cloud:${m.id}` === key)?.name
       : getLocalModel(key.slice('local:'.length))?.name;
     if (name) toast(`Switched to ${name}`);
+  }
+
+  // They asked for a locked model, signed in or bought credits, and came back: switch to it.
+  useEffect(() => {
+    if (!wantedKey) return;
+    const model = catalog?.models.find(m => `cloud:${m.id}` === wantedKey);
+    if (!model || !isUnlocked(model, account)) return;
+    setWanted(null);
+    storeWanted(null);
+    choose(wantedKey);
+  });
+
+  function continueFromPaywall() {
+    if (!paywall) return;
+    const key = `cloud:${paywall.id}`;
+    setWanted(key);
+    storeWanted(key);
+    setPaywall(null);
+    setAccountOpen(true);
   }
 
   function pickLocalModel(model: LocalModel) {
@@ -346,6 +403,7 @@ export function App() {
       )}
       {accountOpen && <AccountSheet account={account} onClose={closeAccount} />}
       {memoriesOpen && <MemorySheet onClose={closeMemories} />}
+      {paywall && <PaywallSheet model={paywall} account={account} currentName={choice?.model.name ?? null} onClose={() => setPaywall(null)} onContinue={continueFromPaywall} />}
       {syncOpen && <SyncSheet account={account} onClose={closeSync} onOpenAccount={() => { setSyncOpen(false); setAccountOpen(true); }} />}
       {getAppOpen && <GetAppSheet slowBrowser={slowBrowser} onClose={closeGetApp} />}
       <Toasts />

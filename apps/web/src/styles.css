@@ -531,3 +531,17 @@ code.path { padding: 1px 6px; border-radius: 6px; background: rgba(14, 14, 40, 0
 .btn-link.muted:hover, .btn-link.danger { color: var(--error); }
 .danger-row { display: grid; gap: 4px; margin-bottom: 14px; justify-items: start; }
 .danger-row .note { font-size: 12.5px; }
+
+/* Locked cloud models and the paywall */
+.popover-section .section-note { margin-left: auto; font-weight: 500; color: var(--text-3); opacity: 0.85; }
+.menu-item .title { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.menu-item .lock { flex: none; color: var(--text-3); }
+.menu-item.locked:hover .lock { color: var(--indigo); }
+.badge.new { color: #8a4b00; background: rgba(255, 170, 40, 0.18); }
+.paywall-model { display: flex; align-items: center; gap: 14px; margin: 6px 0 12px; }
+.paywall-model strong { display: block; font-size: 17px; letter-spacing: -0.01em; }
+.paywall-model span:not(.paywall-lock) { display: block; font-size: 13px; color: var(--text-3); }
+.paywall-lock { flex: none; display: grid; place-items: center; width: 46px; height: 46px; border-radius: 14px; color: var(--indigo); background: rgba(59, 46, 255, 0.09); }
+.paywall-about { margin: 0 0 6px; font-size: 14.5px; color: var(--text-2); }
+.paywall .perks { margin-top: 14px; }
+.paywall .plan-actions { margin-top: 4px; }
