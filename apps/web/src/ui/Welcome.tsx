@@ -47,7 +47,7 @@ export function Welcome({ device, downloads, onBrowseModels, cloudModel, onUseCl
               <div className="progress-fill" style={{ width: `${pct}%` }} />
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 6 }}>
-              <p className="note" style={{ margin: 0, flex: 1 }}>Close the tab or go offline anytime. It picks up where it left off.</p>
+              <p className="note" style={{ margin: 0, flex: 1 }}>{isDesktopApp() ? 'Quit the app' : 'Close the tab'} or go offline anytime. It picks up where it left off.</p>
               {(status === 'downloading' || status === 'waiting') && (
                 <button className="btn btn-soft press" onClick={() => cancelDownload(target.id)}><Pause size={15} /> Pause</button>
               )}
