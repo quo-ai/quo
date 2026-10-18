@@ -1,0 +1,9 @@
+node_modules/
+dist/
+out/
+*.log
+
+# build/ holds electron-builder resources; only the icons are source files.
+build/*
+!build/icon.png
+!build/icon-mac.png

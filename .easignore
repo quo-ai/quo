@@ -1,0 +1,25 @@
+# EAS Build uploads the whole repository and reads this file from its root
+# (it replaces .gitignore for uploads). Only apps/mobile is needed; unlike
+# .gitignore, local config such as GoogleService-Info.plist IS uploaded.
+
+# Everything that isn't the phone app
+/apps/web/
+/apps/desktop/
+/website/
+/.github/
+
+# Dependencies, caches and build output
+node_modules/
+.expo/
+.expo-shared/
+npm-debug.log*
+yarn-error.log*
+.DS_Store
+**/build
+**/.gradle
+**/.cxx
+apps/mobile/ios/build
+apps/mobile/ios/Pods
+
+# Fetched at build time by scripts/fetch-starter-model.js
+apps/mobile/assets-native/bundled-models

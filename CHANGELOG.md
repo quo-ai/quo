@@ -1,0 +1,122 @@
+# Changelog
+
+All notable changes to Quo will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+### Added
+- **Quo Web** — Quo in the browser: offline models run on the computer (WebGPU in Chrome and Edge), saved chats, thinking mode, resumable model downloads, installable as an app. Optional, clearly marked cloud models.
+- **Quo for desktop** — macOS, Windows and Linux app (Electron) wrapping Quo Web, so the graphics card works whatever the browser. Built and published by GitHub Actions.
+- **Get the app / Install Quo** — one-time install prompt after the first answer, a "Get the app" sheet, and browser / phone banners that point to the faster option.
+- **Open source** — Apache 2.0 licence, contributing guide, code of conduct, security policy, issue templates; website and brand assets refreshed for launch.
+
+## [1.5.0] - 2026-10-04
+
+### Added
+- **Gemma 4** — new model with image understanding
+- **Memories** — Quo remembers facts you ask it to, like your name
+- **Light and dark mode** — refreshed look
+
+### Improved
+- **Answers** — smarter, more accurate and more on topic
+- **Speed** — faster replies; thinking mode no longer takes so long
+- **Smaller download** — the starter model installs in the background (Play Asset Delivery fast-follow)
+
+### Fixed
+- A crash when using thinking mode, plus many stability fixes
+
+## [1.4.0] - 2026-07-07
+
+### Added
+- **Bundled starter model (instant start)** — Qwen3.5 0.8B ships with the app via Play Asset Delivery and is materialized on first launch, eliminating the first-run download wall. Builds without the pack fall back to the download flow automatically
+- **Rolling context compression** — Older messages fold into an on-device LLM-written summary once history approaches the context limit, so long conversations keep their early content instead of silently forgetting it
+- **Enhanced Recall (premium)** — Optional 84MB embedding model indexes conversations on-device; when a question relates to summarized-away messages, the most relevant originals are retrieved verbatim into the prompt
+- **Read Aloud / offline voice output (premium)** — Optional ~535MB OuteTTS + WavTokenizer voice reads any answer aloud, fully offline, from the message long-press menu
+- **Voice input trial** — Free users get 3 metered voice transcriptions before the paywall instead of a hard feature wall
+- **New models** — Gemma 3 4B (vision), Gemma 3 1B, Phi-4 Mini (3.8B reasoning), Llama 3.2 3B
+- **Speed Boost (experimental)** — Draft-model speculative decoding: the 0.8B starter drafts for Qwen 2B/4B when enabled in Settings → Intelligence
+- **Storage management** — Download/delete controls for the optional voice and recall models in Settings
+- **Suggested questions** — Empty state now shows 4 random questions from a 1,100+ knowledge bank instead of workflow template buttons
+
+### Fixed
+- **Responses cutting off mid-sentence** — Generation now auto-continues (up to 3 extra passes) when the token cap is hit, so detailed multi-step answers run to completion
+- **Free vision contradiction** — Users on non-vision models are pointed to the free Ministral vision model instead of being shown a paywall for a capability the free tier includes
+- **Conversation storage scalability** — Conversations now store one-per-key with an index (plus one-time migration), avoiding Android CursorWindow limits that could make large histories unreadable
+- **Partial answers no longer discarded** — If generation errors after streaming began, the already-streamed content is kept instead of thrown away
+
+### Improved
+- **Smooth streaming with live formatting** — Replies render through the full markdown + LaTeX pipeline while streaming, with typewriter pacing and automatic repair of in-progress markdown (bold/code/fences/math no longer flash as raw markers)
+- **Background memory usage** — Optional TTS and recall AI contexts are released when the app goes to background and reload lazily
+- **Dependencies** — llama.rn 0.12.5, whisper.rn 0.5.5, lucide 1.x, expo-audio replaces deprecated expo-av, IAP 14.7.20; removed 15 unused dependencies
+- **Engineering** — Jest test suite introduced (95+ unit tests), all model download URLs verified, deduplicated generation pipeline shared between send and resend
+
+## [1.3.2] - 2026-07-06
+
+### Added
+- New and refined model options, including premium models
+- Voice input auto-detects the language with multilingual models
+
+### Improved
+- Vision model downloads and model management
+
+### Fixed
+- Layout issues, bugs and performance problems
+
+## [1.3.0] - 2026-03-30
+
+### Fixed
+- **Native Crash (SIGSEGV): endCompletion() race condition** — Added `isCompleting` mutex to prevent `stopCompletion()` from being called when no completion is active, fixing use-after-free crashes in `librnllama` on dotprod and v8 devices
+- **Native Crash (SIGSEGV): JSI binding lambda** — `unloadModel()` now waits for any in-flight completion to finish before releasing the native context, preventing the JSI lambda from accessing freed memory
+- **ANR: Model loading blocks UI thread** — Deferred `initLlama()` to `InteractionManager.runAfterInteractions` with a 100ms yield so the heavy native memory-mapping no longer competes with input dispatching during app startup
+- **ANR: Download completion blocks main thread** — Moved `moveAsync()` file I/O in the download `.done()` callback off the native main thread via `setTimeout(0)`, fixing "RNBackgroundDownloaderModuleImpl.onSuccessfulDownload — Input dispatching timed out"
+- **ANR: Streaming bridge contention** — Increased token streaming throttle from 50ms to 100ms to halve the number of React Native bridge crossings and reduce setState pressure on the UI thread
+- **ANR: Mali GPU shader compilation** — The `InteractionManager` deferral also prevents `glLinkProgram` from contending with input dispatching on Mali GPU devices during model init
+- **Math/LaTeX rendering overhaul** — Completely rewrote math rendering to convert LaTeX to Unicode inline within text, fixing broken paragraph flow. Supports Greek letters, super/subscripts (Unicode), fractions, roots, operators, relations, set theory, calculus, logic, arrows, accents, delimiters, trig functions, and environments. Display math renders as code blocks; inline math as code spans
+
+### Added
+- **File attachments** — Attach text files, PDFs, code, CSV, JSON, XML, and more to messages. The app extracts text content and sends it to the model so you can ask questions about documents, analyse finances, review code, etc. Supported via the new 📎 button in the input bar
+
+### Improved
+- **Chat scroll during streaming** — Scrolling up to read earlier content no longer fights auto-scroll. A floating ↓ button appears to jump back to the latest output. Auto-scroll resumes when you scroll back to the bottom or when generation finishes
+- **Model tags updated** — Qwen3.5 models now carry the "Recommended" badge; legacy Qwen3 models are marked "Outdated" with descriptions pointing to their newer replacements
+
+---
+
+## [1.2.9] - 2026-03-04
+
+### Added
+- **Background Generation**: Model responses now continue generating when the app goes to background, with a persistent notification so Android keeps the process alive
+- **Generation Notifications**: Get notified when your AI response finishes while the app is in background, with a preview of the response
+- **Expanded Question Database**: Added 585+ diverse, timeless knowledge questions across 30 categories (science, history, philosophy, technology, cultures, etc.) for better conversation starters
+- **Copy Responses**: Users can now copy model responses to clipboard (already implemented)
+
+### Improved
+- **Model Knowledge Confidence**: Updated system prompts to answer factual questions confidently instead of hedging or deflecting on common knowledge
+- **Android Compatibility**: Fixed deprecated API warnings for Android 15+ by removing explicit statusBarColor setting
+- **Large Screen Support**: Enabled all orientations and removed portrait lock to better support tablets and foldable devices
+- **Model Management**: Improved custom model deletion to properly unload and remove files without affecting other models
+- **Prompt Quality**: Removed weak/trivial questions and upgraded all prompts to be more specific and engaging
+
+### Fixed
+- **Background Generation Bug**: Previously, tapping home button during generation would stop the response and discard progress. Now generation continues in background
+- **Model Deletion Bug**: Fixed issue where deleting a model could unload unrelated active models
+- **System Prompt Issues**: Fixed model tendency to deflect on basic science questions by clarifying when to use "I don't know"
+- **Notification Cleanup**: Fixed edge cases where ongoing generation notifications could persist after completion
+
+### Technical
+- Added persistent notification channel "Generation In Progress" for Android
+- Added proper notification dismissal across all generation lifecycle events (stop, error, completion, return to app)
+- Enhanced AppState handling to track background/foreground transitions correctly
+- Improved error handling for model context invalidation scenarios
+
+---
+
+## [1.2.8] - Previous Release
+- Initial release with core AI chat functionality
+- On-device model inference
+- Vision/image analysis capabilities
+- Memory system for user preferences
+- Multi-language support

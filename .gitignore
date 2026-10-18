@@ -1,0 +1,14 @@
+# Shared rules; each app has its own .gitignore for the rest.
+node_modules/
+dist/
+*.tsbuildinfo
+__pycache__/
+.env
+.env*.local
+*.log
+
+# Editors, OS and local tooling
+.DS_Store
+.vscode/
+.idea/
+.claude/

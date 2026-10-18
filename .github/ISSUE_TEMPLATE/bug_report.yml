@@ -1,0 +1,59 @@
+name: Bug report
+description: Something isn't working as it should.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time. Please don't include anything private from your chats.
+        Found a security issue? Please follow [SECURITY.md](https://github.com/quo-ai/quo/blob/master/.github/SECURITY.md) instead.
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Where does it happen?
+      options:
+        - Quo Web (browser)
+        - Desktop app (macOS)
+        - Desktop app (Windows)
+        - Desktop app (Linux)
+        - Android
+        - iPhone / iPad
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open Quo
+        2. Choose model ...
+        3. ...
+  - type: input
+    id: device
+    attributes:
+      label: Device and browser
+      placeholder: e.g. MacBook Air M2, 16 GB, Chrome 154 / Pixel 8, Android 16
+    validations:
+      required: true
+  - type: input
+    id: model
+    attributes:
+      label: Model
+      placeholder: e.g. Qwen3.5 2B
+  - type: input
+    id: version
+    attributes:
+      label: Quo version
+      placeholder: Shown in Settings (apps) or the desktop app's About menu
+  - type: textarea
+    id: logs
+    attributes:
+      label: Screenshots or logs
+      description: Optional. For Quo Web, the browser console (F12) often helps.

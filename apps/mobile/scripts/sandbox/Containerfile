@@ -1,0 +1,52 @@
+# Android dev-build toolchain for Quo, run by scripts/android-sandbox.sh.
+# Everything the build executes (npm install scripts, Gradle plugins, CMake)
+# runs in here, never on the host. Versions track
+# node_modules/react-native/gradle/libs.versions.toml — bump on RN upgrades.
+FROM docker.io/library/ubuntu:24.04
+
+ARG NODE_VERSION=24.20.0
+ARG CMDLINE_TOOLS_BUILD=13114758
+
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+      openjdk-17-jdk-headless ca-certificates curl unzip xz-utils git \
+ && rm -rf /var/lib/apt/lists/*
+
+# Node from the official tarball, checked against the published SHASUMS.
+RUN set -eu; cd /tmp; \
+    tarball="node-v${NODE_VERSION}-linux-x64.tar.xz"; \
+    curl -fsSLO "https://nodejs.org/dist/v${NODE_VERSION}/${tarball}"; \
+    curl -fsSLO "https://nodejs.org/dist/v${NODE_VERSION}/SHASUMS256.txt"; \
+    grep " ${tarball}\$" SHASUMS256.txt | sha256sum -c -; \
+    tar -xJf "${tarball}" -C /usr/local --strip-components=1 --no-same-owner; \
+    rm -f "${tarball}" SHASUMS256.txt
+
+# Android SDK. Baked into the (read-only at runtime) image, so every package
+# Gradle may ask for must be listed here — a missing one fails the build
+# instead of being silently downloaded.
+ENV ANDROID_HOME=/opt/android-sdk
+ENV ANDROID_SDK_ROOT=/opt/android-sdk
+ENV PATH=/opt/android-sdk/cmdline-tools/latest/bin:/opt/android-sdk/platform-tools:$PATH
+RUN set -eu; mkdir -p "$ANDROID_HOME/cmdline-tools"; cd /tmp; \
+    curl -fsSLo tools.zip "https://dl.google.com/android/repository/commandlinetools-linux-${CMDLINE_TOOLS_BUILD}_latest.zip"; \
+    unzip -q tools.zip; mv cmdline-tools "$ANDROID_HOME/cmdline-tools/latest"; rm tools.zip; \
+    yes | sdkmanager --licenses > /dev/null; \
+    sdkmanager --install \
+      "platform-tools" \
+      "platforms;android-36" "platforms;android-35" \
+      "build-tools;36.0.0" "build-tools;35.0.0" \
+      "ndk;27.1.12297006" \
+      "cmake;3.22.1" > /dev/null
+
+# Unprivileged user matching the host uid (run with --userns=keep-id).
+RUN userdel -r ubuntu \
+ && useradd -m -u 1000 -s /bin/bash dev \
+ && mkdir -p /workspace && chown dev:dev /workspace
+
+USER dev
+ENV HOME=/home/dev
+ENV GRADLE_USER_HOME=/home/dev/.gradle
+ENV EXPO_NO_TELEMETRY=1
+WORKDIR /workspace
+CMD ["sleep", "infinity"]

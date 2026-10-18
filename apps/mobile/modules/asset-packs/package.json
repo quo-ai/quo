@@ -1,0 +1,7 @@
+{
+  "name": "asset-packs",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Play Asset Delivery bindings for Quo (fast-follow starter model)",
+  "main": "src/index.ts"
+}

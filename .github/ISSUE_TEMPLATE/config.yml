@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions and ideas
+    url: https://github.com/quo-ai/quo/discussions
+    about: Ask questions, share your setup and speeds, or discuss ideas.
+  - name: Help with the apps
+    url: https://quoai.vercel.app/support/
+    about: Common questions, and how to contact support.
+  - name: Report a security issue
+    url: https://github.com/quo-ai/quo/security/advisories/new
+    about: Please report vulnerabilities privately.

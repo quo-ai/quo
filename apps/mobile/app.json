@@ -1,0 +1,103 @@
+{
+  "expo": {
+    "name": "Quo",
+    "slug": "quo",
+    "version": "1.5.0",
+    "orientation": "default",
+    "icon": "./assets/images/icon.png",
+    "splash": {
+      "image": "./assets/images/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#3B2EFF"
+    },
+    "scheme": "quo",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.quo.app",
+      "buildNumber": "33",
+      "googleServicesFile": "./GoogleService-Info.plist",
+      "infoPlist": {
+        "NSSpeechRecognitionUsageDescription": "This app uses speech recognition for voice input",
+        "NSMicrophoneUsageDescription": "This app uses the microphone for voice input",
+        "NSCameraUsageDescription": "This app uses the camera to take photos for on-device image analysis",
+        "NSPhotoLibraryUsageDescription": "This app accesses your photos so you can attach images for on-device analysis",
+        "ITSAppUsesNonExemptEncryption": false
+      },
+      "entitlements": {
+        "com.apple.developer.kernel.increased-memory-limit": true,
+        "com.apple.developer.kernel.extended-virtual-addressing": true
+      }
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      "./plugins/withLlamaFix",
+      "./plugins/withIosBundledModel",
+      "react-native-iap",
+      "@react-native-firebase/app",
+      "@react-native-firebase/crashlytics",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "kotlinVersion": "2.2.0",
+            "enableEdgeToEdge": true
+          },
+          "ios": {
+            "useFrameworks": "static"
+          }
+        }
+      ],
+      [
+        "llama.rn",
+        {
+          "enableEntitlements": true,
+          "entitlementsProfile": "production",
+          "forceCxx20": true,
+          "enableOpenCLAndHexagon": false
+        }
+      ],
+      "@kesha-antonov/react-native-background-downloader",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/notification-icon.png",
+          "color": "#3B2EFF"
+        }
+      ],
+      "expo-localization",
+      "expo-audio",
+      "expo-splash-screen",
+      "expo-status-bar"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "android": {
+      "package": "com.quo.app",
+      "versionCode": 33,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon-foreground.png",
+        "monochromeImage": "./assets/images/adaptive-icon-monochrome.png",
+        "backgroundColor": "#3B2EFF"
+      },
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
+      ],
+      "softwareKeyboardLayoutMode": "resize"
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "37bb949f-f836-477d-abf4-8a603d1bc60b"
+      }
+    },
+    "owner": "astralbs"
+  }
+}

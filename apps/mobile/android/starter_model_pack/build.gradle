@@ -1,0 +1,25 @@
+// Play Asset Delivery pack that ships the starter LLM with the app, so
+// first-time users get an answer without hunting for a model download.
+//
+// fast-follow: Play downloads the pack automatically right after install,
+// so the store download stays app-sized and the app opens immediately (it
+// shows the pack's progress on first launch — services/bundledModel.ts).
+// Fast-follow packs are stored as plain files, so the model is loaded in
+// place with no 530MB copy. (install-time would make the store download
+// ~600MB and force a second on-device copy, since llama.rn can't mmap from
+// APK assets on Android.)
+//
+// The model file is NOT committed to git (see .gitignore). Fetch it before a
+// release build with: npm run fetch:starter-model
+// (EAS builds do this automatically via the eas-build-post-install hook.)
+//
+// Builds without the model file still work — the app detects the missing
+// pack at runtime and falls back to the normal in-app download flow.
+apply plugin: 'com.android.asset-pack'
+
+assetPack {
+    packName = "starter_model_pack"
+    dynamicDelivery {
+        deliveryType = "fast-follow"
+    }
+}

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Template only. Download the real file from Firebase Console:
+  Project settings -> Your apps -> Add app -> iOS (bundle id com.quo.app)
+  -> download GoogleService-Info.plist, save it as ./GoogleService-Info.plist
+  (repo root — it is gitignored). app.json's ios.googleServicesFile points
+  there; expo prebuild copies it into the iOS project.
+-->
+<plist version="1.0">
+<dict>
+  <key>API_KEY</key>
+  <string>REPLACE_ME</string>
+  <key>GCM_SENDER_ID</key>
+  <string>REPLACE_ME</string>
+  <key>PLIST_VERSION</key>
+  <string>1</string>
+  <key>BUNDLE_ID</key>
+  <string>com.quo.app</string>
+  <key>PROJECT_ID</key>
+  <string>REPLACE_ME</string>
+  <key>STORAGE_BUCKET</key>
+  <string>REPLACE_ME</string>
+  <key>IS_ADS_ENABLED</key>
+  <false/>
+  <key>IS_ANALYTICS_ENABLED</key>
+  <true/>
+  <key>IS_APPINVITE_ENABLED</key>
+  <false/>
+  <key>IS_GCM_ENABLED</key>
+  <true/>
+  <key>IS_SIGNIN_ENABLED</key>
+  <false/>
+  <key>GOOGLE_APP_ID</key>
+  <string>REPLACE_ME</string>
+</dict>
+</plist>

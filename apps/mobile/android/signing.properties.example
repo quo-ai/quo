@@ -1,0 +1,7 @@
+# Copy this file to android/signing.properties for local release builds.
+# Do not commit android/signing.properties.
+
+MYAPP_UPLOAD_STORE_FILE=C:\\path\\to\\upload-keystore.jks
+MYAPP_UPLOAD_STORE_PASSWORD=your-store-password
+MYAPP_UPLOAD_KEY_ALIAS=your-key-alias
+MYAPP_UPLOAD_KEY_PASSWORD=your-key-password

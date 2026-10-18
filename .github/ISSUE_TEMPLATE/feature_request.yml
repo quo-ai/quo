@@ -1,0 +1,31 @@
+name: Feature idea
+description: Suggest something that would make Quo better.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do?
+      description: The problem or situation, in your own words. This matters more than the solution.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would help?
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Which versions?
+      multiple: true
+      options:
+        - Quo Web
+        - Desktop
+        - Android
+        - iPhone
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy
+      options:
+        - label: This works without sending anything off the device (or it's clearly an opt-in cloud feature).

@@ -1,0 +1,98 @@
+# https://www.electron.build/configuration
+appId: com.quo.desktop
+productName: Quo
+copyright: Copyright © 2026 Astra Labs Ltd
+
+directories:
+  output: dist
+  buildResources: build
+
+files:
+  - src/**/*
+  - package.json
+
+# The built web app (`npm run build:web`), served from app://quo/.
+# No service worker in the desktop app, so its files are left out.
+extraResources:
+  - from: ../web/dist
+    to: web
+    filter:
+      - "**/*"
+      - "!sw.js"
+      - "!workbox-*.js"
+      - "!registerSW.js"
+
+# Harden the shipped binary: it can't be reused as a plain Node runtime or
+# debugger target (https://www.electronjs.org/docs/latest/tutorial/fuses).
+electronFuses:
+  runAsNode: false
+  enableNodeOptionsEnvironmentVariable: false
+  enableNodeCliInspectArguments: false
+  onlyLoadAppFromAsar: true
+  grantFileProtocolExtraPrivileges: false
+
+# Releases are drafts tagged desktop-vX.Y.Z; publish the draft to ship it.
+publish:
+  provider: github
+  owner: quo-ai
+  repo: quo
+  releaseType: draft
+  tagNamePrefix: desktop-v
+
+# Artifact names carry no version: the website links to
+# https://github.com/quo-ai/quo/releases/latest/download/<name>.
+mac:
+  target:
+    - target: dmg
+      arch: universal
+    # electron-updater installs macOS updates from the zip.
+    - target: zip
+      arch: universal
+  artifactName: Quo-mac-universal.${ext}
+  icon: build/icon-mac.png
+  category: public.app-category.productivity
+  hardenedRuntime: true
+  # Notarization runs only when APPLE_API_KEY/APPLE_API_KEY_ID/APPLE_API_ISSUER are set.
+dmg:
+  artifactName: Quo-mac-universal.dmg
+
+win:
+  target:
+    - target: nsis
+      arch: x64
+  icon: build/icon.png
+nsis:
+  artifactName: Quo-windows-x64-setup.exe
+  # Per-user install: no admin prompt, and auto-updates install silently.
+  oneClick: true
+  perMachine: false
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Quo
+  runAfterFinish: true
+  # Keep downloaded models (several GB) if the app is uninstalled and reinstalled.
+  deleteAppDataOnUninstall: false
+
+linux:
+  target:
+    - target: AppImage
+      arch: x64
+    - target: deb
+      arch: x64
+  # Set explicitly: Linux would otherwise derive its icons from mac.icon.
+  icon: build/icon.png
+  # The .desktop file is named after package.json "desktopName", which is also
+  # Electron's Wayland app_id / WM_CLASS, so windows get the right taskbar icon.
+  syncDesktopName: true
+  category: Utility
+  maintainer: Astra Labs Ltd <astralabsltd@gmail.com>
+  vendor: Astra Labs Ltd
+  synopsis: Private AI that runs on your computer
+  description: Quo is a private, offline-first AI assistant. Models run on your own computer, on the GPU when available.
+appImage:
+  artifactName: Quo-linux-x86_64.AppImage
+  # Don't hard-code --no-sandbox in the .desktop entry: AppRun already adds it
+  # only where unprivileged user namespaces are unavailable.
+  executableArgs: []
+deb:
+  artifactName: Quo-linux-amd64.deb

@@ -1,0 +1,35 @@
+{
+  "name": "quo-desktop",
+  "productName": "Quo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Quo, private AI that runs on your computer and works offline.",
+  "author": {
+    "name": "Astra Labs Ltd",
+    "email": "astralabsltd@gmail.com"
+  },
+  "license": "Apache-2.0",
+  "homepage": "https://quoai.vercel.app",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/quo-ai/quo.git"
+  },
+  "main": "src/main.js",
+  "desktopName": "quo-desktop.desktop",
+  "scripts": {
+    "dev": "electron .",
+    "build:web": "npm --prefix ../web run build",
+    "dist": "electron-builder --publish never",
+    "smoke": "electron . --smoke"
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.10"
+  },
+  "devDependencies": {
+    "electron": "^44.9.0",
+    "electron-builder": "^26.17.0"
+  },
+  "allowScripts": {
+    "electron-winstaller": false
+  }
+}
