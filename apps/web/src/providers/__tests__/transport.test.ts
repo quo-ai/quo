@@ -45,8 +45,17 @@ describe('talking to a provider straight from a browser', () => {
 
   it('says it can’t reach the provider when the network fails, and passes an abort through', async () => {
     browserKeys.set('openai', 'k');
-    await expect(browserTransport((async () => { throw new TypeError('Failed to fetch'); }) as unknown as typeof fetch).send(OPENAI, { method: 'GET', path: '/models' })).rejects.toMatchObject({ code: 'offline', message: expect.stringContaining('OpenAI') });
+    const failing = browserTransport((async () => { throw new TypeError('Failed to fetch'); }) as unknown as typeof fetch);
+    await expect(failing.send(OPENAI, { method: 'GET', path: '/models' })).rejects.toMatchObject({ code: 'provider_unreachable', message: expect.stringMatching(/OpenAI.*desktop app/s) });
+    vi.stubGlobal('navigator', { onLine: false });
+    await expect(failing.send(OPENAI, { method: 'GET', path: '/models' })).rejects.toMatchObject({ code: 'offline' });
+    vi.unstubAllGlobals();
     await expect(browserTransport((async () => { throw new DOMException('x', 'AbortError'); }) as unknown as typeof fetch).send(OPENAI, { method: 'GET', path: '/models' })).rejects.toMatchObject({ name: 'AbortError' });
+  });
+
+  it('explains an unreachable server of the user’s own as that, not as being offline', async () => {
+    const failing = browserTransport((async () => { throw new TypeError('Failed to fetch'); }) as unknown as typeof fetch);
+    await expect(failing.send(CUSTOM, { method: 'GET', path: '/models' })).rejects.toMatchObject({ code: 'provider_unreachable', message: expect.stringMatching(/CORS.*desktop app/s) });
   });
 
   it('keeps keys and custom servers in this browser, and ignores damaged entries', () => {
@@ -106,6 +115,11 @@ describe('talking to a provider through the desktop app', () => {
     await Promise.resolve();
     second.push({ id: second.requests[0].id, type: 'error', message: 'ENOTFOUND' });
     await expect(pending).rejects.toMatchObject({ code: 'offline' });
+    const own = fakeBridge();
+    const ownPending = desktopTransport(own.bridge).send(CUSTOM, { method: 'GET', path: '/models' });
+    await Promise.resolve();
+    own.push({ id: own.requests[0].id, type: 'error', message: 'ECONNREFUSED' });
+    await expect(ownPending).rejects.toMatchObject({ code: 'provider_unreachable', message: expect.not.stringContaining('CORS') });
     const third = fakeBridge();
     third.bridge.request = vi.fn(async () => { throw new NativeError('failed', 'boom'); });
     await expect(desktopTransport(third.bridge).send(OPENAI, { method: 'GET', path: '/models' })).rejects.toBeInstanceOf(NativeError);

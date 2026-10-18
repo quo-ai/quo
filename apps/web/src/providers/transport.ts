@@ -28,7 +28,19 @@ export interface Transport {
 }
 
 const aborted = () => new DOMException('Aborted', 'AbortError');
-const unreachable = (provider: ProviderInfo) => new ProviderError(0, 'offline', `Couldn’t reach ${provider.name}. Check your connection${provider.custom ? ' and that the server is running' : ''}.`, provider.id);
+/**
+ * A provider that can't be reached. Only when the browser says it is offline is that "you're offline": otherwise, for
+ * a server of the user's own it is usually that it isn't running, or (in a browser) that it doesn't allow this site
+ * or the browser hasn't let the page reach their own network, and some providers don't accept requests from web pages.
+ */
+const unreachable = (provider: ProviderInfo, inBrowser: boolean) => {
+  const offline = inBrowser ? typeof navigator !== 'undefined' && navigator.onLine === false : !provider.custom;
+  if (offline) return new ProviderError(0, 'offline', `Couldn’t reach ${provider.name}. Check your connection.`, provider.id);
+  const why = provider.custom
+    ? `Check that it is running${inBrowser ? ', that it allows this site (CORS), and that your browser let Quo reach devices on your network. The desktop app has none of these limits' : ''}.`
+    : 'Check your connection. Some providers don’t accept requests from a web page: the desktop app works with every provider.';
+  return new ProviderError(0, 'provider_unreachable', `Couldn’t reach ${provider.name}. ${why}`, provider.id);
+};
 const noKey = (provider: ProviderInfo) => new ProviderError(401, 'provider_no_key', `Add your ${provider.name} key first (Models & storage → Your keys).`, provider.id);
 
 export function browserTransport(fetchFn: typeof fetch = (...args) => fetch(...args)): Transport {
@@ -49,7 +61,7 @@ export function browserTransport(fetchFn: typeof fetch = (...args) => fetch(...a
         });
       } catch (error) {
         if ((error as DOMException)?.name === 'AbortError') throw error;
-        throw unreachable(provider);
+        throw unreachable(provider, true);
       }
       return { status: response.status, ok: response.ok, body: response.body ?? new ReadableStream({ start: controller => controller.close() }) };
     },
@@ -118,7 +130,7 @@ export function desktopTransport(bridge: DesktopProviders): Transport {
           controller,
           gotHead: false,
           head: status => resolve({ status, ok: status >= 200 && status < 300, body: stream }),
-          fail: () => finish(unreachable(provider)),
+          fail: () => finish(unreachable(provider, false)),
         });
         bridge.request({ id, providerId: provider.id, method, path, body }).then(
           result => {

@@ -66,7 +66,7 @@ export function CustomForm({ existing, onSaved, onRemoved, onCancel }: CustomFor
       <label className="keys-label">Key <span className="keys-optional">{existing ? (moved ? 'the old key is removed when the address changes' : 'leave empty to keep the saved one') : 'optional: most servers on your own computer don’t need one'}</span>
         <span className="field-wrap"><input className="field" type="password" value={key} onChange={e => setKey(e.target.value)} autoComplete="off" autoCapitalize="off" spellCheck={false} aria-label="Key" /></span>
       </label>
-      <p className="note">Use https://…, or http:// for a server on this computer or your own network. In a browser the server also has to allow this site (CORS); the desktop app has no such limit.</p>
+      <p className="note">Use https://…, or http:// for a server on this computer or your own network. In a browser the server also has to allow this site (CORS), and the browser may ask to reach devices on your network; the desktop app has no such limits.</p>
       {error && <p className="error" role="alert">{error}</p>}
       <div className="keys-actions">
         <button className="btn btn-primary press" type="submit" disabled={busy || !name.trim() || !baseUrl.trim()}>{existing ? 'Save' : 'Add server'}</button>
