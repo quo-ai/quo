@@ -219,7 +219,7 @@ describe('models you already have', () => {
     const entry = await store.addCustom(good);
     assert.match(entry.id, /^custom-[0-9a-f]{10}$/);
     assert.equal(entry.name, 'mine');
-    assert.equal(entry.path, fs.realpathSync(good));
+    assert.equal(entry.path, fs.realpathSync.native(good));
     assert.deepEqual((await store.customModels()).map(m => m.id), [entry.id]);
     assert.equal((await store.addCustom(good)).id, entry.id); // adding twice doesn't duplicate
     assert.equal((await store.customModels()).length, 1);
@@ -258,6 +258,27 @@ describe('models you already have', () => {
         if (value === undefined) delete process.env[key];
         else process.env[key] = value;
       }
+    });
+
+    it('does not offer a model again once added, even when its folder is reached through a symlink', { skip: process.platform === 'win32' }, async () => {
+      // macOS reaches /tmp and /var through symlinks, and so can any home folder or models drive.
+      const real = temp();
+      const home = `${real}-link`;
+      fs.symlinkSync(real, home);
+      process.env.HOME = home;
+      process.env.USERPROFILE = home;
+      delete process.env.OLLAMA_MODELS;
+      const lm = path.join(home, '.lmstudio', 'models', 'someone', 'model-GGUF');
+      fs.mkdirSync(lm, { recursive: true });
+      const file = path.join(lm, 'model-Q4_K_M.gguf');
+      fs.writeFileSync(file, gguf(64));
+      fs.truncateSync(file, 60 * 1024 * 1024);
+
+      const { store } = makeStore();
+      const [found] = await store.scanExternal();
+      assert.equal(found.name, 'model-Q4_K_M');
+      await store.addCustom(found.path);
+      assert.deepEqual(await store.scanExternal(), []);
     });
 
     it('lists Ollama and LM Studio models, with projectors, and skips ones already added', async () => {

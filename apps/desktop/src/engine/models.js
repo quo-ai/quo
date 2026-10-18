@@ -286,8 +286,10 @@ class ModelStore {
     const home = os.homedir();
     const known = new Set((await this.customModels()).map(item => item.path));
     const found = [];
-    const add = entry => {
-      if (!known.has(entry.path) && found.length < 300) found.push(entry);
+    // The list of added models stores real paths, so compare real paths: the folder may be reached through a symlink.
+    const add = async entry => {
+      const real = await fsp.realpath(entry.path).catch(() => entry.path);
+      if (!known.has(real) && found.length < 300) found.push(entry);
     };
 
     for (const root of [path.join(home, '.lmstudio', 'models'), path.join(home, '.cache', 'lm-studio', 'models')]) {
@@ -296,7 +298,7 @@ class ModelStore {
         const sizeBytes = await sizeOf(file);
         if (sizeBytes < MIN_SCANNED_BYTES) continue;
         const projector = await findProjector(file);
-        add({ name: path.basename(file).replace(/\.gguf$/i, ''), path: file, sizeBytes, source: 'lmstudio', ...(projector ? { mmprojPath: projector } : {}) });
+        await add({ name: path.basename(file).replace(/\.gguf$/i, ''), path: file, sizeBytes, source: 'lmstudio', ...(projector ? { mmprojPath: projector } : {}) });
       }
     }
 
@@ -322,7 +324,7 @@ class ModelStore {
         const namespace = parts.pop();
         const label = `${namespace && namespace !== 'library' ? `${namespace}/` : ''}${model}:${tag}`;
         const projector = blob('projector');
-        add({ name: label, path: modelBlob, sizeBytes: await sizeOf(modelBlob), source: 'ollama', ...(projector && (await sizeOf(projector)) ? { mmprojPath: projector } : {}) });
+        await add({ name: label, path: modelBlob, sizeBytes: await sizeOf(modelBlob), source: 'ollama', ...(projector && (await sizeOf(projector)) ? { mmprojPath: projector } : {}) });
       }
     }
     return found;

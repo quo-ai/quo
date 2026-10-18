@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { defineConfig, type Plugin, type ViteDevServer } from 'vitest/config';
+import type { Plugin, ViteDevServer } from 'vite';
+import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 import { sendWebResponse, setIsolationHeaders, toWebRequest } from './server/node';
