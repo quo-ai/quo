@@ -63,6 +63,8 @@ const STATEMENTS = [
     count integer not null default 0,
     primary key (key, day)
   )`,
+  // Free-usage keys are hashed (freeTier.ts); remove any stored before that.
+  `delete from free_usage where key like '%:%'`,
   `create table if not exists processed_events (
     id text primary key,
     created_at timestamptz not null default now()

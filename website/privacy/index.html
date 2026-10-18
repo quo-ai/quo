@@ -63,8 +63,8 @@
 </div></header>
 <main class="doc">
 <h1>Privacy Policy</h1>
-<p class="meta">Last updated 5 October 2026 · Applies to the Quo app and this website</p>
-<div class="summary"><p><strong>In short:</strong> Quo runs its AI on your device. Your conversations, files, photos, voice and memories are processed and stored only on your device and are never sent to us or anyone else. To fix crashes and improve the app, Quo collects limited usage and crash data that never includes your content: in the EU and EEA only if you allow it, and anywhere you can turn it off at any time in Settings.</p></div>
+<p class="meta">Last updated 18 October 2026 · Applies to the Quo apps (phone, web and desktop) and this website</p>
+<div class="summary"><p><strong>In short:</strong> Quo runs its AI on your device. Your conversations, files, photos, voice and memories are processed and stored only on your device and are never sent to us or anyone else, unless you choose the optional cloud model in Quo Web or the desktop app; those messages are sent to the model’s provider to answer, and nobody keeps them. To fix crashes and improve the app, Quo collects limited usage and crash data that never includes your content: in the EU and EEA only if you allow it, and anywhere you can turn it off at any time in Settings.</p></div>
 
 <h2>Who we are</h2>
 <p>Quo is made by Astra Labs Ltd (“we”, “us”), a company registered in England and Wales (company number 16558481), registered office 82 James Carter Road, Mildenhall, IP28 7DE, United Kingdom. We are the controller of the limited personal data described in this policy. For any privacy question or request, email <a href="mailto:astralabsltd@gmail.com">astralabsltd@gmail.com</a>.</p>
@@ -108,17 +108,24 @@
 <h2>This website</h2>
 <p>This website uses no cookies, analytics or trackers. It is hosted by Vercel, which processes standard server logs (such as IP address, browser type and the pages requested) to deliver and secure the site.</p>
 
+<h2>Quo Web and Quo for desktop</h2>
+<p>With offline models, everything happens on your computer: your chats are saved only in your browser’s or the app’s storage on that computer, and nothing you type is sent anywhere. Models are downloaded once from Hugging Face, and the desktop app checks GitHub for updates; like any download, these requests show your IP address to those services.</p>
+<h3>Optional cloud model</h3>
+<p>Quo Web and the desktop app also offer a free cloud model, clearly marked and used only when you pick it. When you do, the messages in that chat are sent through our server to OpenRouter, which passes them to the model’s provider (for example OpenAI) to write the reply. We only use providers that don’t keep or train on your messages, and our server doesn’t store them either.</p>
+<p>To keep the free allowance fair, our server counts how many cloud messages are sent each day per device and per IP address. It stores these counts under one-way keyed hashes, never the IP address or the app’s random device ID itself, and deletes them after two days. There are no accounts on Quo Web yet.</p>
+
 <h2>Why we use your data (legal bases)</h2>
 <p>Where UK or EU data protection law applies, we rely on:</p>
 <ul>
 <li><strong>Consent</strong> for usage and crash data in the EU and EEA. You can withdraw it at any time in Settings.</li>
 <li><strong>Legitimate interests</strong> for usage and crash data elsewhere, including the UK (keeping Quo working and improving it), for website logs (security) and for replying to emails. We keep this data minimal and pseudonymous, and you can switch off usage and crash data at any time.</li>
-<li><strong>Performance of a contract</strong> to provide Premium after you buy it.</li>
+<li><strong>Performance of a contract</strong> to provide Premium after you buy it, and to answer your messages when you choose a cloud model.</li>
+<li><strong>Legitimate interests</strong> for counting free cloud messages, to stop abuse of the free allowance.</li>
 <li><strong>Legal obligations</strong>, for example keeping purchase and tax records.</li>
 </ul>
 
 <h2>Service providers and international transfers</h2>
-<p>Google (Firebase) and Vercel process data for us as service providers. They may process it outside the UK and EU, including in the United States. Where they do, the transfer is protected by recognised safeguards such as the EU–US Data Privacy Framework and its UK Extension, or Standard Contractual Clauses.</p>
+<p>Google (Firebase), Vercel (hosting) and Neon (our database, in London) process data for us as service providers. When you choose a cloud model, OpenRouter and that model’s provider process those messages to answer them. They may process it outside the UK and EU, including in the United States. Where they do, the transfer is protected by recognised safeguards such as the EU–US Data Privacy Framework and its UK Extension, or Standard Contractual Clauses.</p>
 
 <h2>How long we keep data</h2>
 <ul>
@@ -127,6 +134,8 @@
 <li><strong>Crash reports</strong> are kept by Google for about 90 days.</li>
 <li><strong>Emails</strong> are kept only as long as needed to help you.</li>
 <li><strong>Website logs</strong> are kept briefly by Vercel under its retention policy.</li>
+<li><strong>Cloud messages</strong> aren’t stored by us; OpenRouter and the providers we use don’t retain them.</li>
+<li><strong>Free cloud message counts</strong> are deleted after two days.</li>
 </ul>
 
 <h2>Security</h2>

@@ -113,4 +113,14 @@ describe('free tier', () => {
     expect(await takeFreeMessage(db, keys, limits, now)).toBe(true);
     expect(await takeFreeMessage(db, { subject: 'device:other', ip: '1.2.3.4' }, limits, now)).toBe(false);
   });
+
+  it('never stores an IP address or device id', async () => {
+    await takeFreeMessage(db, { subject: 'device:private-id', ip: '203.0.113.7' }, { perSubject: 5, perIp: 5 }, now);
+    const rows = await db.query<{ key: string }>('select key from free_usage');
+    expect(rows.length).toBeGreaterThan(0);
+    for (const { key } of rows) {
+      expect(key).not.toContain('203.0.113.7');
+      expect(key).not.toContain('private-id');
+    }
+  });
 });
