@@ -10,7 +10,12 @@ export interface Account {
   credits: number | null;
   free: { limit: number; remaining: number };
   billing: { live: boolean };
+  /** What the server offers; anything off is hidden in the app. */
+  features: { cloud: boolean; accounts: boolean; billing: boolean };
 }
+
+/** Sign-in is offered only when the server has email set up. */
+export const accountsEnabled = (account: Account | null): boolean => Boolean(account?.features?.accounts);
 
 export type ProductId = 'pro_monthly' | 'pro_yearly' | 'pack_1000' | 'pack_2750' | 'pack_6000';
 

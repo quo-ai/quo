@@ -1,5 +1,5 @@
-import { config } from './env';
-import { migrate } from './schema';
+import { config } from './env.js';
+import { migrate } from './schema.js';
 
 /**
  * Minimal database interface over Postgres. Production uses postgres.js with
@@ -33,6 +33,7 @@ export async function createTestDb(): Promise<Db> {
 }
 
 async function open(): Promise<Db> {
+  if (config.databaseRequired) throw new Error('DATABASE_URL must be set in production');
   const db = config.databaseUrl ? await openPostgres(config.databaseUrl) : await openPglite(config.pgliteDir);
   await migrate(db);
   return db;

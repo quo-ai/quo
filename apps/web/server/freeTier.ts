@@ -1,4 +1,4 @@
-import type { Db } from './db';
+import type { Db } from './db.js';
 
 /**
  * Daily free allowance for the default cloud model. Counted per user (when

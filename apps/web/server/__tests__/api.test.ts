@@ -9,12 +9,12 @@ vi.stubEnv('RESEND_API_KEY', '');
 vi.stubEnv('FREE_DAILY_MESSAGES', '2');
 vi.stubEnv('FREE_DAILY_MESSAGES_PER_IP', '50');
 
-let handleApi: typeof import('../routes').handleApi;
-let verifyPaddleSignature: typeof import('../billing').verifyPaddleSignature;
+let handleApi: typeof import('../routes.js').handleApi;
+let verifyPaddleSignature: typeof import('../billing.js').verifyPaddleSignature;
 
 beforeAll(async () => {
-  ({ handleApi } = await import('../routes'));
-  ({ verifyPaddleSignature } = await import('../billing'));
+  ({ handleApi } = await import('../routes.js'));
+  ({ verifyPaddleSignature } = await import('../billing.js'));
   vi.spyOn(console, 'log').mockImplementation(() => {});
 });
 

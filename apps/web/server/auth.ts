@@ -1,13 +1,13 @@
 import { createHash, randomInt, randomUUID, timingSafeEqual } from 'node:crypto';
-import { grantTrial } from './credits';
-import { getDb } from './db';
-import { sendLoginCode } from './email';
-import { config } from './env';
-import { takeFreeMessage } from './freeTier';
-import { HttpError, json, readJson } from './http';
-import { identify } from './identity';
-import { accountSummary } from './account';
-import { clearSessionCookie, createSessionCookie } from './session';
+import { grantTrial } from './credits.js';
+import { getDb } from './db.js';
+import { sendLoginCode } from './email.js';
+import { config, features } from './env.js';
+import { takeFreeMessage } from './freeTier.js';
+import { HttpError, json, readJson } from './http.js';
+import { identify } from './identity.js';
+import { accountSummary } from './account.js';
+import { clearSessionCookie, createSessionCookie } from './session.js';
 
 /**
  * Passwordless sign-in with a 6-digit code sent by email. Codes expire after
@@ -29,6 +29,7 @@ function normalizeEmail(value: unknown): string {
 }
 
 export async function handleAuthStart(request: Request): Promise<Response> {
+  if (!features.accounts) throw new HttpError(503, 'accounts_unavailable', 'Accounts aren’t available yet.');
   const body = await readJson<{ email?: string }>(request);
   const email = normalizeEmail(body.email);
   const db = await getDb();

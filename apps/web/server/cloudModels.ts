@@ -1,5 +1,5 @@
-import { config } from './env';
-import { MILLI } from './credits';
+import { config, features } from './env.js';
+import { MILLI } from './credits.js';
 
 /**
  * Cloud models (OpenRouter ids). Prices are USD per 1M tokens, used to
@@ -61,9 +61,11 @@ export const costToMillicredits = (usd: number) => Math.ceil((usd / CREDIT_USD) 
 
 /** What clients see: no internal prices, just what a typical message costs. */
 export function publicCatalog() {
+  // Paid models need an account to pay with; without accounts only the free one is offered.
+  const available = !features.cloud ? [] : features.accounts ? cloudModels() : cloudModels().filter(isFreeModel);
   return {
     defaultModel: config.defaultCloudModel,
-    models: cloudModels().map(model => ({
+    models: available.map(model => ({
       id: model.id,
       name: model.name,
       provider: model.provider,

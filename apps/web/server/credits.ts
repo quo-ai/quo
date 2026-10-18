@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { Db } from './db';
+import type { Db } from './db.js';
 
 /**
  * Credit ledger. All amounts are integer millicredits (1 credit = 1000).

@@ -1,5 +1,5 @@
-import { clientIp } from './http';
-import { sessionUserId } from './session';
+import { clientIp } from './http.js';
+import { sessionUserId } from './session.js';
 
 /** Who is calling: a signed-in user, an anonymous device, and an IP. */
 export interface Identity {

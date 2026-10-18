@@ -1,9 +1,9 @@
-import { handleMe } from './account';
-import { handleAuthStart, handleAuthVerify, handleSignOut } from './auth';
-import { handleBillingConfig, handleCheckout, handleDevComplete, handlePaddleWebhook, handlePortal } from './billing';
-import { handleChat } from './chat';
-import { publicCatalog } from './cloudModels';
-import { errorResponse, HttpError, json } from './http';
+import { handleMe } from './account.js';
+import { handleAuthStart, handleAuthVerify, handleSignOut } from './auth.js';
+import { handleBillingConfig, handleCheckout, handleDevComplete, handlePaddleWebhook, handlePortal } from './billing.js';
+import { handleChat } from './chat.js';
+import { publicCatalog } from './cloudModels.js';
+import { errorResponse, HttpError, json } from './http.js';
 
 /**
  * The whole API behind one entry point: `handleApi(request, path)` with

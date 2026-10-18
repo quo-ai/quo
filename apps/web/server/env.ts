@@ -7,7 +7,10 @@
  *   RESEND_API_KEY unset      → sign-in codes are printed to the server log
  *   PADDLE_API_KEY unset      → purchases are simulated (dev only)
  *
- * In production (QUO_ENV=production) the secrets below are required.
+ * In production (QUO_ENV=production) SESSION_SECRET and DATABASE_URL are
+ * required, and each service switches on only once it's configured (see
+ * `features`): no OpenRouter key means no cloud models, no Resend key means
+ * no sign-in, and no Paddle key means no purchases. Nothing is simulated.
  */
 
 const env = process.env;
@@ -34,6 +37,10 @@ export const config = {
     return required('SESSION_SECRET', 'dev-sandbox-secret-not-for-production');
   },
 
+  get databaseRequired() {
+    return production && !env.DATABASE_URL;
+  },
+
   openRouterKey: env.OPENROUTER_API_KEY || null,
   /** The free, cheap default cloud model (an OpenRouter model id). */
   defaultCloudModel: env.DEFAULT_CLOUD_MODEL || 'openai/gpt-6-luna',
@@ -55,5 +62,24 @@ export const config = {
       pack_2750: env.PADDLE_PRICE_PACK_2750 || null,
       pack_6000: env.PADDLE_PRICE_PACK_6000 || null,
     },
+  },
+};
+
+/**
+ * What this deployment offers, reported to clients by /api/me so the app
+ * only shows what works. Development simulates every service.
+ */
+export const features = {
+  /** Cloud models: needs an OpenRouter key in production. */
+  get cloud() {
+    return !production || Boolean(config.openRouterKey);
+  },
+  /** Sign-in by emailed code: needs Resend in production. */
+  get accounts() {
+    return !production || Boolean(config.resendKey);
+  },
+  /** Purchases: needs Paddle in production (and accounts, to buy as someone). */
+  get billing() {
+    return features.accounts && (!production || Boolean(config.paddle.apiKey));
   },
 };

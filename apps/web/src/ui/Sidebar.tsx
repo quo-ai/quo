@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Boxes, Crown, MonitorDown, PanelLeftClose, Plus, Search, Trash2, UserRound } from 'lucide-react';
-import type { Account } from '../cloud/account';
+import { accountsEnabled, type Account } from '../cloud/account';
 import { groupConversations } from '../chat/groups';
 import type { Conversation } from '../chat/types';
 import { QuoMark } from './QuoMark';
@@ -75,7 +75,7 @@ export function Sidebar({ conversations, currentId, installedCount, account, onO
           <button className="footer-btn press" onClick={onGetApp}>
             <MonitorDown size={18} /> Get the app
           </button>
-          {/* No account at all means Quo's API isn't reachable (e.g. a static deploy): hide sign-in. */}
+          {/* Sign-in only when the API is reachable and has accounts switched on. */}
           {account?.user ? (
             <button className="footer-btn account-btn press" onClick={onOpenAccount}>
               <span className="avatar">{account.user.email[0].toUpperCase()}</span>
@@ -85,7 +85,7 @@ export function Sidebar({ conversations, currentId, installedCount, account, onO
               </span>
               {account.plan === 'pro' && <span className="badge"><Crown size={11} /> Pro</span>}
             </button>
-          ) : account && (
+          ) : accountsEnabled(account) && (
             <div className="signin-row">
               <button className="footer-btn press" onClick={onOpenAccount}><UserRound size={18} /> Sign in</button>
               <button className="btn btn-primary press get-pro" onClick={onOpenAccount}>Get Pro</button>

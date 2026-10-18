@@ -1,4 +1,4 @@
-import type { Db } from './db';
+import type { Db } from './db.js';
 
 /**
  * Schema (idempotent). Credits are integer millicredits (1 credit = 1000).

@@ -12,13 +12,44 @@ Separate from the mobile app's Premium (no shared entitlement).
 
 ```bash
 npm install
-npm run dev         # app + API on http://localhost:5173 (embedded database, simulated payments)
+npm run dev         # app + API on http://localhost:5173 (embedded database, simulated services)
 npm run typecheck   # app and server
 npm test
 npm run build       # dist/, also used by the desktop app
 ```
 
-Deployed as a static site with cross-origin isolation headers (`vercel.json`); the API in `server/` is plain `Request → Response` handlers (`server/routes.ts`).
+## Hosting
+
+The app is static (`dist/`) and must be served with cross-origin isolation headers; the API in `server/` is plain Web `Request → Response` handlers (`server/routes.ts`), so the same code runs everywhere:
+
+| Where | Entry point |
+|---|---|
+| Dev server | `vite.config.ts` (via `server/node.ts`) |
+| Vercel (now) | `api/index.ts`, with `vercel.json` rewriting `/api/*` to it |
+| Your own server (later) | `npm run build && npm start` (`server/serve.ts`: app + API on `PORT`, default 3000) |
+
+**Environment** (`server/env.ts`):
+
+| Variable | Needed | What it does |
+|---|---|---|
+| `QUO_ENV=production` | production | Real services only; nothing simulated |
+| `DATABASE_URL` | production | Postgres (Neon on Vercel today) |
+| `SESSION_SECRET` | production | Signs session cookies; long random string |
+| `APP_URL` | production | Public URL, e.g. `https://quoai-app.vercel.app` |
+| `OPENROUTER_API_KEY` | for cloud models | Without it, cloud models are hidden |
+| `RESEND_API_KEY`, `EMAIL_FROM` | for sign-in | Emails sign-in codes; needs a verified sending domain. Without it, sign-in, paid models and purchases are hidden |
+| `PADDLE_*` | for purchases | Paddle merchant of record; without it, purchases are hidden |
+| `DEFAULT_CLOUD_MODEL`, `FREE_DAILY_MESSAGES`, `FREE_DAILY_MESSAGES_PER_IP` | optional | Free tier (defaults: GPT-6 Luna, 20 per device, 60 per IP, per day) |
+
+The server reports what's switched on in `/api/me` (`features`), and the app only shows what works. The database schema is created automatically on first use.
+
+**Vercel (temporary):** project `quoai-app` in London (`lhr1`), with the Neon integration providing `DATABASE_URL`. Deploy with `bash scripts/deploy.sh` (it uploads a copy from outside git; Vercel builds it).
+
+**Moving to your own host and domain:**
+1. Run `npm run build && npm start` behind a reverse proxy with TLS (it must forward `X-Forwarded-For`).
+2. Keep Neon (it's plain Postgres and works from anywhere), or move the data with `pg_dump` / `pg_restore`.
+3. Set the variables above, with `APP_URL` on the new domain.
+4. Point the clients at the new address: `WEB_APP_URL` in `src/platform.ts`, `API_ORIGIN` in `apps/desktop/src/protocol.js`, and `LINKS.webapp` in `website/assets/site.js`.
 
 ## Local models
 
@@ -61,7 +92,7 @@ Quo Web is the fastest way in; the install prompt and desktop app keep people co
 
 1. **Local core** (in progress): catalog, resumable downloads, OPFS storage, engine, chat. ✔ first version.
 2. **Local polish:** chats saved in IndexedDB, markdown rendering, offline app shell (PWA, install prompt), device check and model recommendation, "keep models in a folder" (Chromium), split hosting for > 2 GiB models, export/import.
-3. **Deploy** at app.<domain> with cross-origin isolation headers. Static app ready: `vercel.json` (Vercel project `quoai-app`, https://quoai-app.vercel.app until there's a domain). The API still needs a serverless entry point.
+3. **Deploy** ✔ Live at https://quoai-app.vercel.app with the API and a Neon database (temporary; moves to its own host and domain later, see Hosting).
 4. **Accounts and billing:** passwordless sign-in, Paddle subscription + packs, credit ledger.
 5. **Cloud models:** gateway proxy (OpenRouter + direct providers where cheaper), metering, model picker with "Cloud" labelling, trial credits.
 6. **Later:** end-to-end encrypted sync, local documents and images.

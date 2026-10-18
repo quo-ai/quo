@@ -1,5 +1,5 @@
-import { config } from './env';
-import type { CloudModel } from './cloudModels';
+import { config } from './env.js';
+import type { CloudModel } from './cloudModels.js';
 
 /**
  * Streams a chat completion from OpenRouter (OpenAI-compatible SSE).

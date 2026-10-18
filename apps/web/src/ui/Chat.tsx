@@ -4,7 +4,7 @@ import { buildContext } from '../chat/context';
 import { titleFrom } from '../chat/store';
 import { newId, type Conversation, type Message } from '../chat/types';
 import { ApiError } from '../cloud/api';
-import { applyUsage, type Account } from '../cloud/account';
+import { accountsEnabled, applyUsage, type Account } from '../cloud/account';
 import { generateCloud, stopCloud } from '../cloud/cloudEngine';
 import { localEngine } from '../engine/localEngine';
 import { CLOUD_CONTEXT, type ModelChoice } from '../models';
@@ -260,7 +260,7 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
         })}
 
         {failure && !busy && (
-          <FailureCard failure={failure} offlineReady={offlineReady} signedIn={Boolean(account?.user)} onAction={onAction} onRetry={retry} />
+          <FailureCard failure={failure} offlineReady={offlineReady} signedIn={Boolean(account?.user)} accounts={accountsEnabled(account)} onAction={onAction} onRetry={retry} />
         )}
       </div>
 
@@ -316,10 +316,12 @@ function replyMeta(message: Message): string {
 }
 
 /** A failed turn with the next sensible step, never a dead end. */
-function FailureCard({ failure, offlineReady, signedIn, onAction, onRetry }: {
+function FailureCard({ failure, offlineReady, signedIn, accounts, onAction, onRetry }: {
   failure: Failure;
   offlineReady: boolean;
   signedIn: boolean;
+  /** Sign-in and purchases exist on this server. */
+  accounts: boolean;
   onAction: (action: ChatAction) => void;
   onRetry: () => void;
 }) {
@@ -329,7 +331,7 @@ function FailureCard({ failure, offlineReady, signedIn, onAction, onRetry }: {
   switch (failure.code) {
     case 'free_limit':
       title = 'You’ve used today’s free cloud messages.';
-      actions = <>{offline}<button className="btn btn-primary press" onClick={() => onAction(signedIn ? 'get-pro' : 'sign-in')}>{signedIn ? 'Get Pro' : 'Sign in for more'}</button></>;
+      actions = <>{offline}{accounts && <button className="btn btn-primary press" onClick={() => onAction(signedIn ? 'get-pro' : 'sign-in')}>{signedIn ? 'Get Pro' : 'Sign in for more'}</button>}</>;
       break;
     case 'insufficient_credits':
       actions = <><button className="btn btn-primary press" onClick={() => onAction('top-up')}>Get credits</button><button className="btn btn-soft press" onClick={() => onAction('use-free')}>Use the free model</button>{offline}</>;

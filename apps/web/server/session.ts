@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
-import { config } from './env';
-import { cookies } from './http';
+import { config } from './env.js';
+import { cookies } from './http.js';
 
 /**
  * Sessions are stateless signed tokens in an HttpOnly cookie:

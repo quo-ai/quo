@@ -1,12 +1,12 @@
 // @vitest-environment node
 import { randomUUID } from 'node:crypto';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { createTestDb, type Db } from '../db';
+import { createTestDb, type Db } from '../db.js';
 import {
   addMonths, ensureMonthlyGrant, getBalance, grantCredits, grantPack, grantTrial, MILLI, monthsBetween,
   reserveCredits, settleCredits,
-} from '../credits';
-import { freeRemaining, refundFreeMessage, takeFreeMessage } from '../freeTier';
+} from '../credits.js';
+import { freeRemaining, refundFreeMessage, takeFreeMessage } from '../freeTier.js';
 
 let db: Db;
 let userId: string;

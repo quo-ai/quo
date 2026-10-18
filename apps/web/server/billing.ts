@@ -1,9 +1,9 @@
 import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
-import { addMonths, grantPack, PACK_CREDITS, type PackId } from './credits';
-import { getDb, type Db } from './db';
-import { config } from './env';
-import { HttpError, json, readJson } from './http';
-import { identify } from './identity';
+import { addMonths, grantPack, PACK_CREDITS, type PackId } from './credits.js';
+import { getDb, type Db } from './db.js';
+import { config } from './env.js';
+import { HttpError, json, readJson } from './http.js';
+import { identify } from './identity.js';
 
 /**
  * Billing through Paddle (merchant of record: handles VAT / sales tax).

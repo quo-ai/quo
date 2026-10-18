@@ -1,12 +1,12 @@
 import { randomUUID } from 'node:crypto';
-import { costToMillicredits, CREDIT_USD, estimateCost, getCloudModel, isFreeModel } from './cloudModels';
-import { MILLI, getBalance, reserveCredits, settleCredits } from './credits';
-import { getDb } from './db';
-import { config } from './env';
-import { freeRemaining, refundFreeMessage, takeFreeMessage } from './freeTier';
-import { HttpError, readJson } from './http';
-import { freeSubject, identify } from './identity';
-import { streamChat, UpstreamError, type ChatMessage } from './openrouter';
+import { costToMillicredits, CREDIT_USD, estimateCost, getCloudModel, isFreeModel } from './cloudModels.js';
+import { MILLI, getBalance, reserveCredits, settleCredits } from './credits.js';
+import { getDb } from './db.js';
+import { config, features } from './env.js';
+import { freeRemaining, refundFreeMessage, takeFreeMessage } from './freeTier.js';
+import { HttpError, readJson } from './http.js';
+import { freeSubject, identify } from './identity.js';
+import { streamChat, UpstreamError, type ChatMessage } from './openrouter.js';
 
 /**
  * POST /api/chat — cloud chat, streamed as server-sent events:
@@ -35,6 +35,7 @@ const sse = (event: string, data: unknown) => `event: ${event}\ndata: ${JSON.str
 const toCredits = (millicredits: number) => Math.round(millicredits / 100) / 10;
 
 export async function handleChat(request: Request): Promise<Response> {
+  if (!features.cloud) throw new HttpError(503, 'cloud_unavailable', 'Cloud models aren’t available right now.');
   const body = await readJson<ChatRequest>(request);
   const model = getCloudModel(body.model ?? '');
   if (!model) throw new HttpError(400, 'unknown_model', 'That model isn’t available.');

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Check, ChevronDown, Cloud, CreditCard, Download, HardDrive, Settings2 } from 'lucide-react';
 import { LOCAL_MODELS, modelSizeBytes } from '../catalog';
-import type { Account } from '../cloud/account';
+import { accountsEnabled, type Account } from '../cloud/account';
 import type { CloudCatalog } from '../cloud/catalog';
 import type { ModelChoice } from '../models';
 import type { DownloadState } from '../storage/downloads';
@@ -106,7 +106,7 @@ export function ModelPicker({ choice, catalog, account, downloads, onChoose, onM
           </div>
 
           <div className="menu-divider" />
-          {account && (
+          {account && accountsEnabled(account) && (
             <button className="menu-item press" role="menuitem" onClick={() => { onOpenAccount(); setOpen(false); }}>
               <CreditCard size={18} color="var(--text-2)" />
               <span className="grow"><span className="title">{account.plan === 'pro' ? 'Plan & credits' : 'Get Pro & credits'}</span></span>

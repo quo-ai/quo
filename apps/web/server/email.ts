@@ -1,4 +1,4 @@
-import { config } from './env';
+import { config } from './env.js';
 
 /** Sends the sign-in code. Without RESEND_API_KEY (sandbox) it's logged instead. */
 export async function sendLoginCode(email: string, code: string): Promise<void> {
