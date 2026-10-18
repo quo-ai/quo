@@ -28,6 +28,20 @@ jobs:
           CI: '1'
           EXPO_NO_TELEMETRY: '1'
 
+  # Nothing sensitive reaches the public repository: secrets files, keys, tokens, personal
+  # email addresses and local paths, in the files and in every commit ever made.
+  hygiene:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node scripts/check-secrets.js --history
+      - run: node --test scripts/check-secrets.test.js
+
   web:
     runs-on: ubuntu-latest
     defaults:

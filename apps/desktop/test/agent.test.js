@@ -90,8 +90,9 @@ describe('what counts as a secret', () => {
 
   it('removes well-known secret formats from text, and leaves code alone', () => {
     const text = [
-      '-----BEGIN RSA PRIVATE KEY-----\nMIIEow\nabc\n-----END RSA PRIVATE KEY-----',
-      'aws AKIAABCDEFGHIJKLMNOP',
+      // Fake secrets are assembled here, so no real-looking one sits in the source for scanners to find.
+      `${'-----BEGIN RSA '}${'PRIVATE KEY-----'}\nMIIEow\nabc\n${'-----END RSA '}${'PRIVATE KEY-----'}`,
+      `aws ${'AK'}${'IA'}ABCDEFGHIJKLMNOP`,
       `gh ghp_${'a'.repeat(36)}`,
       `openai sk-${'b'.repeat(40)}`,
       `anthropic sk-ant-${'c'.repeat(40)}`,
@@ -99,7 +100,7 @@ describe('what counts as a secret', () => {
       `google AIza${'d'.repeat(35)}`,
     ].join('\n');
     const cleaned = safety.redactSecrets(text);
-    for (const leaked of ['MIIEow', 'AKIAABCDEFGHIJKLMNOP', 'ghp_', 'sk-bbbb', 'sk-ant-', 'xoxb-', 'AIza']) assert.ok(!cleaned.includes(leaked), leaked);
+    for (const leaked of ['MIIEow', `${'AK'}${'IA'}ABCDEFGHIJKLMNOP`, 'ghp_', 'sk-bbbb', 'sk-ant-', 'xoxb-', 'AIza']) assert.ok(!cleaned.includes(leaked), leaked);
     const code = 'const key = process.env.API_KEY; // sk- is the prefix\nfunction skip(a) { return a }';
     assert.equal(safety.redactSecrets(code), code);
   });
@@ -525,7 +526,7 @@ describe('reference repositories', () => {
       'r-main/.env': 'SECRET=1',
       'r-main/keys/id_rsa': 'key',
       'r-main/node_modules/pkg/index.js': 'dep',
-      'r-main/.git/config': 'url = https://token@github.com/x/y',
+      'r-main/.git/config': '[remote "origin"]\nurl = https://github.com/x/y',
       'r-main/big.bin': new Uint8Array(3 * 1024 * 1024),
       'r-main/dist/out.js': 'built output is kept',
     }));
