@@ -64,9 +64,9 @@ A coding agent in the chat: with a capable cloud model (the frontier ones, and a
 | `run_command` | a shell command in the project folder | **every time**, or once per exact command for "this session". A short list of read-only commands (`git status`, `git diff`, `git log`, `git show`, `node --version`…) runs without asking (`commands.js`) |
 | `open_repo` | download a public GitHub repository to read (read-only) | no |
 
-**With offline models.** Code mode also works with a model running on this computer, so nothing leaves it. The native engine (llama-server with `--jinja`) speaks the OpenAI format including tool calls, so the web app reads it with the same adapter as any provider (`apps/web/src/agent/local.ts`). Small context windows are the difficulty, so such a session is *compact*: the page asks for it in `agent:start`, and file pages, search and listing results and command output are cut to a size a small window can afford (`COMPACT_LIMITS` in `session.js`); the model is reloaded with a 32k window for Code mode (`engine:start` takes the window size); and the loop sends only what fits. Which models Code mode is on for is the user's choice (Models & storage → Code): 9B and up are recommended and on by default; smaller ones, and models the user added, ask first with the reason. This is about quality only: edits and commands need the user's OK exactly as with any model.
+**Offline models.** Code mode also works with a model on this computer; nothing leaves it. llama-server (`--jinja`) speaks OpenAI-style tool calls, so the web app reads it with the same adapter as any provider (`apps/web/src/agent/local.ts`). Small context windows are the difficulty, so these sessions are *compact*: `agent:start` takes `compact`, which shortens file pages, search results and command output (`COMPACT_LIMITS` in `session.js`), and the model is reloaded with a 32k window (`engine:start` takes the size). Which models Code mode is on for is the user's choice (Models & storage → Code): 9B and up by default, smaller ones ask first. That is about quality only; approvals are the same for every model.
 
-**Also:** *plan mode* (the Plan chip) offers the model only the reading tools and the desktop app refuses everything else; each reply that changed files has an *Undo* button (`history.js`: it only puts a file back if it is still exactly as the agent left it); and the project's `AGENTS.md` (or `CLAUDE.md`) is passed to the model as capped, secret-cleaned notes that can't override the rules (`instructions.js`).
+**Also:** *plan mode* offers only the reading tools and the desktop app refuses everything else; *Undo* (`history.js`) puts a file back only if it is still exactly as the agent left it; the project's `AGENTS.md` or `CLAUDE.md` goes to the model as capped, secret-cleaned notes that can't override the rules (`instructions.js`).
 
 **How it is kept safe** (each of these has tests in `test/agent/`):
 
@@ -87,7 +87,7 @@ Costs: each model step is billed like a message, and a session re-sends its cont
 
 ## Your own API keys
 
-With a key from OpenRouter, Anthropic, OpenAI, Google, xAI, DeepSeek, Mistral or Groq, or the address of a server of their own (Ollama, LM Studio, a company gateway), a person can chat with those models, and use Code mode with them, with no Quo account. Requests go from this computer to the provider; Quo's servers aren't involved. The screens are Models & storage → Your keys (`apps/web/src/ui/keys/`); the wire formats (OpenAI-style and Anthropic-style) and the model list are `apps/web/src/providers/`; this side is `src/providers/`. In a browser the same screens work with keys kept in that browser instead.
+A key from OpenRouter, Anthropic, OpenAI, Google, xAI, DeepSeek, Mistral or Groq, or the address of a server of the user's own (Ollama, LM Studio), gives chat and Code mode with those models, with no Quo account and nothing through Quo's servers. Screens: Models & storage → Your keys (`apps/web/src/ui/keys/`); wire formats and model lists: `apps/web/src/providers/`; this side: `src/providers/`.
 
 **How the keys are kept safe** (each of these has tests in `test/providers/`):
 

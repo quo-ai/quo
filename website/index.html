@@ -157,9 +157,11 @@
       <tr><td><strong>Qwen3.5 2B</strong><span>Smarter, still quick</span></td><td>1.3 GB</td><td>6 GB phones, 8 GB computers</td><td>Everywhere</td><td>Apache 2.0</td></tr>
       <tr><td><strong>Llama 3.2 3B</strong><span>Writing and summaries</span></td><td>2.0 GB</td><td>8 GB phones and computers</td><td>Everywhere</td><td>Llama 3.2 Community</td></tr>
       <tr><td><strong>Ministral 3B</strong><span>Sees photos</span></td><td>2.1 GB</td><td>8 GB phones</td><td>Phone</td><td>Apache 2.0</td></tr>
-      <tr><td><strong>Qwen3.5 4B</strong><span>Sees photos, thinks</span></td><td>2.7 GB</td><td>8 GB phones</td><td>Phone</td><td>Apache 2.0</td></tr>
-      <tr><td><strong>Gemma 4 E2B</strong><span>Sees photos, many languages</span></td><td>3.1 GB</td><td>8 GB phones</td><td>Phone</td><td>Gemma terms</td></tr>
-      <tr><td><strong>Phi-4 Mini</strong><span>Reasoning</span></td><td>2.5 GB</td><td>8 GB phones</td><td>Phone</td><td>MIT</td></tr>
+      <tr><td><strong>Qwen3.5 4B</strong><span>Sees photos, thinks</span></td><td>2.7 GB</td><td>8 GB phones and computers</td><td>Phone, desktop</td><td>Apache 2.0</td></tr>
+      <tr><td><strong>Gemma 4 E2B</strong><span>Sees photos, many languages</span></td><td>3.1 GB</td><td>8 GB phones and computers</td><td>Phone, desktop</td><td>Gemma terms</td></tr>
+      <tr><td><strong>Phi-4 Mini</strong><span>Reasoning</span></td><td>2.5 GB</td><td>8 GB phones and computers</td><td>Phone, desktop</td><td>MIT</td></tr>
+      <tr><td><strong>Qwen3.5 9B</strong><span>Much smarter, codes</span></td><td>5.7 GB</td><td>16 GB computers, or an 8 GB graphics card</td><td>Desktop</td><td>Apache 2.0</td></tr>
+      <tr><td><strong>Qwen3.5 27B</strong><span>The most capable</span></td><td>16.7 GB</td><td>32 GB computers</td><td>Desktop</td><td>Apache 2.0</td></tr>
     </tbody>
   </table></div>
   <p class="fine">The phone apps also offer Gemma 3, SmolLM3 and others. Speed depends on your device: on older phones, smaller models reply faster.</p>
@@ -172,7 +174,7 @@
     <div class="plan">
       <h3>Web and desktop</h3>
       <p class="price">Free</p>
-      <ul><li>Every offline model, unlimited</li><li>Chats saved on your device</li><li>Thinking mode</li><li>Optional free cloud model, 20 messages a day</li></ul>
+      <ul><li>Every offline model, unlimited</li><li>Chats saved on your device</li><li>Thinking mode</li><li>Optional free cloud model, 20 messages a day</li><li>Your own API keys, no account</li></ul>
     </div>
     <div class="plan">
       <h3>Phone apps</h3>
@@ -191,7 +193,7 @@
   <div class="desktop-grid">
     <div>
       <h2>Quo for desktop.</h2>
-      <p class="section-lede">Quo as an app for Mac, Windows and Linux. Models run natively on your graphics card, so replies are much faster than in a browser and bigger models fit. Attach photos and PDFs, talk instead of typing, and keep working with no connection.</p>
+      <p class="section-lede">Quo as an app for Mac, Windows and Linux. Models run natively on your graphics card, so replies are much faster than in a browser and bigger models fit. Attach photos and PDFs, talk instead of typing, and keep working with no connection. Code mode lets a model work on your project folder, and you approve every change.</p>
       <div class="dl-buttons">
         <a class="dl-btn" data-dl="mac" href="https://github.com/quo-ai/quo/releases/latest/download/Quo-mac-universal.dmg"><svg aria-hidden="true"><use href="#i-apple"/></svg><span><small>Download for</small><strong>macOS</strong></span></a>
         <a class="dl-btn" data-dl="windows" href="https://github.com/quo-ai/quo/releases/latest/download/Quo-windows-x64-setup.exe"><svg aria-hidden="true"><use href="#i-windows"/></svg><span><small>Download for</small><strong>Windows</strong></span></a>
@@ -226,7 +228,7 @@
     </div>
     <pre class="term" aria-label="Run Quo Web from source"><code><span class="c"># run Quo Web on your machine</span>
 git clone <span data-clone>https://github.com/quo-ai/quo</span>
-cd quo/webapp
+cd quo/apps/web
 npm install
 npm run dev</code></pre>
   </div>
@@ -234,7 +236,7 @@ npm run dev</code></pre>
 
 <section class="cloud"><div class="wrap">
   <div class="rows">
-    <div class="row"><h3>Need more power? Only when you ask.</h3><p>Quo is local first. When you want a bigger model, Quo Web and the desktop app offer a free cloud model too. It's clearly marked, only used when you pick it, and runs only through providers that keep no data. More cloud models are coming.</p></div>
+    <div class="row"><h3>Need more power? Only when you ask.</h3><p>Quo is local first. For a bigger model, Quo Web and the desktop app offer a free cloud model, or you can connect your own key from OpenRouter, Anthropic, OpenAI and others. Both are clearly marked and only used when you pick them. With your own key, messages go straight to the provider, not through Quo.</p></div>
   </div>
 </div></section>
 
@@ -243,7 +245,7 @@ npm run dev</code></pre>
   <details><summary>Is Quo really free?</summary><p>Yes. Quo Web and the desktop app are completely free, and the phone apps are free with three models. An optional one-time upgrade on the phone unlocks every model and feature. There's no subscription and no ads. See <a href="#pricing">pricing</a>.</p></details>
   <details><summary>Which browser should I use?</summary><p>Chrome or Edge on a laptop or desktop. They let Quo use your graphics card, which makes replies much faster. Firefox and Safari work, but run on your processor, so replies are slower. If you'd rather not switch browsers, get the desktop app.</p></details>
   <details><summary>What do I need to run Quo?</summary><p>A computer or phone from the last few years. The smallest model (about 530 MB) runs almost anywhere; bigger models want 8 GB of memory. Quo checks your device and suggests one that fits. See <a href="#models">models</a>.</p></details>
-  <details><summary>Does anything leave my device?</summary><p>Not when you use offline models. Your chats, files and voice are processed on your device, and chats are saved only there. The only network use is downloading a model, once. If you choose the optional cloud model in Quo Web or the desktop app, those messages go to that model's provider to answer, and Quo marks them clearly. Nobody keeps them.</p></details>
+  <details><summary>Does anything leave my device?</summary><p>Not when you use offline models. Your chats, files and voice are processed on your device, and chats are saved only there. The only network use is downloading a model, once. If you choose a cloud model, or one with your own API key, those messages go to that model's provider to answer, and Quo marks them clearly. With your own key they go straight to the provider, not through Quo.</p></details>
   <details><summary>Web, desktop or phone: what's the difference?</summary><p>They're the same private assistant. Quo Web needs nothing installed. The desktop app runs models natively on your graphics card, so it's the fastest and fits the biggest models. Documents and voice work in all of them; photos need a model that reads images, which the desktop and phone apps have. Chats stay on each device.</p></details>
   <details><summary>My computer warns about the desktop app. Is it safe?</summary><p>The app is built from the open-source code on GitHub by an automated release process. Until our signing certificates are in place, macOS may ask you to confirm it in System Settings › Privacy &amp; Security, and Windows may show “More info › Run anyway”.</p></details>
   <details><summary>How is Quo different from ChatGPT or Claude?</summary><p>Those run on company servers, so you need an account and a connection, and your chats are stored there. Quo runs on your device, so it works offline and your chats stay yours. Local models are smaller, so for the hardest tasks the big cloud models are still stronger.</p></details>
