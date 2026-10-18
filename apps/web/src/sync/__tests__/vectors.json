@@ -1,0 +1,100 @@
+{
+  "note": "Shared by apps/web and apps/mobile: both must read every record here. Records marked \"web\" were written by apps/web/src/sync/crypto.ts, \"mobile\" by apps/mobile/services/sync/crypto.ts.",
+  "secretHex": "0102030405060708090a0b0c0d0e0f1011121314",
+  "recoveryKey": "0410-6105-0R3G-G28A-1C60-T3GF-208H-44RM-SB",
+  "records": [
+    {
+      "by": "web",
+      "kind": "chat",
+      "id": "1760000000000-k3j2h1g9x",
+      "value": {
+        "id": "1760000000000-k3j2h1g9x",
+        "title": "Trip to Lisbon",
+        "createdAt": 1760000000000,
+        "updatedAt": 1760000100000,
+        "messages": [
+          {
+            "id": "m1",
+            "role": "user",
+            "content": "Plan two days in Lisbon — ünïcode and emoji 🚀 included.",
+            "timestamp": 1760000001000
+          },
+          {
+            "id": "m2",
+            "role": "assistant",
+            "content": "Day one: Alfama and the tram 28.",
+            "reasoning": "They want a short plan.",
+            "timestamp": 1760000002000,
+            "x": {
+              "mobile": {
+                "toolActions": []
+              }
+            }
+          }
+        ]
+      },
+      "blob": "ARV2saFoKXg/EIPSvqxRtdDKTqj61Ct5cfdOHyyxjmug6TaRN3DC2zh6DUls/PiiKXjXKwK5hQF+No5jVAH9l8ZxH8vstlSv0t5vl3IJj3jMAD1d5UjLl+Ezq/Ts6jpogNt4FSjWnmSqNKq5pkWb/osVCSi2Ku+K+UQGYwfwj6NZNxx4kLrvJN0FpuGKr8Yof5HVn0N839LU+G3n00811WwE1ZuHBzIGcfwuUI4sBZ4Ns6bLAHRHFMBrIazAjuUE/bHzUaZXUExy3JcEtQNYvbj21VahimdpRZFXvte7xM3etx7CbWzvOGhtYsGf+JkzL9sXO7AiLvbyJUtaHHkH8tpk9bJmsYOW/UP/D60hHBk6Zzo+hUZAhAUmMO3vY6UgQX4HLLgomYIg7ggRHdVayMSzHcPhH0+NxQc="
+    },
+    {
+      "by": "web",
+      "kind": "memory",
+      "id": "memory:mem_1760000000000_ab12cd",
+      "value": {
+        "id": "mem_1760000000000_ab12cd",
+        "content": "My name is Sam",
+        "createdAt": 1760000000000,
+        "updatedAt": 1760000050000
+      },
+      "blob": "Ab3s4LSYsPGTWwuvymnHAqSStHAde5/v0VXdsEEJq/LHBiKQuHa11gwKivJIJOXsXC8lwVDf/l4vNS1mFj05qqiQINFfZrzUViGnEChchL+DtP4GWOvNfcAC00MENgdRZhN89Pf/YarN6dd6LHEZ0E0KK2OFcTe87VHNLg=="
+    },
+    {
+      "by": "mobile",
+      "kind": "chat",
+      "id": "1760000500000-p9o8i7u6y",
+      "value": {
+        "id": "1760000500000-p9o8i7u6y",
+        "title": "Written on the phone",
+        "createdAt": 1760000500000,
+        "updatedAt": 1760000600000,
+        "messages": [
+          {
+            "id": "1760000500001-aaaaaaaaa",
+            "role": "user",
+            "content": "Résumé of the 🌍 — plain text",
+            "timestamp": 1760000500001
+          },
+          {
+            "id": "1760000500002-bbbbbbbbb",
+            "role": "assistant",
+            "content": "Sure.",
+            "reasoning": "Short answer.",
+            "timestamp": 1760000500002,
+            "x": {
+              "mobile": {
+                "stats": {
+                  "completionTokens": 3
+                },
+                "toolActions": []
+              }
+            }
+          }
+        ]
+      },
+      "blob": "AalXxnhsnKbEpMcRGLMu2q0UA1psVfJfGYNBXMWmyE876TIVptFPlOLcgdsjbgQDT7jxjBwrFUt7yd7VedZnmWpp/org9DiV1dBAke+0EqYUA38BR6dNOKu2eiOQtPnvnlq1zmaY0L+fM3K9HRwajL79qI9W8cLyYxgf1pxKYRnC2dOp0+mQONOFT52jwrctjPKh2k06vRNgiNHQlO+Y6mGYgKcq7dpkm0RdZ4e9lL0dIQ3P5Bo9z8DF6HbzYimHCIFt4Secz2AhSkQJ7UpbNGTkicPoD62OkvqgynSFJYiENlOz6JBm0HOe0aJ95NdS01ipFLiWKlq58HB/aJPlyBgyqhCnK3ZP2x2ttNUKprfRCr1KhQOTbzc3h4ZhqvGsT7EhH3UZSzfEaeYEpgKKhg=="
+    },
+    {
+      "by": "mobile",
+      "kind": "memory",
+      "id": "memory:mem_1760000500000_zz99yy",
+      "value": {
+        "id": "mem_1760000500000_zz99yy",
+        "content": "Prefers dark mode",
+        "createdAt": 1760000500000,
+        "updatedAt": 1760000500000
+      },
+      "blob": "AflKIO1wFtNbRarlnefJUowRT3lzGxEYvGaDYRmG407wX+0O3Yh7DqbZi8AD2fOPZA+GY9haEimeHIBSrtT9mUJCsBxS3w90eHVM60nkH+W5yemRxCnU9I3qGVgDVlb/hNXpsNFIGjlpTDvr1kdLzS0NfbmS7HPp7cS7xi/l"
+    }
+  ],
+  "verifier": "AZRlQRSN0bZujJeBhhRROxlGW2X7yK9htJHCrQK13vQr326aNQzZKSB2Z2YmWslfqy8EyOJBgGJLPmbqTvOYeTI=",
+  "mobileVerifier": "ARQenh+iFPlrA1vCIx+JU0QR4iQxf4DAxcwxORX5ko9bIGu4SxkdA2BB9ewmGTxdYbou5IRqUv8AGThEut+wY/8="
+}

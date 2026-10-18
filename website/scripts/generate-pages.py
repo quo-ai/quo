@@ -62,20 +62,20 @@ def page(title, desc, body, path, main='doc'):
 
 privacy = f'''<h1>Privacy Policy</h1>
 <p class="meta">Last updated {UPDATED} · Applies to the Quo apps (phone, web and desktop) and this website</p>
-<div class="summary"><p><strong>In short:</strong> Quo runs its AI on your device. Your conversations, files, photos, voice and memories are processed and stored only on your device and are never sent to us or anyone else, unless you choose the optional cloud model in Quo Web or the desktop app; those messages are sent to the model’s provider to answer, and nobody keeps them. To fix crashes and improve the app, Quo collects limited usage and crash data that never includes your content: in the EU and EEA only if you allow it, and anywhere you can turn it off at any time in Settings.</p></div>
+<div class="summary"><p><strong>In short:</strong> Quo runs its AI on your device. Your conversations, files, photos, voice and memories are processed and stored only on your device and are never sent to us or anyone else, unless you choose the optional cloud model in Quo Web or the desktop app; those messages are sent to the model’s provider to answer, and nobody keeps them. If you choose to turn on Quo Sync (optional, and it needs a Quo account), your chats and memories are uploaded only after being encrypted on your device with a key we never receive, so we still can’t read them. To fix crashes and improve the app, Quo collects limited usage and crash data that never includes your content: in the EU and EEA only if you allow it, and anywhere you can turn it off at any time in Settings.</p></div>
 
 <h2>Who we are</h2>
 <p>Quo is made by {COMPANY} (“we”, “us”), {COMPANY_DETAILS}. We are the controller of the limited personal data described in this policy. For any privacy question or request, email {MAIL}.</p>
 
 <h2>What stays on your device</h2>
-<p>The following is processed entirely on your device and is never transmitted to us or to any AI service:</p>
+<p>The following is processed on your device and is never sent to us or to any AI service in a form anyone can read:</p>
 <ul>
 <li>Your messages and the AI’s replies</li>
 <li>Documents and photos you attach</li>
 <li>Voice input, which is transcribed by a speech model running on your device</li>
 <li>Memories the AI saves about you, and your settings</li>
 </ul>
-<p>Read-aloud uses your device’s built-in text-to-speech engine. Quo has no accounts and no sign-in. We cannot see, read or recover your conversations.</p>
+<p>Read-aloud uses your device’s built-in text-to-speech engine. You don’t need an account to use Quo. We cannot see, read or recover your conversations. That stays true if you use Quo Sync, described below, because what it uploads is encrypted on your device with a key only you hold.</p>
 
 <h2>Information we collect</h2>
 <h3>Usage and crash data</h3>
@@ -94,6 +94,18 @@ privacy = f'''<h1>Privacy Policy</h1>
 <p>Quo downloads configuration values from Firebase Remote Config to adjust app behaviour. This request includes the app’s Firebase installation identifier and app version, and never your content. It happens only when usage data collection is allowed; otherwise Quo uses built-in defaults.</p>
 <h3>When you contact us</h3>
 <p>If you email us, we receive your email address and whatever you include in your message. We use it only to reply to you.</p>
+
+<h2>Accounts and Quo Sync</h2>
+<p>You only need a Quo account to use Quo Sync, which keeps your chats and memories in step between your devices (Quo Web, the desktop app and the Android app), or to buy Quo Pro or a Quo Sync plan. Everything else works without one.</p>
+<h3>Your account</h3>
+<p>You sign in with your email address: we email you a six-digit code (through our email provider, Resend), which works for 10 minutes. We keep your email address, a one-way hash of the code until it is used or replaced, and records of your plan and credits. Staying signed in uses a secure cookie (Quo Web and the desktop app) or a token held in your phone’s secure storage; signing out removes it from that device.</p>
+<h3>What Quo Sync stores</h3>
+<p>If you turn on Quo Sync, each chat and memory is encrypted on your device before it is uploaded, with a key made from a recovery key that you save and that we never receive. We store the encrypted data, a random identifier for each item, its size and when it last changed, and a small encrypted check value that lets a new device confirm your recovery key. The names of attached files are part of the encrypted data; the files, photos and models themselves are never synced.</p>
+<p>We can’t read, search or recover your synced chats and memories, and if you lose your recovery key nobody can open them. We can tell that your account uses Quo Sync, roughly how many items it holds, how big they are and when they changed, but not what they say.</p>
+<h3>Payments</h3>
+<p>Quo Pro and Quo Sync plans bought on the web or in the desktop app are sold by Paddle, our merchant of record, which collects your payment details and handles tax. We receive your email address, your country and the status of your plan, never your card details.</p>
+<h3>Deleting your account</h3>
+<p>You can delete your account yourself at any time (<strong>Settings → Sync</strong> in the Android app, <strong>Plan &amp; credits</strong> in Quo Web and the desktop app; see <a href="/delete-account/">how to delete your account</a>), as long as you have no running plan; cancel that first. Deleting it removes your synced chats and memories, your credits and your plan records from our systems. The chats and memories on your devices stay. Paddle keeps its own records of purchases, as the law requires.</p>
 
 <h2>Downloads and purchases</h2>
 <p>AI models are downloaded from Hugging Face, a public model host, or, if you add a custom model, from the web address you enter. On Android, the starter model may instead be delivered by Google Play. As with any download, the host receives standard request information such as your IP address and is responsible for it under its own privacy policy.</p>
@@ -118,13 +130,13 @@ privacy = f'''<h1>Privacy Policy</h1>
 <ul>
 <li><strong>Consent</strong> for usage and crash data in the EU and EEA. You can withdraw it at any time in Settings.</li>
 <li><strong>Legitimate interests</strong> for usage and crash data elsewhere, including the UK (keeping Quo working and improving it), for website logs (security) and for replying to emails. We keep this data minimal and pseudonymous, and you can switch off usage and crash data at any time.</li>
-<li><strong>Performance of a contract</strong> to provide Premium after you buy it, and to answer your messages when you choose a cloud model.</li>
+<li><strong>Performance of a contract</strong> to provide Premium after you buy it, to answer your messages when you choose a cloud model, and to sign you in and provide Quo Sync and your plan if you have an account.</li>
 <li><strong>Legitimate interests</strong> for counting free cloud messages, to stop abuse of the free allowance.</li>
 <li><strong>Legal obligations</strong>, for example keeping purchase and tax records.</li>
 </ul>
 
 <h2>Service providers and international transfers</h2>
-<p>Google (Firebase), Vercel (hosting) and Neon (our database, in London) process data for us as service providers. When you choose a cloud model, OpenRouter and that model’s provider process those messages to answer them. They may process it outside the UK and EU, including in the United States. Where they do, the transfer is protected by recognised safeguards such as the EU–US Data Privacy Framework and its UK Extension, or Standard Contractual Clauses.</p>
+<p>Google (Firebase), Vercel (hosting), Neon (our database, in London) and Resend (sign-in emails) process data for us as service providers, and Paddle sells Quo Pro and Quo Sync plans as merchant of record. When you choose a cloud model, OpenRouter and that model’s provider process those messages to answer them. They may process it outside the UK and EU, including in the United States. Where they do, the transfer is protected by recognised safeguards such as the EU–US Data Privacy Framework and its UK Extension, or Standard Contractual Clauses.</p>
 
 <h2>How long we keep data</h2>
 <ul>
@@ -135,16 +147,18 @@ privacy = f'''<h1>Privacy Policy</h1>
 <li><strong>Website logs</strong> are kept briefly by Vercel under its retention policy.</li>
 <li><strong>Cloud messages</strong> aren’t stored by us; OpenRouter and the providers we use don’t retain them.</li>
 <li><strong>Free cloud message counts</strong> are deleted after two days.</li>
+<li><strong>Your account</strong> (email address, plan and credit records) is kept until you delete it. A sign-in code stops working after 10 minutes.</li>
+<li><strong>Quo Sync data</strong> is kept until you delete it or your account. If your plan ends, it stays for 180 days (you can still download it to your devices), we email you once 30 days before it is deleted, and then it is deleted for good. Records that tell your other devices a chat was deleted are removed after 90 days.</li>
 </ul>
 
 <h2>Security</h2>
-<p>Your content is protected by your device’s own security and never leaves it. The limited data sent to our service providers is encrypted in transit.</p>
+<p>Your content is protected by your device’s own security and, unless you use Quo Sync, never leaves it. Quo Sync data is encrypted on your device (AES-256-GCM) before it is uploaded, and the key never leaves your devices. The limited data sent to our service providers is encrypted in transit.</p>
 
 <h2>Children</h2>
 <p>Quo is not directed at children under 13, and we do not knowingly collect personal data from them. If you believe a child has used Quo and data was collected, contact us and we will help.</p>
 
 <h2>Your rights</h2>
-<p>Depending on where you live, you may have the right to access, correct or delete your personal data, to restrict or object to its use, and to data portability. You can withdraw consent or object to usage and crash data at any time by turning it off in Settings. To make a request, email {MAIL}. Because Quo has no accounts, we may need information from your device (such as its analytics identifier) to find any data linked to you.</p>
+<p>Depending on where you live, you may have the right to access, correct or delete your personal data, to restrict or object to its use, and to data portability. You can withdraw consent or object to usage and crash data at any time by turning it off in Settings. To make a request, email {MAIL}. If you have a Quo account you can delete it yourself, and everything we hold for it, as described above. For usage and crash data, which isn’t linked to an account, we may need information from your device (such as its analytics identifier) to find what’s linked to you.</p>
 <p>If you are in the UK, you can complain to the Information Commissioner’s Office (ico.org.uk). If you are in the EU, you can complain to your local data protection authority. We would appreciate the chance to resolve your concern first.</p>
 <h3>California residents</h3>
 <p>In the past 12 months we have collected the categories described above: identifiers (pseudonymous app identifiers), internet or other electronic activity (app usage), approximate geolocation, and commercial information (purchase records). We use them only for the purposes in this policy. We do not sell or share personal information, as those terms are defined under California law, and we do not use sensitive personal information. You have the right to know, delete and correct your personal information, and we will not discriminate against you for exercising these rights.</p>
@@ -181,7 +195,19 @@ terms = f'''<h1>Terms of Use</h1>
 <p>Responses are generated by AI models running on your device. They can be inaccurate, incomplete, out of date or offensive. Don’t rely on Quo for medical, legal, financial or other professional advice, and check important information independently.</p>
 
 <h2>Your content</h2>
-<p>Your chats, files and memories belong to you and stay on your device. We can’t access them, so we can’t back them up or restore them. If you uninstall Quo, clear its data or lose your device, they are gone.</p>
+<p>Your chats, files and memories belong to you and stay on your device unless you turn on Quo Sync. We can’t read them either way, so we can’t back them up or restore them for you. If you uninstall Quo, clear its data or lose your device, they are gone, unless you have a synced copy and your recovery key.</p>
+
+<h2>Accounts, Quo Pro and Quo Sync</h2>
+<p>You don’t need an account to use Quo. An account (an email address, confirmed with a code) is needed for Quo Sync, and for Quo Pro and paid cloud models. Keep your sign-in secure: you’re responsible for what is done with your account. You can delete your account yourself at any time (<strong>Settings → Sync</strong> in the Android app, <strong>Plan &amp; credits</strong> in Quo Web and the desktop app), once any running plan has been cancelled.</p>
+<h3>Quo Sync</h3>
+<p>Quo Sync keeps your chats and memories in step between your devices. It is included with Quo Pro, or can be bought on its own as a yearly plan. Plans are bought on the web or in the desktop app and are sold by Paddle, our merchant of record. The price, renewal and cancellation terms are shown at checkout, and refunds follow Paddle’s buyer terms and your legal rights. Cancelling stops renewal; the plan runs to the end of the period you paid for.</p>
+<ul>
+<li><strong>Your recovery key.</strong> Your synced chats are encrypted with a key made from a recovery key that only you hold. We can’t see it and can’t reset it. If you lose it, nobody can open the cloud copy. The chats on your devices aren’t affected, and you can delete the cloud copy and start again.</li>
+<li><strong>Limits.</strong> One account can hold up to 250 MB of synced data and 20,000 chats. A single chat larger than about 1 MB stays on your device and isn’t synced. Photos, files and models aren’t synced.</li>
+<li><strong>It isn’t a backup.</strong> Sync copies changes both ways, so deleting a chat on one device deletes it everywhere. Keep your own copy of anything you can’t afford to lose.</li>
+<li><strong>When a plan ends.</strong> For 180 days you can still open Quo Sync and download your synced chats to your devices, but you can’t upload new changes. We email you once, 30 days before the cloud copy is deleted for good. Getting a plan again before then picks up where you left off.</li>
+<li><strong>Availability.</strong> We aim to keep Quo Sync running but don’t promise it will always be available. Your chats always work on your device without it.</li>
+</ul>
 
 <h2>Premium</h2>
 <p>Premium is an optional one-time purchase that unlocks additional models and features for the Google Play or Apple account you bought it with. Prices vary by country and are shown before you buy. You can restore your purchase on another device with the same account using <strong>Restore Purchases</strong> in Settings. Purchases are processed by Google Play or the App Store, and refunds are handled under their policies and your legal rights.</p>
@@ -191,10 +217,10 @@ terms = f'''<h1>Terms of Use</h1>
 
 <h2>Disclaimers and liability</h2>
 <p>Quo is provided “as is” and “as available”. To the extent the law allows, we make no warranties about Quo, its models or their output.</p>
-<p>To the extent the law allows, we are not liable for indirect or consequential losses, or for loss of data, arising from your use of Quo, and our total liability to you is limited to the amount you paid us for Premium. Nothing in these terms limits liability for death or personal injury caused by negligence, for fraud, or for anything else that cannot be limited by law, and nothing affects your statutory rights as a consumer.</p>
+<p>To the extent the law allows, we are not liable for indirect or consequential losses, or for loss of data, arising from your use of Quo, and our total liability to you is limited to the amount you paid us for Premium, Quo Pro or Quo Sync. Nothing in these terms limits liability for death or personal injury caused by negligence, for fraud, or for anything else that cannot be limited by law, and nothing affects your statutory rights as a consumer.</p>
 
 <h2>Ending these terms</h2>
-<p>You can stop using Quo at any time by uninstalling it. We may suspend your licence if you seriously breach these terms.</p>
+<p>You can stop using Quo at any time by uninstalling it, and you can cancel a plan or delete your account as described above. We may suspend your licence, or an account, if you seriously breach these terms or abuse the service (for example, by using Quo Sync to store things that aren’t Quo chats).</p>
 
 <h2>Apple App Store</h2>
 <p>If you downloaded Quo from the App Store, Apple’s <a href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/">Standard End User License Agreement</a> also applies. These terms are between you and us, not Apple. Apple has no obligation to provide maintenance or support for Quo and is not responsible for Quo, any claims relating to it (including product liability, legal compliance and intellectual property claims) or its content. Apple and its subsidiaries are third-party beneficiaries of these terms and may enforce them against you.</p>
@@ -210,7 +236,13 @@ faq = [
     ('Does Quo need an internet connection?',
      'Only to download an AI model. After that, Quo works fully offline.'),
     ('Where are my chats stored?',
-     'Only on your device. There is no account and no server copy, so if you uninstall the app or clear your chats, they are gone for good.'),
+     'On your device. If you turn on Quo Sync (optional, and it needs a Quo account), encrypted copies are also kept so your other devices can have them, and we can’t read them. Without Quo Sync there is no server copy, so if you uninstall the app or clear your chats, they are gone for good.'),
+    ('What is Quo Sync?',
+     'It keeps your chats and memories in step between your devices (the Android app, Quo Web and the desktop app), end-to-end encrypted: they’re scrambled on your device with a key only you hold, so we can’t read them. Turn it on in <strong>Settings → Sync</strong> in the Android app, or from the sidebar in Quo Web and the desktop app. It’s included with Quo Pro, or can be bought on its own. Photos, files and models aren’t synced.'),
+    ('I lost my Quo Sync recovery key.',
+     'Nobody can recover it, not even us, because that’s what keeps your chats private. Your chats on your devices are still there. Open Quo Sync, choose to delete the cloud copy, and turn Quo Sync on again from a device that has your chats: it uploads them afresh with a new key.'),
+    ('How do I delete my Quo account?',
+     'In the Android app: <strong>Settings → Sync → Delete my Quo account</strong>. In Quo Web or the desktop app: <strong>Plan &amp; credits → Delete my account</strong>. It deletes your synced chats and memories, credits and plan records, and leaves the chats on your devices. If you have a running plan, cancel it first. If you can’t sign in, email us from the address on the account and we’ll do it for you. Full steps: <a href="/delete-account/">how to delete your account</a>.'),
     ('Why are replies slow on my phone?',
      'The AI runs on your phone’s processor. Lighter models reply faster; larger models are more capable but slower, especially on older phones. You can switch models in Settings.'),
     ('How do I restore my Premium purchase?',
@@ -218,7 +250,7 @@ faq = [
     ('How do I turn off analytics?',
      'Settings → Data → Share Usage Analytics. Quo never sends your chats, prompts or files either way.'),
     ('How do I delete my data?',
-     'Your chats and memories are only on your device: delete them in Settings, or uninstall Quo to remove everything. For the limited usage data described in our <a href="/privacy/">Privacy Policy</a>, email us.'),
+     'Your chats and memories are on your device: delete them in Settings, or uninstall Quo to remove everything. If you use Quo Sync, delete your account to remove the cloud copy too (see below). For the limited usage data described in our <a href="/privacy/">Privacy Policy</a>, email us.'),
     ('Where can I use Quo?',
      'In your browser at <a data-link="webapp" href="https://quoai-app.vercel.app/">Quo Web</a> (Chrome or Edge work best), as a <a href="/#desktop">desktop app</a> for Mac, Windows and Linux, and on Android. The iPhone app is coming soon. Each keeps its chats on that device only.'),
     ('Why are replies slow in my browser?',
@@ -271,6 +303,30 @@ brand = '''<h1>Brand assets</h1>
 <h2>Contact</h2>
 <p>Press and partnerships: <a href="mailto:astralabsltd@gmail.com">astralabsltd@gmail.com</a>.</p>'''
 
+delete_account = f'''<h1>Delete your Quo account</h1>
+<p class="meta">Last updated {UPDATED}</p>
+<p>You only have a Quo account if you signed in to use Quo Sync, Quo Pro or paid cloud models. If you never signed in, there is nothing to delete: Quo keeps your chats on your own device.</p>
+
+<h2>Delete it yourself</h2>
+<ul>
+<li><strong>Android app:</strong> open <strong>Settings → Sync</strong>, then tap <strong>Delete my Quo account</strong> and confirm.</li>
+<li><strong>Quo Web and the desktop app:</strong> open <strong>Plan &amp; credits</strong> (from your email address in the sidebar), then choose <strong>Delete my account</strong> and confirm.</li>
+</ul>
+<p>If you have a running plan (Quo Pro or Quo Sync), cancel it first (<strong>Plan &amp; credits → Manage subscription</strong>), then delete your account.</p>
+
+<h2>What is deleted</h2>
+<ul>
+<li>Your email address and account</li>
+<li>Your synced chats and memories (the encrypted copy on our servers)</li>
+<li>Your credits, their history and your plan records</li>
+</ul>
+<p>It happens straight away. <strong>What stays:</strong> the chats and memories on your own devices, which are not touched, and Paddle’s own records of any purchases you made, which it keeps as the law requires.</p>
+
+<h2>Can’t sign in?</h2>
+<p>Email {MAIL} from the address on the account and ask us to delete it. We’ll check it’s you and do it within 30 days. You can also delete only your synced chats and keep the account, from Quo Sync’s settings (<strong>Delete the cloud copy</strong>).</p>
+<p>See our <a href="/privacy/">Privacy Policy</a> for what we hold and for how long.</p>
+'''
+
 not_found = '''<div>
   <svg class="mark" viewBox="0 0 900 755" aria-hidden="true"><use href="#quo-mark"/></svg>
   <h1>Nothing here.</h1>
@@ -283,6 +339,7 @@ PAGES = [
     ('terms/index.html', '/terms/', 'Terms of Use — Quo', 'Terms of use for Quo.', terms, 'doc'),
     ('support/index.html', '/support/', 'Support — Quo', 'Get help with Quo, private AI that works offline.', support, 'doc'),
     ('brand/index.html', '/brand/', 'Brand assets — Quo', 'Quo logos, colours, screenshots and how to describe Quo. Free to use when writing about Quo.', brand, 'doc wide'),
+    ('delete-account/index.html', '/delete-account/', 'Delete your Quo account — Quo', 'How to delete your Quo account and the data held for it.', delete_account, 'doc'),
     ('404.html', '/404', 'Page not found — Quo', 'This page doesn’t exist.', not_found, 'not-found'),
 ]
 for file, path, title, desc, body, main in PAGES:

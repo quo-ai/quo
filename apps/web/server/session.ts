@@ -12,18 +12,28 @@ const MAX_AGE_S = 180 * 24 * 60 * 60;
 
 const sign = (payload: string) => createHmac('sha256', config.sessionSecret).update(payload).digest('base64url');
 
-export function createSessionCookie(userId: string, now = Date.now()): string {
+/** The signed session value: what the cookie holds, and what the phone app sends as a bearer token. */
+export function createSessionToken(userId: string, now = Date.now()): string {
   const payload = Buffer.from(`${userId}.${now + MAX_AGE_S * 1000}`).toString('base64url');
-  const token = `${payload}.${sign(payload)}`;
-  return `${COOKIE}=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${MAX_AGE_S}${config.production ? '; Secure' : ''}`;
+  return `${payload}.${sign(payload)}`;
+}
+
+export function createSessionCookie(userId: string, now = Date.now()): string {
+  return `${COOKIE}=${createSessionToken(userId, now)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${MAX_AGE_S}${config.production ? '; Secure' : ''}`;
 }
 
 export function clearSessionCookie(): string {
   return `${COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${config.production ? '; Secure' : ''}`;
 }
 
+/**
+ * The signed-in user: from the session cookie (the web app and desktop app),
+ * or an `Authorization: Bearer` token (the phone app, which keeps it in secure
+ * storage rather than a cookie jar).
+ */
 export function sessionUserId(request: Request, now = Date.now()): string | null {
-  const token = cookies(request)[COOKIE];
+  const bearer = /^Bearer\s+(\S+)$/i.exec(request.headers.get('authorization') ?? '')?.[1];
+  const token = bearer ?? cookies(request)[COOKIE];
   if (!token) return null;
   const [payload, signature] = token.split('.');
   if (!payload || !signature) return null;

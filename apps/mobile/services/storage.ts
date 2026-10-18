@@ -3,6 +3,7 @@ import { Conversation, AppSettings, Message } from '@/types/chat';
 import { getDefaultModel, DEFAULT_MODEL_ID } from '@/constants/models';
 import { analyticsService } from './analyticsService';
 import { repairAssistantContent } from '@/utils/repairMessage';
+import { chatFingerprint } from '@/services/sync/convert';
 
 // Conversations are stored one-per-key. A single blob for the whole history
 // hits Android's ~2MB CursorWindow row limit once a user accumulates enough
@@ -45,6 +46,41 @@ const unreadableIds = new Set<string>();
 // legacy key is only removed after a later save succeeds.
 let legacyRemovalPending = false;
 
+// Quo Sync listens for chats the user saved or deleted (never ones sync itself
+// wrote, and never the free tier's trimming of old chats). `notified` remembers
+// the last state sync was told about, so changes that don't alter the chat as
+// synced (a rewritten long-chat summary) aren't announced; `syncApplied`
+// marks what sync just wrote, so it isn't announced back to it.
+export interface ConversationChange {
+  id: string;
+  deleted: boolean;
+}
+type ChangeListener = (changes: ConversationChange[]) => void;
+const changeListeners = new Set<ChangeListener>();
+const notified = new Map<string, string>();
+const syncApplied = new Map<string, string>();
+
+export function onConversationChanges(listener: ChangeListener): () => void {
+  changeListeners.add(listener);
+  return () => changeListeners.delete(listener);
+}
+
+function announce(changes: ConversationChange[]): void {
+  if (changes.length === 0) return;
+  for (const listener of changeListeners) {
+    try {
+      listener(changes);
+    } catch (error) {
+      analyticsService.recordError(error, 'storage_change_listener');
+    }
+  }
+}
+
+/** Sync wrote this chat itself: don't announce it as an edit when it's saved. */
+export function markSyncApplied(conversation: Conversation): void {
+  syncApplied.set(conversation.id, chatFingerprint(conversation));
+}
+
 function fingerprint(conversation: Conversation): string {
   return `${conversation.updatedAt}:${conversation.messages.length}:${conversation.contextSummary?.updatedAt ?? 0}`;
 }
@@ -56,6 +92,9 @@ export function __resetStorageCacheForTests(): void {
   loadSucceeded = false;
   unreadableIds.clear();
   legacyRemovalPending = false;
+  notified.clear();
+  syncApplied.clear();
+  changeListeners.clear();
 }
 
 function parseIndex(indexJson: string): string[] {
@@ -114,6 +153,7 @@ export async function loadConversations(): Promise<Conversation[]> {
     // Prime the save cache so the first debounced save skips unchanged rows
     for (const conversation of conversations) {
       savedFingerprints.set(conversation.id, fingerprint(conversation));
+      notified.set(conversation.id, chatFingerprint(conversation));
     }
     savedIndexJson = indexJson;
     loadSucceeded = true;
@@ -191,6 +231,11 @@ function enqueueWrite<T>(write: () => Promise<T>): Promise<T> {
   return run;
 }
 
+/** Resolves once every conversation write started so far has finished. */
+export function whenWritten(): Promise<unknown> {
+  return writeQueue;
+}
+
 /**
  * Persist the given conversations (changed rows only) and the index. Never
  * deletes rows: conversations missing from the list simply drop out of the
@@ -234,6 +279,19 @@ async function saveConversationsNow(conversations: Conversation[]): Promise<bool
     }
     if (indexJson !== null) savedIndexJson = indexJson;
 
+    const changes: ConversationChange[] = [];
+    for (const [key] of toWrite) {
+      if (!key.startsWith(CONVERSATION_KEY_PREFIX)) continue;
+      const conversation = sanitized.find(c => conversationKey(c.id) === key);
+      if (!conversation) continue;
+      const state = chatFingerprint(conversation);
+      const fromSync = syncApplied.get(conversation.id) === state;
+      syncApplied.delete(conversation.id);
+      if (notified.get(conversation.id) !== state && !fromSync) changes.push({ id: conversation.id, deleted: false });
+      notified.set(conversation.id, state);
+    }
+    announce(changes);
+
     if (legacyRemovalPending) {
       legacyRemovalPending = false;
       await AsyncStorage.removeItem(LEGACY_CONVERSATIONS_KEY).catch(() => {
@@ -268,11 +326,16 @@ async function mergeWithStoredIndex(ids: string[]): Promise<string | null> {
  * Explicitly delete conversation rows (user delete, clear-all, free-tier cap)
  * and drop them from the index.
  */
-export function deleteConversationRows(ids: string[]): Promise<boolean> {
-  return enqueueWrite(() => deleteConversationRowsNow(ids));
+export function deleteConversationRows(ids: string[], options: DeleteOptions = {}): Promise<boolean> {
+  return enqueueWrite(() => deleteConversationRowsNow(ids, options));
 }
 
-async function deleteConversationRowsNow(ids: string[]): Promise<boolean> {
+/** `quiet`: the chats still exist elsewhere (the free tier trimming old ones, or Quo Sync applying a deletion), so Quo Sync isn't told they were deleted. */
+export interface DeleteOptions {
+  quiet?: boolean;
+}
+
+async function deleteConversationRowsNow(ids: string[], options: DeleteOptions): Promise<boolean> {
   if (ids.length === 0) return true;
   const removed = new Set(ids);
   try {
@@ -280,7 +343,10 @@ async function deleteConversationRowsNow(ids: string[]): Promise<boolean> {
     for (const id of ids) {
       savedFingerprints.delete(id);
       unreadableIds.delete(id);
+      notified.delete(id);
+      syncApplied.delete(id);
     }
+    if (!options.quiet) announce(ids.map(id => ({ id, deleted: true })));
     if (loadSucceeded && savedIndexJson) {
       const remaining = parseIndex(savedIndexJson).filter(id => !removed.has(id));
       const indexJson = JSON.stringify(remaining);
@@ -307,7 +373,11 @@ async function clearConversationRowsNow(): Promise<boolean> {
     const keys = (await AsyncStorage.getAllKeys()).filter(
       key => key.startsWith(CONVERSATION_KEY_PREFIX) || key === CONVERSATION_INDEX_KEY,
     );
+    const cleared = keys.filter(key => key.startsWith(CONVERSATION_KEY_PREFIX)).map(key => key.slice(CONVERSATION_KEY_PREFIX.length));
     if (keys.length > 0) await AsyncStorage.multiRemove(keys);
+    announce(cleared.map(id => ({ id, deleted: true })));
+    notified.clear();
+    syncApplied.clear();
     savedFingerprints.clear();
     unreadableIds.clear();
     savedIndexJson = '';

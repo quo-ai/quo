@@ -23,13 +23,16 @@ import { identify } from './identity.js';
 export const SYNC_PLANS = ['pro_monthly', 'pro_yearly', 'sync_yearly'];
 const ACTIVE_STATUSES = ['active', 'trialing', 'past_due'];
 
-export const SYNC_KINDS = ['chat'];
+export const SYNC_KINDS = ['chat', 'memory'];
+/** Clients that don't say which kinds they understand get chats only, as the first versions did. */
+const DEFAULT_PULL_KINDS = ['chat'];
 const MAX_BLOB_CHARS = 1_400_000; // about 1 MB of ciphertext, as base64
 const MAX_VERIFIER_CHARS = 400;
 const MAX_BATCH = 25;
 const MAX_PULL = 100;
 const MAX_RECORDS = 20_000;
-const ID_PATTERN = /^[A-Za-z0-9-]{8,64}$/;
+// Chats use their own id; other kinds are prefixed (`memory:<id>`), and phone ids contain underscores.
+const ID_PATTERN = /^[A-Za-z0-9_.:-]{8,100}$/;
 const BASE64 = /^[A-Za-z0-9+/]+={0,2}$/;
 
 function requireSync(request: Request): string {
@@ -37,6 +40,12 @@ function requireSync(request: Request): string {
   const { userId } = identify(request);
   if (!userId) throw new HttpError(401, 'sign_in_required', 'Sign in to use Quo Sync.');
   return userId;
+}
+
+/** A sign-in token outlives the account it was for (sessions are stateless), so check the account is still there. */
+async function requireAccount(db: Db, userId: string): Promise<void> {
+  const [user] = await db.query('select 1 from users where id = $1', [userId]);
+  if (!user) throw new HttpError(401, 'sign_in_required', 'Sign in to use Quo Sync.');
 }
 
 export async function isSyncEntitled(db: Db, userId: string): Promise<boolean> {
@@ -75,6 +84,7 @@ async function usage(db: Db, userId: string): Promise<{ bytes: number; records: 
 export async function handleSyncStatus(request: Request): Promise<Response> {
   const userId = requireSync(request);
   const db = await getDb();
+  await requireAccount(db, userId);
   const [entitled, account, used] = await Promise.all([isSyncEntitled(db, userId), getAccount(db, userId), usage(db, userId)]);
   return json({
     entitled,
@@ -93,6 +103,7 @@ export async function handleSyncStatus(request: Request): Promise<Response> {
 export async function handleSyncSetup(request: Request): Promise<Response> {
   const userId = requireSync(request);
   const db = await getDb();
+  await requireAccount(db, userId);
   await requireEntitled(db, userId);
   const { verifier } = await readJson<{ verifier?: unknown }>(request);
   if (typeof verifier !== 'string' || !verifier || verifier.length > MAX_VERIFIER_CHARS || !BASE64.test(verifier)) {
@@ -107,15 +118,18 @@ export async function handleSyncSetup(request: Request): Promise<Response> {
 export async function handleSyncPull(request: Request): Promise<Response> {
   const userId = requireSync(request);
   const db = await getDb();
+  await requireAccount(db, userId);
   const account = await getAccount(db, userId);
   if (!account) throw new HttpError(404, 'sync_not_set_up', 'Quo Sync isn’t turned on for this account.');
 
   const params = new URL(request.url).searchParams;
   const since = Math.max(0, Number.parseInt(params.get('since') ?? '0', 10) || 0);
   const limit = Math.min(MAX_PULL, Math.max(1, Number.parseInt(params.get('limit') ?? String(MAX_PULL), 10) || MAX_PULL));
+  const asked = (params.get('kinds') ?? '').split(',').filter(kind => SYNC_KINDS.includes(kind));
+  const kinds = asked.length ? asked : DEFAULT_PULL_KINDS;
   const rows = await db.query<{ id: string; kind: string; seq: number; blob: string | null; deleted: boolean }>(
-    'select id, kind, seq, blob, deleted from sync_records where user_id = $1 and seq > $2 order by seq limit $3',
-    [userId, since, limit + 1],
+    'select id, kind, seq, blob, deleted from sync_records where user_id = $1 and seq > $2 and kind = any($3) order by seq limit $4',
+    [userId, since, kinds, limit + 1],
   );
   const more = rows.length > limit;
   const records = rows.slice(0, limit);
@@ -155,6 +169,7 @@ function validateRecords(value: unknown): PushedRecord[] {
 export async function handleSyncPush(request: Request): Promise<Response> {
   const userId = requireSync(request);
   const db = await getDb();
+  await requireAccount(db, userId);
   await requireEntitled(db, userId);
   const { records: incoming } = await readJson<{ records?: unknown }>(request, 4 * 1024 * 1024);
   const records = validateRecords(incoming);
@@ -207,6 +222,7 @@ export async function handleSyncPush(request: Request): Promise<Response> {
 export async function handleSyncReset(request: Request): Promise<Response> {
   const userId = requireSync(request);
   const db = await getDb();
+  await requireAccount(db, userId);
   await db.tx(async t => {
     await t.query('delete from sync_records where user_id = $1', [userId]);
     await t.query('delete from sync_accounts where user_id = $1', [userId]);

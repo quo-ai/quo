@@ -48,6 +48,8 @@ export const config = {
   freeDailyMessages: int(env.FREE_DAILY_MESSAGES, 20),
   freeDailyMessagesPerIp: int(env.FREE_DAILY_MESSAGES_PER_IP, 60),
 
+  /** Lets the host's scheduler call /api/cron/*; unset means those routes don't exist. */
+  cronSecret: env.CRON_SECRET || null,
   /** Quo Sync: most encrypted data one account may keep. */
   syncLimitBytes: int(env.SYNC_LIMIT_MB, 250) * 1_000_000,
 

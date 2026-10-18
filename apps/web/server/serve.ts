@@ -3,7 +3,9 @@ import { stat } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import { extname, join, normalize, resolve } from 'node:path';
 import { sendWebResponse, setIsolationHeaders, toWebRequest } from './node.js';
+import { getDb } from './db.js';
 import { handleApi } from './routes.js';
+import { cleanupSync } from './syncRetention.js';
 
 /**
  * Standalone server for self-hosting: the built app (dist/) plus the API,
@@ -63,3 +65,11 @@ createServer(async (req, res) => {
     res.end();
   }
 }).listen(PORT, () => console.log(`Quo Web on http://localhost:${PORT}`));
+
+// There's no scheduler here, so run the daily Quo Sync clean-up (server/syncRetention.ts) on a timer.
+const runCleanup = () => getDb().then(db => cleanupSync(db)).then(
+  result => (result.deletedAccounts || result.warned || result.prunedMarkers) && console.log('[quo] sync clean-up', result),
+  error => console.error('[quo] sync clean-up failed', error),
+);
+setTimeout(runCleanup, 2 * 60_000).unref();
+setInterval(runCleanup, 24 * 60 * 60_000).unref();

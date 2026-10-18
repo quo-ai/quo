@@ -31,3 +31,24 @@ jest.mock('llama.rn', () => ({
   initLlama: jest.fn(),
   loadLlamaModelInfo: jest.fn(),
 }));
+
+// Quo Sync: secure random numbers from Node, and secure storage held in memory
+// (shared with tests as __secureStore so they can inspect what was kept where).
+jest.mock('expo-crypto', () => ({
+  getRandomBytes: n => new Uint8Array(require('crypto').randomBytes(n)),
+  randomUUID: () => require('crypto').randomUUID(),
+}));
+
+jest.mock('expo-secure-store', () => {
+  const store = new Map();
+  return {
+    __secureStore: store,
+    getItemAsync: jest.fn(async key => (store.has(key) ? store.get(key) : null)),
+    setItemAsync: jest.fn(async (key, value) => {
+      store.set(key, value);
+    }),
+    deleteItemAsync: jest.fn(async key => {
+      store.delete(key);
+    }),
+  };
+});

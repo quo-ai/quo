@@ -6,8 +6,11 @@ import {
   clearConversationRows,
   capConversationsForFreeTier,
   clearAllData,
+  markSyncApplied,
+  onConversationChanges,
   __resetStorageCacheForTests,
 } from '../storage';
+import type { ConversationChange } from '../storage';
 import { Conversation } from '@/types/chat';
 
 const LEGACY_KEY = 'local_ai_conversations';
@@ -200,5 +203,83 @@ describe('capConversationsForFreeTier', () => {
   it('returns the input untouched when under the cap', () => {
     const conversations = [makeConversation('a', 1)];
     expect(capConversationsForFreeTier(conversations, 2)).toBe(conversations);
+  });
+});
+
+describe('telling Quo Sync what changed', () => {
+  const heard: ConversationChange[][] = [];
+  let stop: () => void;
+
+  beforeEach(() => {
+    heard.length = 0;
+    stop = onConversationChanges(changes => heard.push(changes));
+  });
+  afterEach(() => stop());
+
+  const flat = () => heard.flat().map(change => `${change.id}${change.deleted ? ' deleted' : ''}`);
+
+  it('announces a chat the first time it is saved, and again when it changes', async () => {
+    const a = makeConversation('a', 1000);
+    await saveConversations([a]);
+    expect(flat()).toEqual(['a']);
+    await saveConversations([a]); // nothing changed
+    expect(flat()).toEqual(['a']);
+    await saveConversations([{ ...a, updatedAt: 2000, messages: [...a.messages, { id: 'a-m2', role: 'assistant', content: 'hi', timestamp: 2000 }] }]);
+    expect(flat()).toEqual(['a', 'a']);
+  });
+
+  it('does not announce chats it only loaded', async () => {
+    await saveConversations([makeConversation('a', 1000)]);
+    __resetStorageCacheForTests();
+    stop();
+    stop = onConversationChanges(changes => heard.push(changes));
+    heard.length = 0;
+    const loaded = await loadConversations();
+    await saveConversations(loaded);
+    expect(flat()).toEqual([]);
+  });
+
+  it('does not announce a rewritten long-chat summary, which sync never sends', async () => {
+    const a = makeConversation('a', 1000);
+    await saveConversations([a]);
+    heard.length = 0;
+    await saveConversations([{ ...a, contextSummary: { text: 'digest', coversMessageCount: 1, updatedAt: 5 } }]);
+    expect(flat()).toEqual([]);
+  });
+
+  it('does not announce what sync itself wrote', async () => {
+    const fromSync = makeConversation('s', 3000);
+    markSyncApplied(fromSync);
+    await saveConversations([fromSync]);
+    expect(flat()).toEqual([]);
+    // ...but a later edit of it is the user's.
+    await saveConversations([{ ...fromSync, updatedAt: 4000, messages: [...fromSync.messages, { id: 's-m2', role: 'user', content: 'more', timestamp: 4000 }] }]);
+    expect(flat()).toEqual(['s']);
+  });
+
+  it('announces deletions the user makes, and clearing everything', async () => {
+    await saveConversations([makeConversation('a', 1000), makeConversation('b', 2000), makeConversation('c', 3000)]);
+    heard.length = 0;
+    await deleteConversationRows(['a']);
+    expect(flat()).toEqual(['a deleted']);
+    await clearConversationRows();
+    expect(flat().sort()).toEqual(['a deleted', 'b deleted', 'c deleted']);
+  });
+
+  it('does not announce quiet deletions: the free tier trimming, or sync applying a delete', async () => {
+    await saveConversations([makeConversation('a', 1000), makeConversation('b', 2000)]);
+    heard.length = 0;
+    await deleteConversationRows(['a'], { quiet: true });
+    expect(flat()).toEqual([]);
+    expect(await AsyncStorage.getItem(rowKey('a'))).toBeNull();
+  });
+
+  it('announces a chat again if it comes back after being deleted', async () => {
+    const a = makeConversation('a', 1000);
+    await saveConversations([a]);
+    await deleteConversationRows(['a']);
+    heard.length = 0;
+    await saveConversations([a]);
+    expect(flat()).toEqual(['a']);
   });
 });

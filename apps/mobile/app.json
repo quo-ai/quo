@@ -70,7 +70,8 @@
       "expo-localization",
       "expo-audio",
       "expo-splash-screen",
-      "expo-status-bar"
+      "expo-status-bar",
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true

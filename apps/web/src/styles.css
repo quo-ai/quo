@@ -509,3 +509,8 @@ code.path { padding: 1px 6px; border-radius: 6px; background: rgba(14, 14, 40, 0
 .sync-state small { color: var(--text-3); font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sync-state.error > svg { color: var(--error); }
 .sync-state .btn { flex: none; height: 34px; padding: 0 14px; font-size: 13.5px; }
+
+.danger-zone { margin-top: 18px; padding-top: 14px; border-top: 1px solid rgba(14, 14, 40, 0.08); }
+.danger-zone .btn-link { color: var(--text-3); font-weight: 500; font-size: 13px; }
+.danger-zone .btn-link:hover { color: var(--error); }
+.danger-zone p { margin: 0 0 10px; }

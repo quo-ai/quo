@@ -9,9 +9,17 @@ export interface Memory {
   id: string;
   content: string;
   createdAt: number;
+  /** When it was last edited (Quo Sync keeps the later edit); absent until it is. */
+  updatedAt?: number;
 }
 
 export type MemoryChangeListener = (memories: Memory[]) => void;
+
+/** What changed, for Quo Sync: edits the user made, not ones sync applied itself. */
+export interface MemoryChange {
+  id: string;
+  deleted: boolean;
+}
 
 // Minimum length for a partial (substring) match in deleteMemoryByContent.
 // Shorter fragments ("a", "my") would match almost anything.
@@ -45,6 +53,7 @@ class MemoryService {
   private memories: Memory[] = [];
   private initialized = false;
   private listeners: Set<MemoryChangeListener> = new Set();
+  private changeListeners: Set<(changes: MemoryChange[]) => void> = new Set();
 
   private constructor() {}
 
@@ -93,6 +102,35 @@ class MemoryService {
     this.listeners.forEach(l => l(copy));
   }
 
+  /** Quo Sync: told when the user adds, edits or deletes a memory. */
+  onChanges(listener: (changes: MemoryChange[]) => void): () => void {
+    this.changeListeners.add(listener);
+    return () => this.changeListeners.delete(listener);
+  }
+
+  private announce(changes: MemoryChange[]): void {
+    if (changes.length > 0) this.changeListeners.forEach(listener => listener(changes));
+  }
+
+  /** The memories as they are now. Call after `initialize()`. */
+  snapshot(): Memory[] {
+    return [...this.memories];
+  }
+
+  /** Quo Sync: writes a memory that came from another device (not announced back, and not held to the slot limit). */
+  async putFromSync(memory: Memory): Promise<void> {
+    await this.initialize();
+    const index = this.memories.findIndex(m => m.id === memory.id);
+    this.memories = index === -1 ? [...this.memories, memory] : this.memories.map((m, i) => (i === index ? memory : m));
+    await this.save();
+  }
+
+  async removeFromSync(id: string): Promise<void> {
+    await this.initialize();
+    this.memories = this.memories.filter(m => m.id !== id);
+    await this.save();
+  }
+
   async addMemory(content: string, isPremium: boolean = true): Promise<Memory> {
     await this.initialize();
     
@@ -120,6 +158,7 @@ class MemoryService {
 
     this.memories.push(memory);
     await this.save();
+    this.announce([{ id: memory.id, deleted: false }]);
     return memory;
   }
 
@@ -127,6 +166,7 @@ class MemoryService {
     await this.initialize();
     this.memories = this.memories.filter(m => m.id !== id);
     await this.save();
+    this.announce([{ id, deleted: true }]);
   }
 
   /**
@@ -143,9 +183,10 @@ class MemoryService {
     if (index === -1) {
       throw new Error('Memory not found.');
     }
-    const updated: Memory = { ...this.memories[index], content: trimmed };
+    const updated: Memory = { ...this.memories[index], content: trimmed, updatedAt: Date.now() };
     this.memories = this.memories.map((m, i) => (i === index ? updated : m));
     await this.save();
+    this.announce([{ id, deleted: false }]);
     return updated;
   }
 
@@ -156,12 +197,15 @@ class MemoryService {
     // Filter by reference: legacy ids (`mem_<ms>`) can collide.
     this.memories = this.memories.filter(m => m !== target);
     await this.save();
+    this.announce([{ id: target.id, deleted: true }]);
     return true;
   }
 
   async clearAllMemories(): Promise<void> {
+    const ids = this.memories.map(m => m.id);
     this.memories = [];
     await this.save();
+    this.announce(ids.map(id => ({ id, deleted: true })));
   }
 
   async getMemories(): Promise<Memory[]> {

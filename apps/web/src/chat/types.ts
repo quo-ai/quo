@@ -19,6 +19,9 @@ export interface Attachment {
   omitted?: boolean;
 }
 
+/** Fields another app (the phone app) put on a chat or message that this one doesn't use; kept so they survive a round trip. */
+export type Extra = Record<string, unknown>;
+
 export interface Message {
   id: string;
   role: 'user' | 'assistant';
@@ -27,6 +30,8 @@ export interface Message {
   reasoning?: string;
   modelId?: string;
   stats?: MessageStats;
+  timestamp?: number;
+  x?: Extra;
   /** The user stopped the reply before it finished. */
   stopped?: boolean;
   /** Cloud replies: credits charged (0 when free). */
@@ -41,6 +46,7 @@ export interface Conversation {
   createdAt: number;
   updatedAt: number;
   messages: Message[];
+  x?: Extra;
 }
 
 export const newId = (): string => crypto.randomUUID();

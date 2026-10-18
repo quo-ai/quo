@@ -1,9 +1,10 @@
-import { handleMe } from './account.js';
+import { handleAccountDelete, handleMe } from './account.js';
 import { handleAuthStart, handleAuthVerify, handleSignOut } from './auth.js';
 import { handleBillingConfig, handleCheckout, handleDevComplete, handlePaddleWebhook, handlePortal } from './billing.js';
 import { handleChat } from './chat.js';
 import { publicCatalog } from './cloudModels.js';
 import { errorResponse, HttpError, json } from './http.js';
+import { handleCronSyncCleanup } from './syncRetention.js';
 import { handleSyncPull, handleSyncPush, handleSyncReset, handleSyncSetup, handleSyncStatus } from './sync.js';
 
 /**
@@ -17,6 +18,7 @@ type Handler = (request: Request) => Response | Promise<Response>;
 const ROUTES: Record<string, Handler> = {
   'GET models': () => json(publicCatalog(), 200, { 'cache-control': 'public, max-age=300' }),
   'GET me': handleMe,
+  'POST account/delete': handleAccountDelete,
   'POST auth/start': handleAuthStart,
   'POST auth/verify': handleAuthVerify,
   'POST auth/signout': handleSignOut,
@@ -26,6 +28,7 @@ const ROUTES: Record<string, Handler> = {
   'GET billing/dev-complete': handleDevComplete,
   'POST billing/portal': handlePortal,
   'POST paddle/webhook': handlePaddleWebhook,
+  'GET cron/sync-cleanup': handleCronSyncCleanup,
   'GET sync/status': handleSyncStatus,
   'POST sync/setup': handleSyncSetup,
   'GET sync/pull': handleSyncPull,

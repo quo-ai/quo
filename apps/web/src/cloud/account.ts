@@ -62,6 +62,12 @@ export async function verifySignIn(email: string, code: string): Promise<void> {
   set(await api<Account>('auth/verify', { body: { email, code } }));
 }
 
+/** Deletes the account and everything held for it (synced chats, credits, plan records). Refused while a plan is running. */
+export async function deleteAccount(): Promise<void> {
+  await api('account/delete', { body: { confirm: true } });
+  await refreshAccount();
+}
+
 export async function signOut(): Promise<void> {
   await api('auth/signout', { body: {} });
   await refreshAccount();

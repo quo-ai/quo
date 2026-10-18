@@ -1,5 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
+import vectors from './vectors.json';
 import {
   checkVerifier, decryptRecord, deriveKey, encryptRecord, formatRecoveryKey, makeVerifier, newRecoveryKey, parseRecoveryKey, SyncCryptoError,
 } from '../crypto';
@@ -138,5 +139,31 @@ describe('verifier', () => {
     expect(await checkVerifier(await deriveKey(secret), verifier)).toBe(true);
     expect(await checkVerifier(await deriveKey(newRecoveryKey().secret), verifier)).toBe(false);
     expect(await checkVerifier(await deriveKey(secret), 'garbage')).toBe(false);
+  });
+});
+
+describe('shared test vectors (the phone app must read exactly these too)', () => {
+  const secret = Uint8Array.from(Buffer.from(vectors.secretHex, 'hex'));
+
+  it('format and read the recovery key the same way', () => {
+    expect(formatRecoveryKey(secret)).toBe(vectors.recoveryKey);
+    expect(parseRecoveryKey(vectors.recoveryKey)).toEqual(secret);
+  });
+
+  it('decrypt every record, whichever platform wrote it', async () => {
+    const key = await deriveKey(secret);
+    for (const record of vectors.records) {
+      expect(await decryptRecord(key, record.kind, record.id, record.blob), `${record.by} ${record.kind}`).toEqual(record.value);
+    }
+  });
+
+  it('accept both platforms’ verifiers', async () => {
+    const key = await deriveKey(secret);
+    expect(await checkVerifier(key, vectors.verifier)).toBe(true);
+    expect(await checkVerifier(key, vectors.mobileVerifier)).toBe(true);
+  });
+
+  it('include records written by the phone app', () => {
+    expect(vectors.records.filter(record => record.by === 'mobile').map(record => record.kind)).toEqual(['chat', 'memory']);
   });
 });

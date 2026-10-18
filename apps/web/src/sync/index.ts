@@ -1,8 +1,10 @@
 import { useSyncExternalStore } from 'react';
-import { getConversation, listConversations, onConversationChange, putConversationFromSync, removeConversationFromSync } from '../chat/store';
+import { onConversationChange } from '../chat/store';
 import { api, ApiError } from '../cloud/api';
-import { checkVerifier, deriveKey, makeVerifier, parseRecoveryKey } from './crypto';
+import { webChatStorage } from './adapters';
+import { checkVerifier, deriveKey, makeVerifier, parseRecoveryKey, webCodec } from './crypto';
 import { SyncEngine, SyncStateError, type SyncApi } from './engine';
+import { chatKind } from './kinds';
 import { clearSetup, loadSetup, saveSettings, saveSetup, trackingStore, type SyncSettings } from './storage';
 
 /**
@@ -34,7 +36,7 @@ const NEEDS_ACTION = ['cloud_reset', 'key_changed', 'sync_required', 'sign_in_re
 
 const remoteApi: SyncApi = {
   status: () => api('sync/status'),
-  pull: since => api(`sync/pull?since=${since}`),
+  pull: (since, kinds) => api(`sync/pull?since=${since}&kinds=${kinds.join(',')}`),
   push: records => api('sync/push', { body: { records } }),
 };
 
@@ -48,6 +50,8 @@ let blocked = false;
 let lastRunAt = 0;
 let generating = 0;
 let started = false;
+// Changes still being written down as "to upload"; a sync waits for them so none is missed.
+let pendingMarks: Promise<unknown> = Promise.resolve();
 const listeners = new Set<() => void>();
 const remoteListeners = new Set<() => void>();
 
@@ -95,12 +99,7 @@ function explain(error: unknown): { code: string; message: string } {
 }
 
 function makeEngine(key: CryptoKey): SyncEngine {
-  return new SyncEngine({
-    api: remoteApi,
-    key,
-    tracking: trackingStore,
-    chats: { get: getConversation, put: putConversationFromSync, remove: removeConversationFromSync, all: listConversations },
-  });
+  return new SyncEngine({ api: remoteApi, codec: webCodec(key), stores: [chatKind(webChatStorage)], tracking: trackingStore, newId: () => crypto.randomUUID() });
 }
 
 function schedule(delay: number) {
@@ -122,6 +121,7 @@ export async function syncNow({ manual = false } = {}): Promise<void> {
   setStatus({ phase: 'syncing', error: null });
   running = (async () => {
     try {
+      await pendingMarks;
       const report = await active.run();
       lastRunAt = Date.now();
       if (settings) settings = { ...settings, lastSyncAt: lastRunAt };
@@ -152,7 +152,8 @@ export async function initSync(): Promise<void> {
 
   onConversationChange((id, deleted) => {
     if (!engine) return;
-    void engine.markChanged(id, deleted).then(() => schedule(AFTER_CHANGE_MS));
+    const active = engine;
+    pendingMarks = pendingMarks.then(() => active.markChanged('chat', id, deleted)).then(() => schedule(AFTER_CHANGE_MS), () => {});
   });
   const wake = () => {
     if (engine && !document.hidden && Date.now() - lastRunAt > MIN_GAP_MS) void syncNow();

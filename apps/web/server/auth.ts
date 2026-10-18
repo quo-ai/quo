@@ -7,7 +7,7 @@ import { takeFreeMessage } from './freeTier.js';
 import { HttpError, json, readJson } from './http.js';
 import { identify } from './identity.js';
 import { accountSummary } from './account.js';
-import { clearSessionCookie, createSessionCookie } from './session.js';
+import { clearSessionCookie, createSessionCookie, createSessionToken } from './session.js';
 
 /**
  * Passwordless sign-in with a 6-digit code sent by email. Codes expire after
@@ -49,7 +49,7 @@ export async function handleAuthStart(request: Request): Promise<Response> {
 
 export async function handleAuthVerify(request: Request): Promise<Response> {
   if (!features.accounts) throw new HttpError(503, 'setup_required', SETUP_MESSAGES.accounts);
-  const body = await readJson<{ email?: string; code?: string }>(request);
+  const body = await readJson<{ email?: string; code?: string; client?: string }>(request);
   const email = normalizeEmail(body.email);
   const code = String(body.code ?? '').replace(/\D/g, '');
   const db = await getDb();
@@ -72,6 +72,8 @@ export async function handleAuthVerify(request: Request): Promise<Response> {
   await grantTrial(db, user.id);
 
   const summary = await accountSummary(db, { ...identify(request), userId: user.id });
+  // The phone app has no cookie jar to rely on: it asks for the token itself and keeps it in secure storage.
+  if (body.client === 'app') return json({ ...summary, token: createSessionToken(user.id) });
   return json(summary, 200, { 'set-cookie': createSessionCookie(user.id) });
 }
 

@@ -59,6 +59,8 @@ export interface Message {
   document?: DocumentAttachment;
   toolActions?: ToolAction[]; // Tool calls executed during this message
   stats?: GenerationStats;    // Generation statistics for assistant messages
+  /** Quo Sync: fields other apps (web, desktop) put on this message, kept so they survive a round trip. */
+  x?: Record<string, unknown>;
 }
 
 // Rolling digest of the oldest messages in a conversation. Once created, the
@@ -77,6 +79,8 @@ export interface Conversation {
   createdAt: number;
   updatedAt: number;
   contextSummary?: ContextSummary;
+  /** Quo Sync: fields other apps put on this chat, kept so they survive a round trip. */
+  x?: Record<string, unknown>;
 }
 
 export interface AppSettings {

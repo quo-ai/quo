@@ -40,6 +40,7 @@ The app is static (`dist/`) and must be served with cross-origin isolation heade
 | `RESEND_API_KEY`, `EMAIL_FROM` | for sign-in | Emails sign-in codes; needs a verified sending domain. Without it, sign-in, paid models and Quo Sync answer `setup_required` |
 | `PADDLE_*` (incl. `PADDLE_PRICE_SYNC_YEARLY`) | for purchases | Paddle merchant of record; without it, purchases answer `setup_required` |
 | `SYNC_LIMIT_MB` | optional | Most encrypted data one account may keep (default 250) |
+| `CRON_SECRET` | for Quo Sync clean-up | Lets Vercel Cron call `/api/cron/sync-cleanup` (daily, see `vercel.json`); without it that route doesn't exist and nothing is ever cleaned up. The standalone server runs the clean-up on a timer instead |
 | `DEFAULT_CLOUD_MODEL`, `FREE_DAILY_MESSAGES`, `FREE_DAILY_MESSAGES_PER_IP` | optional | Free tier (defaults: GPT-6 Luna, 20 per device, 60 per IP, per day) |
 
 The server reports what's switched on in `/api/me` (`features`). Services that aren't set up yet **stay visible** in the app and answer `503 setup_required` with a plain message when used (sign-in, paid models, purchases, Quo Sync), so the app shows "coming soon" instead of hiding them; set the variables and they just work. The database schema is created automatically on first use.
@@ -89,7 +90,7 @@ Quo Web is the fastest way in; the install prompt and desktop app keep people co
 
 ## Quo Sync
 
-End-to-end encrypted sync of chats between a user's devices (Quo Web and the desktop app). The server stores only ciphertext; the key is made from a recovery key that the user holds. The design, crypto format, protocol and limits are in [SYNC.md](SYNC.md). It's part of Quo Pro, or a Sync-only plan (`sync_yearly`), and needs sign-in, so until those are set up it answers `setup_required`.
+End-to-end encrypted sync of chats and memories between a user's devices (Quo Web, the desktop app and the Android app). The server stores only ciphertext; the key is made from a recovery key that the user holds. The design, crypto format, protocol, limits and retention are in [SYNC.md](SYNC.md). It's part of Quo Pro, or a Sync-only plan (`sync_yearly`), and needs sign-in, so until those are set up it answers `setup_required`. The Android app signs in with a bearer token (`auth/verify` with `client: "app"`) and shares the sync engine with this app: see "One engine, two apps" in SYNC.md. `npm run test:interop` runs the phone's sync code against this server's (it needs `apps/mobile`'s dependencies installed). Users can delete their account with `POST /api/account/delete`.
 
 ## Privacy
 

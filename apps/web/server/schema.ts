@@ -86,6 +86,8 @@ const STATEMENTS = [
     primary key (user_id, id)
   )`,
   `create index if not exists sync_records_seq on sync_records(user_id, seq)`,
+  // When the "your synced chats will be deleted" email was sent (syncRetention.ts).
+  `alter table sync_accounts add column if not exists warned_at timestamptz`,
   `create table if not exists processed_events (
     id text primary key,
     created_at timestamptz not null default now()

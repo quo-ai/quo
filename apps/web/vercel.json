@@ -60,5 +60,11 @@
         }
       ]
     }
+  ],
+  "crons": [
+    {
+      "path": "/api/cron/sync-cleanup",
+      "schedule": "17 3 * * *"
+    }
   ]
 }

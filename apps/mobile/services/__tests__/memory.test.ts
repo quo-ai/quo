@@ -72,7 +72,7 @@ describe('memoryService', () => {
     const updated = await memoryService.updateMemory(first.id, '  edited fact  ');
     unsubscribe();
 
-    expect(updated).toEqual({ ...first, content: 'edited fact' });
+    expect(updated).toEqual({ ...first, content: 'edited fact', updatedAt: expect.any(Number) });
     const all = await memoryService.getMemories();
     expect(all).toHaveLength(max);
     expect(all[0]).toEqual(updated);
@@ -85,5 +85,57 @@ describe('memoryService', () => {
     await expect(memoryService.updateMemory(m.id, '   ')).rejects.toThrow();
     await expect(memoryService.updateMemory('nope', 'x')).rejects.toThrow();
     expect((await memoryService.getMemories())[0].content).toBe('keep me');
+  });
+});
+
+describe('memoryService and Quo Sync', () => {
+  beforeEach(async () => {
+    await memoryService.clearAllMemories();
+  });
+
+  it('announces what the user adds, edits and deletes, and only that', async () => {
+    const seen: { id: string; deleted: boolean }[][] = [];
+    const stop = memoryService.onChanges(changes => seen.push(changes));
+    const added = await memoryService.addMemory('Likes tea');
+    await memoryService.updateMemory(added.id, 'Likes green tea');
+    await memoryService.deleteMemory(added.id);
+    const second = await memoryService.addMemory('Lives in York');
+    await memoryService.deleteMemoryByContent('Lives in York');
+    await memoryService.addMemory('One');
+    await memoryService.addMemory('Two');
+    seen.length = 0;
+    await memoryService.clearAllMemories();
+    stop();
+    expect(second.id).toBeTruthy();
+    expect(seen).toHaveLength(1);
+    expect(seen[0].every(change => change.deleted)).toBe(true);
+    expect(seen[0]).toHaveLength(2);
+  });
+
+  it('records when a memory was edited, and not before', async () => {
+    const memory = await memoryService.addMemory('Fact');
+    expect(memory.updatedAt).toBeUndefined();
+    const edited = await memoryService.updateMemory(memory.id, 'Better fact');
+    expect(edited.updatedAt).toBeGreaterThanOrEqual(memory.createdAt);
+  });
+
+  it('applies what sync brings quietly, over the slot limit, and shows it in the app', async () => {
+    const stop = memoryService.onChanges(() => {
+      throw new Error('sync’s own writes must not be announced back to it');
+    });
+    const shown = jest.fn();
+    const unsubscribe = memoryService.subscribe(shown);
+    const max = memoryService.getMaxMemories(false);
+    for (let i = 0; i < max + 3; i++) await memoryService.putFromSync({ id: `mem_sync_${i}`, content: `Fact ${i}`, createdAt: 1, updatedAt: 2 });
+    expect(memoryService.snapshot()).toHaveLength(max + 3);
+    await memoryService.putFromSync({ id: 'mem_sync_0', content: 'Changed', createdAt: 1, updatedAt: 3 });
+    expect(memoryService.snapshot().find(m => m.id === 'mem_sync_0')?.content).toBe('Changed');
+    expect(memoryService.snapshot()).toHaveLength(max + 3);
+    await memoryService.removeFromSync('mem_sync_1');
+    expect(memoryService.snapshot().some(m => m.id === 'mem_sync_1')).toBe(false);
+    expect(shown).toHaveBeenCalled();
+    expect(JSON.parse((await AsyncStorage.getItem('local_ai_memories'))!)).toHaveLength(max + 2);
+    stop();
+    unsubscribe();
   });
 });

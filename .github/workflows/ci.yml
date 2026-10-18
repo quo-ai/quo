@@ -30,6 +30,8 @@ jobs:
         working-directory: apps/web
     steps:
       - uses: actions/checkout@v4
+      # Quo Sync's engine is one set of files in two apps; they must not drift apart.
+      - run: node ../../scripts/check-shared-sync.js
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -39,6 +41,27 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+
+  # Quo Sync between the web app and the phone app, against the real server code:
+  # the phone's own sync code (apps/mobile/services/sync) talking to the web's.
+  interop:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            apps/web/package-lock.json
+            apps/mobile/package-lock.json
+      # Only the phone app's plain JavaScript dependencies are needed, not its native build.
+      - run: npm ci --ignore-scripts
+        working-directory: apps/mobile
+      - run: npm ci
+        working-directory: apps/web
+      - run: npm run test:interop
+        working-directory: apps/web
 
   # The desktop app's engine code, and proof that the pinned llama.cpp build
   # downloads, verifies and starts on every platform we ship it for.

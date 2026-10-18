@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p server/tsconfig.json --noEmit",
     "test": "vitest run",
-    "start": "tsx server/serve.ts"
+    "start": "tsx server/serve.ts",
+    "test:interop": "vitest run --config vitest.interop.config.ts"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.8",

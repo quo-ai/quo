@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { ArrowLeft, Check, Coins, Crown, LogOut, Mail, Sparkles, X } from 'lucide-react';
 import {
-  ApiError, checkout, openBillingPortal, signOut, startSignIn, verifySignIn, type Account, type ProductId,
+  ApiError, checkout, deleteAccount, openBillingPortal, signOut, startSignIn, verifySignIn, type Account, type ProductId,
 } from '../cloud/account';
+import { disableSync } from '../sync';
 import { toast } from './Toasts';
 
 interface AccountSheetProps {
@@ -126,6 +127,7 @@ function SignIn() {
 }
 
 function SignedIn({ account, onClose }: { account: Account; onClose: () => void }) {
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const pro = account.plan === 'pro';
 
@@ -135,6 +137,19 @@ function SignedIn({ account, onClose }: { account: Account; onClose: () => void 
       await checkout(product);
     } catch (err) {
       toast(err instanceof ApiError ? err.message : 'Checkout isn’t available right now.');
+      setBusy(null);
+    }
+  }
+
+  async function removeAccount() {
+    setBusy('delete');
+    try {
+      await deleteAccount();
+      await disableSync();
+      toast('Your account was deleted.');
+      onClose();
+    } catch (err) {
+      toast(err instanceof ApiError ? err.message : 'Couldn’t delete your account. Try again.');
       setBusy(null);
     }
   }
@@ -166,6 +181,14 @@ function SignedIn({ account, onClose }: { account: Account; onClose: () => void 
 
       {!account.billing.live && <p className="sandbox-note">Sandbox: purchases are simulated, nothing is charged.</p>}
 
+      {account.sync && !pro && (
+        <div className="plan-card current">
+          <div className="plan-head"><Check size={18} /> <strong>Quo Sync</strong></div>
+          <p>Your chats stay in step on all your devices, end-to-end encrypted{account.subscription?.renewsAt ? ` · renews ${new Date(account.subscription.renewsAt).toLocaleDateString()}` : ''}.</p>
+          <button className="btn btn-soft press" disabled={busy === 'portal'} onClick={() => void manage()}>Manage subscription</button>
+        </div>
+      )}
+
       {pro ? (
         <div className="plan-card current">
           <div className="plan-head"><Crown size={18} /> <strong>Quo Pro</strong></div>
@@ -178,6 +201,7 @@ function SignedIn({ account, onClose }: { account: Account; onClose: () => void 
           <ul className="perks">
             <li><Check size={15} /> 1,000 credits every month</li>
             <li><Check size={15} /> Claude, GPT, Gemini and top open models</li>
+            <li><Check size={15} /> Quo Sync included, to keep your chats on all your devices</li>
             <li><Check size={15} /> Offline models stay free and unlimited</li>
           </ul>
           <div className="plan-actions">
@@ -203,6 +227,20 @@ function SignedIn({ account, onClose }: { account: Account; onClose: () => void 
       <div className="account-foot">
         <span className="note">{account.user?.email}</span>
         <button className="btn btn-ghost press" onClick={() => void signOut().then(onClose)}><LogOut size={15} /> Sign out</button>
+      </div>
+
+      <div className="danger-zone">
+        {confirmDelete
+          ? (
+            <>
+              <p className="note">This deletes your account for good: your synced chats and memories in the cloud, your credits and your plan records. Chats on your devices stay. If you have a plan, cancel it first.</p>
+              <div className="plan-actions">
+                <button className="btn btn-primary press" style={{ background: 'var(--error)' }} disabled={busy === 'delete'} onClick={() => void removeAccount()}>{busy === 'delete' ? 'Deleting…' : 'Yes, delete my account'}</button>
+                <button className="btn btn-ghost press" disabled={busy === 'delete'} onClick={() => setConfirmDelete(false)}>Cancel</button>
+              </div>
+            </>
+          )
+          : <button className="btn-link" onClick={() => setConfirmDelete(true)}>Delete my account…</button>}
       </div>
     </div>
   );

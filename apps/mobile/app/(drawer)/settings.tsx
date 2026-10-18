@@ -10,6 +10,7 @@ import { ModelsSection } from '@/components/settings/ModelsSection';
 import { VoiceInputSection } from '@/components/settings/VoiceInputSection';
 import { IntelligenceSection } from '@/components/settings/IntelligenceSection';
 import { MemorySection } from '@/components/settings/MemorySection';
+import { SyncSection } from '@/components/settings/SyncSection';
 import { AdvancedSection } from '@/components/settings/AdvancedSection';
 import { DataSection } from '@/components/settings/DataSection';
 import { AboutSection } from '@/components/settings/AboutSection';
@@ -66,6 +67,8 @@ export default function SettingsScreen() {
         />
 
         <MemorySection isPremium={isPremium} />
+
+        <SyncSection />
 
         <AdvancedSection settings={settings} updateSettings={updateSettings} />
 

@@ -1,63 +1,46 @@
-import type { Attachment, Conversation, Message } from '../chat/types';
+import type { WireChat, WireMemory, WireMessage } from './wire';
 
 /**
- * Chats are append-mostly, so two devices that both changed a chat usually
- * agree on a shared start and differ only at the end. When they really
- * diverged, nothing is thrown away: the newer version wins the chat and the
- * other is kept as a copy.
+ * How two versions of the same thing become one. Chats mostly grow at the end,
+ * so when both sides changed one, they usually agree on a shared start. When
+ * they really diverged, nothing is thrown away: the newer version keeps the chat
+ * and the other is kept as a copy.
  */
 
-/**
- * The version of a chat that is uploaded. Attached images and documents can be
- * large, so their contents stay on the device they were added on; other
- * devices see the file name and a note.
- */
-export function prepareForSync(conversation: Conversation): Conversation {
-  return {
-    ...conversation,
-    messages: conversation.messages.map(message => {
-      if (!message.attachments?.length) return message;
-      const attachments: Attachment[] = message.attachments.map(({ id, kind, name, width, height }) => ({ id, kind, name, width, height, omitted: true }));
-      return { ...message, attachments };
-    }),
-  };
-}
-
-const isPrefix = (shorter: Message[], longer: Message[]): boolean =>
-  shorter.length <= longer.length && shorter.every((message, i) => message.id === longer[i].id);
-
-/** `incoming` with this device's own attachment contents put back (the upload leaves them out). */
-export function withLocalAttachments(incoming: Conversation, local: Conversation): Conversation {
-  const mine = new Map(local.messages.filter(m => m.attachments?.some(a => !a.omitted)).map(m => [m.id, m.attachments!]));
-  if (mine.size === 0) return incoming;
-  return { ...incoming, messages: incoming.messages.map(m => (mine.has(m.id) && m.attachments?.some(a => a.omitted) ? { ...m, attachments: mine.get(m.id) } : m)) };
-}
-
-export interface Reconciled {
-  conversation: Conversation;
-  /** The version that lost a real divergence, kept as its own chat. */
-  copy?: Conversation;
-  /** The result differs from what the server has. */
+export interface Reconciled<T> {
+  item: T;
+  /** The version that lost a real divergence, kept as an item of its own. */
+  copy?: T;
+  /** The result differs from what the server has, so it needs uploading. */
   pushNeeded: boolean;
 }
 
-export function reconcile(local: Conversation, remote: Conversation, newId: () => string): Reconciled {
+const isPrefix = (shorter: WireMessage[], longer: WireMessage[]): boolean =>
+  shorter.length <= longer.length && shorter.every((message, i) => message.id === longer[i].id);
+
+export function reconcileChat(local: WireChat, remote: WireChat, newId: () => string): Reconciled<WireChat> {
   const sameStart = isPrefix(local.messages, remote.messages);
   const remoteIsStart = isPrefix(remote.messages, local.messages);
 
   if (sameStart && remoteIsStart) {
     // Same messages; the later edit (say, a stopped reply that was finished) wins.
     const localWins = local.updatedAt > remote.updatedAt;
-    return { conversation: localWins ? local : withLocalAttachments(remote, local), pushNeeded: localWins };
+    return { item: localWins ? local : remote, pushNeeded: localWins };
   }
-  if (sameStart) return { conversation: withLocalAttachments(remote, local), pushNeeded: false };
-  if (remoteIsStart) return { conversation: local, pushNeeded: true };
+  if (sameStart) return { item: remote, pushNeeded: false };
+  if (remoteIsStart) return { item: local, pushNeeded: true };
 
   const localWins = local.updatedAt > remote.updatedAt;
-  const loser = localWins ? withLocalAttachments(remote, local) : local;
+  const loser = localWins ? remote : local;
   return {
-    conversation: localWins ? local : withLocalAttachments(remote, local),
+    item: localWins ? local : remote,
     copy: { ...loser, id: newId(), title: `${loser.title} (other device)` },
     pushNeeded: localWins,
   };
+}
+
+/** A memory edited on two devices: the later edit wins (a tie goes to the server's version). */
+export function reconcileMemory(local: WireMemory, remote: WireMemory): Reconciled<WireMemory> {
+  const localWins = local.updatedAt > remote.updatedAt;
+  return { item: localWins ? local : remote, pushNeeded: localWins };
 }

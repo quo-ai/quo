@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode, useRef, Dispatch, SetStateAction } from 'react';
 import { InteractionManager } from 'react-native';
 import { Conversation, AppSettings, Message, ImageAttachment, DocumentAttachment, GenerationStats } from '@/types/chat';
 import { loadConversations, loadSettings, saveSettings, defaultSettings, capConversationsForFreeTier, deleteConversationRows, clearConversationRows } from '@/services/storage';
@@ -22,6 +22,9 @@ import { runToolLoop } from '@/contexts/chat/toolLoop';
 import { buildUserMessages } from '@/contexts/chat/messageBuilder';
 import { useStreamingContent, StreamingState } from '@/contexts/chat/useStreamingContent';
 import { useConversationPersistence } from '@/contexts/chat/useConversationPersistence';
+import { createChatBridge } from '@/contexts/chat/syncBridge';
+import { registerChatBridge } from '@/services/sync/bridge';
+import { initSync } from '@/services/sync';
 import { useAppLifecycle } from '@/contexts/chat/useAppLifecycle';
 import { useModelLifecycle } from '@/contexts/chat/useModelLifecycle';
 import { useContextCompression } from '@/contexts/chat/useContextCompression';
@@ -70,7 +73,7 @@ const StreamingContext = createContext<StreamingState>({ content: '', conversati
 export function ChatProvider({ children }: { children: ReactNode }) {
   const { isPremium, isLoading: isPremiumLoading, openUpgradeModal, markActivated } = usePremium();
 
-  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [conversations, setConversationsState] = useState<Conversation[]>([]);
   const [currentConversation, setCurrentConversation] = useState<Conversation | null>(null);
   const [settings, setSettings] = useState<AppSettings>(defaultSettings);
   const [isLoading, setIsLoading] = useState(true);
@@ -94,9 +97,18 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const conversationsRef = useRef(conversations);
   const currentConversationRef = useRef(currentConversation);
   useEffect(() => {
-    conversationsRef.current = conversations;
     currentConversationRef.current = currentConversation;
-  }, [conversations, currentConversation]);
+  }, [currentConversation]);
+
+  // The chats are kept in the ref and React state mirrors it, so the ref is
+  // always the latest word (an update applies to it at once, not at the next
+  // render). Quo Sync reads and writes chats through it, and has to see an edit
+  // the moment it's made. Callers use this exactly like a state setter.
+  const setConversations = useCallback<Dispatch<SetStateAction<Conversation[]>>>(action => {
+    const next = typeof action === 'function' ? action(conversationsRef.current) : action;
+    conversationsRef.current = next;
+    setConversationsState(next);
+  }, []);
 
   const {
     modelLoaded,
@@ -148,7 +160,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       const cappedConversations = isPremium ? loadedConversations : capConversationsForFreeTier(loadedConversations, FREE_TIER_LIMITS.MAX_CHAT_HISTORY);
       if (cappedConversations.length !== loadedConversations.length) {
         const kept = new Set(cappedConversations.map(c => c.id));
-        void deleteConversationRows(loadedConversations.filter(c => !kept.has(c.id)).map(c => c.id));
+        void deleteConversationRows(loadedConversations.filter(c => !kept.has(c.id)).map(c => c.id), { quiet: true });
       }
       setConversations(cappedConversations);
       setSettings(effectiveSettings);
@@ -196,14 +208,32 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isPremiumLoading]);
 
-  useConversationPersistence({
+  const { flush: flushConversations } = useConversationPersistence({
     conversations,
+    getLatest: () => conversationsRef.current,
     setConversations,
     currentConversation,
     setCurrentConversation,
     isLoading,
     isPremium,
   });
+
+  // Quo Sync reads and writes the chats through this, and starts once they've loaded.
+  const isLoadingRef = useRef(true);
+  useEffect(() => {
+    isLoadingRef.current = isLoading;
+  }, [isLoading]);
+  useEffect(() => registerChatBridge(createChatBridge({
+    conversations: conversationsRef,
+    setConversations,
+    setCurrentConversation,
+    flush: flushConversations,
+    busy: () => isGeneratingRef.current || isLoadingRef.current,
+    onRemoved: id => void recallService.deleteIndex(id),
+  })), [setConversations, flushConversations]);
+  useEffect(() => {
+    if (!isLoading) void initSync();
+  }, [isLoading]);
 
   useContextCompression({
     currentConversation,
