@@ -126,6 +126,16 @@ export interface CodeSessionInfo {
   platform: string;
   /** The tools this build implements. */
   tools: string[];
+  /** The ones that only read, for plan mode. */
+  planTools: string[];
+  /** The project's own notes for coding agents (AGENTS.md or CLAUDE.md), if it has any. */
+  instructions: { file: string; text: string } | null;
+}
+
+export interface UndoResult {
+  restored: string[];
+  /** Left alone because they changed again after the agent's change. */
+  skipped: string[];
 }
 
 export interface DesktopAgent {
@@ -134,6 +144,8 @@ export interface DesktopAgent {
   forget: (id: string) => Promise<NativeResult<unknown>>;
   start: (projectId: string) => Promise<NativeResult<CodeSessionInfo>>;
   tool: (sessionId: string, name: string, args: Record<string, unknown>) => Promise<NativeResult<{ ok: boolean; text: string; display?: Record<string, unknown> }>>;
+  mode: (sessionId: string, mode: 'work' | 'plan') => Promise<NativeResult<unknown>>;
+  undo: (sessionId: string, count: number) => Promise<NativeResult<UndoResult>>;
   abort: (sessionId: string) => Promise<NativeResult<unknown>>;
   end: (sessionId: string) => Promise<NativeResult<unknown>>;
   clearRepos: () => Promise<NativeResult<unknown>>;

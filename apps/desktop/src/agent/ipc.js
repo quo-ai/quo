@@ -6,7 +6,8 @@ const path = require('node:path');
 const { app, BrowserWindow, dialog, ipcMain } = require('electron');
 const { AgentError, checkProjectRoot } = require('./safety');
 const { RepoCache } = require('./repos');
-const { AgentSession, TOOL_NAMES } = require('./session');
+const { readInstructions } = require('./instructions');
+const { AgentSession, PLAN_TOOLS, TOOL_NAMES } = require('./session');
 
 /**
  * Connects the web app's Code mode to the agent. Everything is reachable only from
@@ -147,8 +148,12 @@ function setupAgent() {
     const session = new AgentSession({ root: real, name: project.name, repos, approve: request => ask(window, request) });
     sessions.set(id, { session, owner: event.sender.id, project: project.id, controller: null });
     event.sender.once('destroyed', () => endSession(id));
-    return { sessionId: id, name: project.name, platform: process.platform, tools: TOOL_NAMES };
+    return { sessionId: id, name: project.name, platform: process.platform, tools: TOOL_NAMES, planTools: PLAN_TOOLS, instructions: await readInstructions(real) };
   });
+
+  handle('agent:mode', ({ sessionId, mode }, event) => owned(sessionId, event).session.setMode(mode));
+
+  handle('agent:undo', async ({ sessionId, count }, event) => owned(sessionId, event).session.undo(count));
 
   handle('agent:tool', async ({ sessionId, name, args }, event) => {
     const entry = owned(sessionId, event);

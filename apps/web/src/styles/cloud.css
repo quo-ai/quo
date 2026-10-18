@@ -1,0 +1,24 @@
+/* Locked cloud models and the paywall */
+.popover-section .section-note { margin-left: auto; font-weight: 500; color: var(--text-3); opacity: 0.85; }
+.menu-item .title { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.menu-item .lock { flex: none; color: var(--text-3); }
+.menu-item.locked:hover .lock { color: var(--indigo); }
+.badge.new { color: #8a4b00; background: rgba(255, 170, 40, 0.18); }
+.paywall-model { display: flex; align-items: center; gap: 14px; margin: 6px 0 12px; }
+.paywall-model strong { display: block; font-size: 17px; letter-spacing: -0.01em; }
+.paywall-model span:not(.paywall-lock) { display: block; font-size: 13px; color: var(--text-3); }
+.paywall-lock { flex: none; display: grid; place-items: center; width: 46px; height: 46px; border-radius: 14px; color: var(--indigo); background: rgba(59, 46, 255, 0.09); }
+.paywall-about { margin: 0 0 6px; font-size: 14.5px; color: var(--text-2); }
+
+/* Quo Pro and the cloud models tab */
+.sheet.narrow { width: min(460px, 100%); }
+.sheet-head h2 svg { vertical-align: -3px; margin-right: 4px; color: var(--indigo); }
+.pro-price { margin: 4px 0 0; font-size: 15px; color: var(--text-2); }
+.pro-price strong { color: var(--ink); }
+.sheet-body > .plan-actions { margin-top: 18px; }
+.segmented { display: flex; gap: 4px; padding: 4px; margin: 4px 0 14px; border-radius: 14px; background: rgba(14, 14, 40, 0.06); }
+.segmented button { flex: 1; border: 0; padding: 8px 12px; border-radius: 10px; font-weight: 600; font-size: 13.5px; color: var(--text-2); background: transparent; }
+.segmented button[aria-selected="true"] { color: var(--ink); background: #fff; box-shadow: 0 1px 3px rgba(14, 14, 60, 0.12); }
+.cloud-list { display: grid; gap: 2px; }
+.cloud-list .menu-item { padding: 10px 8px; }
+.cloud-note { margin: 12px 4px 0; }

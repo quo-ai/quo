@@ -4,7 +4,7 @@ import { createRoot } from 'react-dom/client';
 import './install';
 import { App } from './App';
 import { isDesktopApp } from './platform';
-import './styles.css';
+import './styles/index.css';
 
 // The page title is the desktop app's window title.
 if (isDesktopApp()) document.title = 'Quo';

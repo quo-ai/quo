@@ -46,14 +46,14 @@ Voice input is the exception, and for a measured reason: Whisper through the nat
 
 ### Contract with the web app
 
-- The preload script exposes `window.quoDesktop = { platform, version, agent }`: `process.platform` (`darwin`, `win32`, `linux`), the app version, and Code mode's bridge (`projects`, `pick`, `forget`, `start`, `tool`, `abort`, `end`, `clearRepos`; see `apps/web/src/native.ts`). `apps/web/src/platform.ts` relies on exactly this shape.
+- The preload script exposes `window.quoDesktop = { platform, version, agent }`: `process.platform` (`darwin`, `win32`, `linux`), the app version, and Code mode's bridge (`projects`, `pick`, `forget`, `start`, `tool`, `mode`, `undo`, `abort`, `end`, `clearRepos`; see `apps/web/src/native.ts`). `apps/web/src/platform.ts` relies on exactly this shape.
 - When the build includes the engine it adds `engine` (`info`, `status`, `start`, `stop`, `onEvent`) and `models` (`state`, `download`, `cancel`, `remove`, `reveal`, `onEvent`, `custom.{list,scan,add,pick,remove}`). Every call resolves to `{ ok }` or `{ error: { code, message } }`. `apps/web/src/native.ts` has the types; the web app uses the in-browser engine when these are absent.
 - The user agent ends with ` QuoDesktop/<version>`, and API requests send the same user agent.
 - Relative `/api/...` URLs keep working. Service workers aren't available (`navigator.serviceWorker` calls fail on `app://`).
 
 ## Code mode
 
-A coding agent in the chat: with a capable cloud model (the frontier ones, and a few cheap ones; the server's catalog says which, `agent: true` in `apps/web/server/cloudModels.ts`), the model can explore a project folder, make changes and run commands, and read public open-source repositories for reference. It only exists in this app, because it needs real files. Code is in `src/agent/`; the model-facing side (tool list, system prompt, tool-call streaming) is `apps/web/server/agentTools.ts` and the `agent` mode of `/api/chat`; the loop is `apps/web/src/agent/loop.ts`.
+A coding agent in the chat: with a capable cloud model (the frontier ones, and a few cheap ones; the server's catalog says which, `agent: true` in `apps/web/server/cloudModels.ts`), the model can explore a project folder, make changes and run commands, and read public open-source repositories for reference. It only exists in this app, because it needs real files. Code is in `src/agent/` (one module per concern: `safety.js`, `files/` with a module per file tool, `commands.js`, `history.js`, `instructions.js`, `exec.js`, `repos.js`, `session.js`, `ipc.js`); the model-facing side (tool list, system prompt, tool-call streaming) is `apps/web/server/agentTools.ts` and the `agent` mode of `/api/chat`; the loop is `apps/web/src/agent/loop.ts`.
 
 **What the model can do**
 
@@ -61,16 +61,19 @@ A coding agent in the chat: with a capable cloud model (the frontier ones, and a
 |---|---|---|
 | `list_directory`, `read_file`, `find_files`, `search_text` | look around the project | no |
 | `edit_file` (exact text replacement), `write_file` | change files | **every time**, or once for "this session" |
-| `run_command` | a shell command in the project folder | **every time**, or once per exact command for "this session" |
+| `run_command` | a shell command in the project folder | **every time**, or once per exact command for "this session". A short list of read-only commands (`git status`, `git diff`, `git log`, `git show`, `node --version`…) runs without asking (`commands.js`) |
 | `open_repo` | download a public GitHub repository to read (read-only) | no |
 
-**How it is kept safe** (each of these has tests in `test/agent.test.js`):
+**Also:** *plan mode* (the Plan chip) offers the model only the reading tools and the desktop app refuses everything else; each reply that changed files has an *Undo* button (`history.js`: it only puts a file back if it is still exactly as the agent left it); and the project's `AGENTS.md` (or `CLAUDE.md`) is passed to the model as capped, secret-cleaned notes that can't override the rules (`instructions.js`).
+
+**How it is kept safe** (each of these has tests in `test/agent/`):
 
 - **The folder is the user's choice, made in a native dialog.** The page only ever holds an id for it (`code-projects.json` in the profile maps ids to paths), so a page can't point a session anywhere else. A whole drive, the home folder and system folders are refused.
 - **Approvals are native dialogs raised by the main process** (`dialog.showMessageBox`, "no" is the default button), not buttons in the page, so a page that has been tricked (a poisoned README, injected markdown) can't approve its own requests. A dismissed dialog means no.
 - **Paths are confined.** Every path the model gives is resolved after following symlinks and must stay inside the project; `..`, absolute paths elsewhere, NUL bytes and links that lead out are refused. Writes never go through links.
 - **Secrets are never read, searched or written:** `.env*` (examples excepted), keys and certificates (`*.pem`, `*.key`, `id_rsa`…), `.npmrc`, credential files, anything inside `.git`. Well-known token formats (private keys, AWS, GitHub, OpenAI/Anthropic/OpenRouter keys, Slack, Google) are also redacted from everything sent to the model.
-- **Edits are exact and checked.** A file must have been read in this session and be unchanged since; the replacement must match exactly once (or `replace_all`); the user sees a diff before anything is written.
+- **Edits are exact and checked.** A file must have been read in this session and be unchanged since; the replacement must match exactly once (or `replace_all`); the user sees a diff before anything is written. Settings that can run commands on their own (`.vscode`, `.idea`, `.husky`, `.devcontainer`, `.envrc`, other agents' config folders) can be read but never changed (`isProtectedPath`).
+- **Commands that run without asking are recognised, not filtered** (`commands.js`): every character must be plain (no quotes, pipes, redirects, substitutions or line breaks), the program must be on a short list, and no argument may write a file, reach outside the project or name a secrets file; `git diff` and `git show` output has secrets files' changes cut out. Never on Windows, where `cmd.exe` would pick up a program from the project folder first (commands there also run with `NoDefaultCurrentDirectoryInExePath`). Reading files has its own tools, so `cat` isn't on the list, and `yarn`, `pnpm`, `cargo` and `go` aren't either: they choose a version from the project's own files.
 - **Commands run with a scrubbed environment** (anything that looks like a credential is removed), no input, a time limit (default 2 minutes, at most 10), capped output, and the whole process tree is killed on timeout or Stop. They are not sandboxed beyond that: the approval dialog shows the exact command, and that is the safeguard.
 - **There is no general network access.** The only thing Code mode fetches is a zip from `codeload.github.com`, built from an owner, repository and ref that are each matched against strict patterns, and redirects to any other host are refused. So there is nowhere for injected instructions to send data. Nothing runs from a downloaded repository: it is unpacked by our own code (`repos.js`, not git), entries with `..`, absolute or odd names are dropped, links are never created, secrets files and dependency folders are skipped, and sizes and counts are capped (120 MB download, 400 MB unpacked, 40,000 files, 2 MB a file, 1.5 GB cache, oldest removed first).
 - **Regular expressions can't hang the app.** A search pattern runs in a `vm` context with a time limit, so a catastrophic one is cut off after 0.4 s.

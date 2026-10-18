@@ -20,7 +20,7 @@ export function describeRunning(tool: string, args: Args): string {
     case 'search_text': return `Searching for “${clip(text(args.pattern), 40)}”…`;
     case 'edit_file': return `Waiting for your OK to edit ${text(args.path)}…`;
     case 'write_file': return `Waiting for your OK to write ${text(args.path)}…`;
-    case 'run_command': return `Waiting for your OK to run ${clip(text(args.command), 50)}…`;
+    case 'run_command': return `Running ${clip(text(args.command), 50)}…`;
     case 'open_repo': return `Downloading ${text(args.repo)}…`;
     default: return `Working (${tool})…`;
   }

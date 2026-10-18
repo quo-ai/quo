@@ -73,7 +73,7 @@ describe('the agent loop', () => {
     });
     await runAgent(user, deps);
     const titles = updates.map(u => u.steps[0]?.title).filter(Boolean);
-    expect(titles[0]).toBe('Waiting for your OK to run npm test…');
+    expect(titles[0]).toBe('Running npm test…');
     expect(titles.at(-1)).toBe('Ran npm test (OK)');
     expect(updates.find(u => u.steps[0]?.status === 'running')).toBeDefined();
   });
@@ -198,7 +198,7 @@ describe('describing steps', () => {
     expect(describeRunning('read_file', { path: 'src/a.ts' })).toBe('Reading src/a.ts…');
     expect(describeRunning('read_file', { path: 'README.md', repo: 'a/b' })).toBe('Reading a/b/README.md…');
     expect(describeRunning('edit_file', { path: 'a.ts' })).toBe('Waiting for your OK to edit a.ts…');
-    expect(describeRunning('run_command', { command: 'npm test' })).toBe('Waiting for your OK to run npm test…');
+    expect(describeRunning('run_command', { command: 'npm test' })).toBe('Running npm test…');
     expect(describeRunning('open_repo', { repo: 'facebook/react' })).toBe('Downloading facebook/react…');
     expect(describeRunning('mystery', {})).toBe('Working (mystery)…');
   });

@@ -50,6 +50,11 @@ export function trimToolOutput(messages: AgentMessage[], limit = CONTEXT_CHARS):
   });
 }
 
+/** How many files the agent changed (created, edited or replaced) in these steps. */
+export function countChanges(steps: AgentStep[]): number {
+  return steps.filter(step => (step.tool === 'edit_file' || step.tool === 'write_file') && step.status === 'done').length;
+}
+
 /** Tool arguments as an object, or null if the model sent something that isn't one. */
 export function parseArguments(raw: string): Record<string, unknown> | null {
   try {

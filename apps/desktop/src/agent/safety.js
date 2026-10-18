@@ -79,6 +79,17 @@ function isSecretPath(relativePosix) {
   return SECRET_EXTENSIONS.has(path.extname(name));
 }
 
+// Settings that run commands on their own (editor tasks, git hooks, agent and dev-container configs). A coding
+// agent that can rewrite them could get a command run later without anyone approving it.
+const PROTECTED_DIRS = new Set(['.vscode', '.idea', '.husky', '.devcontainer', '.claude', '.codex', '.agents', '.cursor', '.opencode']);
+const PROTECTED_NAMES = new Set(['.envrc']);
+
+/** Files Quo reads but never changes, because changing them could make something run without approval. */
+function isProtectedPath(relativePosix) {
+  const segments = String(relativePosix).toLowerCase().split('/').filter(Boolean);
+  return segments.some(segment => PROTECTED_DIRS.has(segment)) || PROTECTED_NAMES.has(segments[segments.length - 1] ?? '');
+}
+
 /** Folders searches and listings skip: dependencies, build output, caches. */
 const IGNORED_DIRS = new Set([
   'node_modules', '.git', '.hg', '.svn', '.next', '.nuxt', '.turbo', '.cache', '__pycache__', '.venv', 'venv',
@@ -146,4 +157,4 @@ function checkProjectRoot(rootReal, home = os.homedir()) {
   return rootReal;
 }
 
-module.exports = { AgentError, resolveInside, isSecretPath, IGNORED_DIRS, looksBinary, redactSecrets, scrubbedEnv, checkProjectRoot, inside, toPosix };
+module.exports = { AgentError, resolveInside, isSecretPath, isProtectedPath, IGNORED_DIRS, looksBinary, redactSecrets, scrubbedEnv, checkProjectRoot, inside, toPosix };

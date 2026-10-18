@@ -2,7 +2,9 @@
 
 const fs = require('node:fs');
 const files = require('./files');
+const { hideSecretDiffs, isReadOnlyCommand } = require('./commands');
 const { runCommand } = require('./exec');
+const { ChangeLog } = require('./history');
 const { AgentError, redactSecrets, scrubbedEnv } = require('./safety');
 
 /**
@@ -12,12 +14,15 @@ const { AgentError, redactSecrets, scrubbedEnv } = require('./safety');
  * `callTool` is the only way in. Reading tools run freely inside the project (or an
  * opened reference repository). Anything that changes things (edit_file, write_file,
  * run_command) first asks `approve`, which the main process implements with a native
- * dialog, so nothing in the page can answer it. Results are plain text for the model
- * plus a small `display` for the chat view; errors come back as results, not throws,
- * so the model can adjust.
+ * dialog, so nothing in the page can answer it. The exception is a short list of
+ * read-only commands (`git status`, `node --version`), which just run. In plan mode
+ * nothing can change at all. Results are plain text for the model plus a small
+ * `display` for the chat view; errors come back as results, not throws, so the model
+ * can adjust.
  */
 
 const TOOL_NAMES = ['list_directory', 'read_file', 'find_files', 'search_text', 'edit_file', 'write_file', 'run_command', 'open_repo'];
+const PLAN_TOOLS = ['list_directory', 'read_file', 'find_files', 'search_text', 'open_repo'];
 const CHANGING_TOOLS = new Set(['edit_file', 'write_file', 'run_command']);
 const MAX_CALLS = 500;
 const COMMAND_CHARS = 4000;
@@ -41,6 +46,18 @@ class AgentSession {
     this.allowEdits = false;
     this.allowedCommands = new Set();
     this.calls = 0;
+    this.mode = 'work'; // or 'plan': read-only
+    this.log = new ChangeLog();
+  }
+
+  setMode(mode) {
+    if (mode !== 'work' && mode !== 'plan') throw new AgentError('bad_args', 'The mode is work or plan.');
+    this.mode = mode;
+  }
+
+  /** Takes back the last `count` changes the agent made, where the files are still as it left them. */
+  undo(count) {
+    return this.log.undo(this.ctx, count);
   }
 
   get ctx() {
@@ -61,6 +78,7 @@ class AgentSession {
     if (typeof args !== 'object' || args === null || Array.isArray(args)) return fail('bad_args', 'The arguments must be an object.');
     try {
       if (!TOOL_NAMES.includes(name)) throw new AgentError('unknown_tool', `There’s no tool called ${name}.`);
+      if (CHANGING_TOOLS.has(name) && this.mode === 'plan') throw new AgentError('plan_mode', 'Plan mode is on, so nothing can be changed or run. Describe the plan instead, and the user can switch it off to carry it out.');
       if (CHANGING_TOOLS.has(name) && args.repo) throw new AgentError('read_only', 'Reference repositories are read-only. Changes go in the project folder.');
       switch (name) {
         case 'list_directory': return ok(await files.listDirectory(this.contextFor(args), args));
@@ -95,6 +113,7 @@ class AgentSession {
     if (answer === 'deny' || answer === 'cancel') return fail('denied', 'The user didn’t allow that change. Don’t try it again; ask what they’d like instead.', { kind: 'edit', path: plan.relative, denied: true });
     if (answer === 'session') this.allowEdits = true;
     await files.applyPlan(this.ctx, plan);
+    this.log.record(plan);
     const label = plan.kind === 'create' ? `Created ${plan.relative}` : `Edited ${plan.relative}`;
     return { ok: true, text: `${label} (+${plan.added} −${plan.removed}).`, display: { kind: plan.kind === 'create' ? 'create' : 'edit', path: plan.relative, added: plan.added, removed: plan.removed, diff: plan.diff } };
   }
@@ -104,7 +123,8 @@ class AgentSession {
     if (!command) throw new AgentError('bad_args', 'run_command needs a command.');
     if (command.length > COMMAND_CHARS) throw new AgentError('bad_args', 'That command is too long.');
     const timeoutMs = Math.min(600, Math.max(1, Number(args.timeout_seconds) || 120)) * 1000;
-    let answer = this.allowedCommands.has(command) ? 'once' : 'ask';
+    const readOnly = isReadOnlyCommand(command);
+    let answer = readOnly || this.allowedCommands.has(command) ? 'once' : 'ask';
     if (answer === 'ask') {
       answer = await this.approve({
         kind: 'command',
@@ -117,8 +137,9 @@ class AgentSession {
     if (answer === 'session') this.allowedCommands.add(command);
     const result = await runCommand({ command, cwd: this.rootReal, env: scrubbedEnv(this.env), timeoutMs, signal });
     const status = result.aborted ? 'was stopped' : result.timedOut ? `timed out after ${timeoutMs / 1000}s` : `exited with code ${result.exitCode ?? result.signal}`;
-    const text = redactSecrets(`$ ${command}\n${result.output.trimEnd() || '(no output)'}\n[${status}]`);
-    return { ok: true, text, display: { kind: 'command', command, exitCode: result.exitCode, timedOut: result.timedOut, aborted: result.aborted, output: clip(redactSecrets(result.output.trimEnd()), 4000) } };
+    const output = readOnly ? hideSecretDiffs(result.output) : result.output;
+    const text = redactSecrets(`$ ${command}\n${output.trimEnd() || '(no output)'}\n[${status}]`);
+    return { ok: true, text, display: { kind: 'command', command, exitCode: result.exitCode, timedOut: result.timedOut, aborted: result.aborted, ...(readOnly ? { auto: true } : {}), output: clip(redactSecrets(output.trimEnd()), 4000) } };
   }
 
   async openRepo(args) {
@@ -137,4 +158,4 @@ class AgentSession {
 const ok = result => ({ ok: true, text: result.text, display: result.display });
 const fail = (code, message, display) => ({ ok: false, text: message, display: display ?? { kind: 'error', code } });
 
-module.exports = { AgentSession, TOOL_NAMES };
+module.exports = { AgentSession, TOOL_NAMES, PLAN_TOOLS };

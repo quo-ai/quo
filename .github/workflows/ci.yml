@@ -28,8 +28,9 @@ jobs:
           CI: '1'
           EXPO_NO_TELEMETRY: '1'
 
-  # Nothing sensitive reaches the public repository: secrets files, keys, tokens, personal
-  # email addresses and local paths, in the files and in every commit ever made.
+  # Nothing sensitive reaches the public repository (secrets files, keys, tokens, personal
+  # email addresses and local paths, in the files and in every commit ever made), and no
+  # source file grows past 500 lines.
   hygiene:
     runs-on: ubuntu-latest
     steps:
@@ -40,7 +41,8 @@ jobs:
         with:
           node-version: 22
       - run: node scripts/check-secrets.js --history
-      - run: node --test scripts/check-secrets.test.js
+      - run: node scripts/check-structure.js
+      - run: node --test scripts/check-secrets.test.js scripts/check-structure.test.js
 
   web:
     runs-on: ubuntu-latest

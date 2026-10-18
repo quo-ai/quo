@@ -1,4 +1,4 @@
-import { agentBridge, NativeError, unwrap, type CodeProject, type CodeSessionInfo, type DesktopAgent } from '../native';
+import { agentBridge, NativeError, unwrap, type CodeProject, type CodeSessionInfo, type DesktopAgent, type UndoResult } from '../native';
 import type { ToolResult } from './types';
 
 /** The project a person last used, so turning Code mode on again needs no dialog. */
@@ -21,7 +21,25 @@ const remember = (id: string) => {
 
 /** A running Code session: a project folder, and the tools that work in it. */
 export class CodeSession {
+  /** Plan mode: only reading. The desktop app enforces it too, so this is what the model is offered, not the rule. */
+  plan = false;
+
   private constructor(private bridge: DesktopAgent, readonly info: CodeSessionInfo, readonly project: CodeProject) {}
+
+  /** The tools to offer the model right now. */
+  get tools(): string[] {
+    return this.plan ? this.info.planTools : this.info.tools;
+  }
+
+  async setPlan(plan: boolean): Promise<void> {
+    unwrap(await this.bridge.mode(this.info.sessionId, plan ? 'plan' : 'work'));
+    this.plan = plan;
+  }
+
+  /** Takes back the last `count` changes the agent made, wherever the files are still as it left them. */
+  async undo(count: number): Promise<UndoResult> {
+    return unwrap(await this.bridge.undo(this.info.sessionId, count));
+  }
 
   static async start(project: CodeProject): Promise<CodeSession> {
     const bridge = agentBridge();

@@ -23,7 +23,7 @@
     "smoke": "electron . --smoke",
     "fetch:engine": "node scripts/fetch-engine.js",
     "check:engine": "node scripts/check-engine.js",
-    "test": "node --test"
+    "test": "node --test \"test/**/*.test.js\""
   },
   "dependencies": {
     "electron-updater": "^6.8.10",

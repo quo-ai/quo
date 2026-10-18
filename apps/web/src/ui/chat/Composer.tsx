@@ -1,0 +1,183 @@
+import { forwardRef, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react';
+import { ArrowUp, Brain, Cloud, HardDrive, Loader2, Mic, Paperclip, Square } from 'lucide-react';
+import { ACCEPT_DOCUMENTS, ACCEPT_IMAGES } from '../../attachments';
+import type { Attachment } from '../../chat/types';
+import { localEngine } from '../../engine/localEngine';
+import { agentBridge } from '../../native';
+import type { ModelChoice } from '../../models';
+import { AttachmentChips } from '../Attachments';
+import { CodeChip } from '../CodeChip';
+import { useVoiceInput } from '../useVoiceInput';
+import type { ChatStatus } from './types';
+import type { CodeMode } from './useCodeMode';
+import { useAttachments } from './useAttachments';
+
+export interface ComposerHandle {
+  focus: () => void;
+}
+
+interface ComposerProps {
+  choice: ModelChoice | null;
+  status: ChatStatus;
+  conversationId: string | undefined;
+  codeMode: CodeMode;
+  thinking: boolean;
+  onThinking: (on: boolean) => void;
+  /** Free cloud messages left today, when the model is the free one. */
+  freeLeft: number | null;
+  onSend: (text: string, attachments: Attachment[]) => void;
+  onStop: () => void;
+}
+
+/** The message box and the row of controls under it. */
+export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Composer(
+  { choice, status, conversationId, codeMode, thinking, onThinking, freeLeft, onSend, onStop },
+  ref,
+) {
+  const [input, setInput] = useState('');
+  const fileInput = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const busy = status !== 'idle';
+  const cloud = choice?.kind === 'cloud';
+  const vision = choice?.kind === 'local' && Boolean(choice.model.vision);
+  // Files stay on this device: attachments only go to offline models.
+  const files = useAttachments({ enabled: Boolean(choice) && !cloud, vision, resetKey: conversationId });
+  const { code } = codeMode;
+  // Code mode: the desktop app, and a cloud model that can do it.
+  const codeAvailable = Boolean(agentBridge()) && choice?.kind === 'cloud' && choice.model.agent;
+
+  const voice = useVoiceInput(text => {
+    setInput(current => (current.trim() ? `${current.trimEnd()} ${text}` : text));
+    inputRef.current?.focus();
+  });
+
+  useImperativeHandle(ref, () => ({ focus: () => inputRef.current?.focus() }), []);
+  useEffect(() => inputRef.current?.focus(), [conversationId]);
+
+  // Grow the composer with its content.
+  useLayoutEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${Math.min(el.scrollHeight, 220)}px`;
+  }, [input]);
+
+  // Esc cancels a recording.
+  useEffect(() => {
+    if (voice.state !== 'recording') return;
+    const onKey = (event: globalThis.KeyboardEvent) => {
+      if (event.key === 'Escape') voice.cancel();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [voice]);
+
+  function send() {
+    const trimmed = input.trim();
+    if ((!trimmed && !files.attachments.length) || busy || !choice) return;
+    const sent = files.attachments;
+    setInput('');
+    files.clear();
+    onSend(trimmed, sent);
+  }
+
+  function onKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
+      event.preventDefault();
+      send();
+    }
+  }
+
+  const info = localEngine.info();
+
+  return (
+    <div className="composer-wrap">
+      <form className={`composer glass${files.dragging ? ' dragging' : ''}`} onSubmit={event => { event.preventDefault(); send(); }} {...files.dropTarget}>
+        <AttachmentChips items={files.attachments} onRemove={files.remove} />
+        <textarea
+          ref={inputRef}
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={onKeyDown}
+          placeholder={choice ? `Message ${choice.model.name}` : 'Choose a model to start'}
+          rows={1}
+          aria-label="Message"
+        />
+        <div className="composer-bar">
+          <input
+            ref={fileInput}
+            type="file"
+            multiple
+            hidden
+            accept={vision ? `${ACCEPT_IMAGES},${ACCEPT_DOCUMENTS}` : ACCEPT_DOCUMENTS}
+            onChange={event => {
+              if (event.target.files) void files.attach(event.target.files);
+              event.target.value = '';
+            }}
+          />
+          <button
+            type="button"
+            className="icon-btn round press attach-btn"
+            disabled={!choice || cloud || busy}
+            onClick={() => fileInput.current?.click()}
+            aria-label="Attach files"
+            title={cloud ? 'Files stay on your device, so they only work with offline models' : vision ? 'Attach photos, PDFs and text files' : 'Attach PDFs and text files'}
+          >
+            <Paperclip size={18} />
+          </button>
+          {voice.supported && (
+            <button
+              type="button"
+              className={`icon-btn round press mic-btn${voice.state === 'recording' ? ' recording' : ''}`}
+              disabled={busy || voice.state === 'transcribing'}
+              onClick={() => void voice.toggle()}
+              aria-label={voice.state === 'recording' ? 'Stop recording' : 'Speak your message'}
+              aria-pressed={voice.state === 'recording'}
+              title={voice.state === 'recording' ? 'Stop (Esc to cancel)' : 'Speak your message. It’s turned into text on this device.'}
+            >
+              {voice.state === 'transcribing' ? <Loader2 size={18} className="spin" /> : voice.state === 'recording' ? <Square size={13} fill="currentColor" /> : <Mic size={18} />}
+            </button>
+          )}
+          {codeAvailable && (
+            <CodeChip
+              active={Boolean(code)}
+              starting={codeMode.starting}
+              disabled={busy}
+              project={code?.project.name ?? null}
+              plan={codeMode.plan}
+              notes={code?.info.instructions?.file ?? null}
+              onToggle={() => void codeMode.toggle()}
+              onChangeFolder={() => void codeMode.changeFolder()}
+              onTogglePlan={() => void codeMode.togglePlan()}
+            />
+          )}
+          {choice?.model.supportsThinking && !code && (
+            <button type="button" className="chip press" aria-pressed={thinking} onClick={() => onThinking(!thinking)} title="Reason step by step before answering">
+              <Brain size={14} /> Think
+            </button>
+          )}
+          <span className="engine-note">
+            {voice.state === 'recording' ? `Listening… ${Math.floor(voice.seconds / 60)}:${String(voice.seconds % 60).padStart(2, '0')}`
+              : voice.state === 'transcribing' ? (voice.download !== null ? `Getting the speech model… ${Math.round(voice.download * 100)}%` : 'Turning speech into text…')
+              : status === 'loading' ? 'Loading model…'
+              : cloud ? <><Cloud size={13} /> Cloud{freeLeft !== null ? ` · ${freeLeft} free today` : ''}</>
+                : choice ? <><HardDrive size={13} /> <span title={info?.device ?? undefined}>{info?.gpu ? 'On your GPU' : 'On this device'}</span> · private</> : ''}
+          </span>
+          <span className="spacer" />
+          {busy ? (
+            <button key="stop" type="button" className="send stop" onClick={onStop} aria-label="Stop (Esc)" title="Stop (Esc)">
+              <Square size={14} fill="currentColor" />
+            </button>
+          ) : (
+            <button key="send" type="submit" className="send" disabled={(!input.trim() && !files.attachments.length) || !choice} aria-label="Send" title="Send (Enter)">
+              <ArrowUp size={20} strokeWidth={2.4} />
+            </button>
+          )}
+        </div>
+      </form>
+      <div className="composer-hint">
+        {code ? `${codeMode.plan ? 'Plan mode · nothing is changed or run' : 'Code mode · edits and commands need your OK'} · files Quo reads are sent to the model’s provider` : cloud ? 'Cloud replies via OpenRouter · Quo doesn’t store your messages' : 'Runs privately on this device'} · Enter to send · Shift+Enter for a new line
+      </div>
+    </div>
+  );
+});

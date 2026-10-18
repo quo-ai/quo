@@ -30,6 +30,8 @@ contextBridge.exposeInMainWorld('quoDesktop', {
     forget: id => invoke('agent:forget', { id }),
     start: projectId => invoke('agent:start', { projectId }),
     tool: (sessionId, name, args) => invoke('agent:tool', { sessionId, name, args }),
+    mode: (sessionId, mode) => invoke('agent:mode', { sessionId, mode }),
+    undo: (sessionId, count) => invoke('agent:undo', { sessionId, count }),
     abort: sessionId => invoke('agent:abort', { sessionId }),
     end: sessionId => invoke('agent:end', { sessionId }),
     clearRepos: () => invoke('agent:clear-repos'),

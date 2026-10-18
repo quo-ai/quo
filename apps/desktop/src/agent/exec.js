@@ -27,7 +27,9 @@ function killTree(child) {
 
 function runCommand({ command, cwd, env, timeoutMs = 120_000, signal }) {
   return new Promise(resolve => {
-    const child = spawn(command, { shell: true, cwd, env, detached: process.platform !== 'win32', windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
+    // On Windows, cmd.exe looks in the project folder before anywhere else; this stops a `git.bat` there from replacing git.
+    const safeEnv = process.platform === 'win32' ? { ...env, NoDefaultCurrentDirectoryInExePath: '1' } : env;
+    const child = spawn(command, { shell: true, cwd, env: safeEnv, detached: process.platform !== 'win32', windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
     let head = '';
     let tail = '';
     let total = 0;

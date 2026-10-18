@@ -1,0 +1,57 @@
+/* Quo Web — "liquid glass" in Quo's language: electric indigo, white,
+   translucent floating chrome over a soft light-field, springy motion.
+   Content stays crisp and opaque; only chrome is glass. */
+
+:root {
+  --indigo: #3b2eff;
+  --indigo-2: #5a4dff;
+  --violet: #8f87ff;
+  --ink: #0e0e1a;
+  --text: #0e0e1a;
+  --text-2: #4c4c62;
+  --text-3: #75758a;
+  --hairline: rgba(14, 14, 40, 0.08);
+  --error: #c4243f;
+  --warn: #9a5b00;
+
+  --glass: rgba(255, 255, 255, 0.58);
+  --glass-strong: rgba(255, 255, 255, 0.78);
+  --glass-blur: blur(28px) saturate(185%);
+  --glass-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.35),
+    0 0 0 0.5px rgba(14, 14, 60, 0.07),
+    0 12px 32px -14px rgba(40, 30, 140, 0.28),
+    0 34px 70px -36px rgba(40, 30, 140, 0.22);
+
+  --r-panel: 28px;
+  --r-card: 20px;
+
+  /* Spring curves: --jelly overshoots then settles (press release,
+     popovers); --ease is a soft deceleration for everything else. */
+  --jelly: linear(0, 0.009, 0.035 2.1%, 0.141 4.4%, 0.723 12.9%, 0.938 16.7%, 1.017 19.4%, 1.067, 1.099 24.3%, 1.108 26%, 1.104, 1.088 30.6%, 1.019 39.4%, 0.996 43.8%, 0.987 48.3%, 0.991 57.3%, 1.001 74.5%, 1);
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+  color-scheme: light;
+}
+
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; }
+body {
+  margin: 0;
+  color: var(--text);
+  background: #f5f5fb;
+  font: 15.5px/1.55 Inter, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+button { font: inherit; color: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+button:disabled { cursor: default; opacity: 0.4; }
+:focus-visible { outline: 2px solid var(--indigo); outline-offset: 2px; }
+svg { flex: none; }
+
+/* Light-field behind the glass: faint indigo/violet blooms. */
+.lightfield { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+.lightfield::before, .lightfield::after { content: ''; position: absolute; border-radius: 50%; filter: blur(80px); opacity: 0.55; }
+.lightfield::before { width: 60vw; height: 60vw; left: -18vw; top: -26vw; background: radial-gradient(closest-side, rgba(90, 77, 255, 0.28), transparent); }
+.lightfield::after { width: 55vw; height: 55vw; right: -20vw; bottom: -28vw; background: radial-gradient(closest-side, rgba(143, 135, 255, 0.3), transparent); }

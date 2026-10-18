@@ -164,7 +164,8 @@ async function streamWords(text: string, options: StreamOptions): Promise<void> 
 /**
  * Sandbox stand-in for Code mode, scripted so every part of the loop can be tried without a key:
  * it looks at the project folder, and if asked to create a file or run something, does that (the
- * user still approves each). "create a file" → write_file; "run" / "test" → run_command.
+ * user still approves each, except read-only commands). "create a file" → write_file; "version" → run_command
+ * node --version (read-only, runs without asking); "run" / "test" → run_command.
  */
 async function standInAgent(model: CloudModel, messages: ChatMessage[], options: StreamOptions): Promise<StreamUsage> {
   const lastUser = [...messages].reverse().findIndex(m => m.role === 'user');
@@ -181,6 +182,7 @@ async function standInAgent(model: CloudModel, messages: ChatMessage[], options:
 
   if (results === 0) {
     if (/\bcreate\b.*\bfile\b/i.test(task)) return say(`I'll create a small file. ${label}\n`, [call('write_file', { path: 'quo-sandbox.txt', content: 'Hello from the Code mode sandbox stand-in.\n' })]);
+    if (/\bversion\b/i.test(task)) return say(`I'll check the Node version. ${label}\n`, [call('run_command', { command: 'node --version' })]);
     if (/\b(run|test)\b/i.test(task)) return say(`I'll run a command. ${label}\n`, [call('run_command', { command: 'echo hello from the sandbox' })]);
     return say(`I'll start by looking at the project. ${label}\n`, [call('list_directory', {})]);
   }

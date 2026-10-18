@@ -6,7 +6,7 @@ import { config, features, SETUP_MESSAGES } from './env.js';
 import { freeRemaining, refundFreeMessage, takeFreeMessage } from './freeTier.js';
 import { HttpError, readJson } from './http.js';
 import { freeSubject, identify } from './identity.js';
-import { agentSystemPrompt, AGENT_TOOL_NAMES, READ_ONLY_TOOLS, toolDefinitions, type Platform } from './agentTools.js';
+import { agentSystemPrompt, AGENT_TOOL_NAMES, parseNotes, READ_ONLY_TOOLS, toolDefinitions, type Platform } from './agentTools.js';
 import { streamChat, UpstreamError, type ChatMessage, type ToolCall } from './openrouter.js';
 
 /**
@@ -37,7 +37,7 @@ interface ChatRequest {
   model?: string;
   messages?: unknown;
   thinking?: boolean;
-  agent?: { tools?: unknown; project?: unknown; platform?: unknown };
+  agent?: { tools?: unknown; project?: unknown; platform?: unknown; instructions?: unknown };
 }
 
 const MAX_AGENT_MESSAGES = 600;
@@ -216,7 +216,7 @@ function parseAgent(input: NonNullable<ChatRequest['agent']>, model: NonNullable
   const platform: Platform = input.platform === 'win32' || input.platform === 'darwin' ? input.platform : 'linux';
   const project = (typeof input.project === 'string' ? input.project : '').replace(/[^\p{L}\p{N} ._-]/gu, '').trim().slice(0, 60) || 'project';
   const tools = toolDefinitions(names);
-  return { tools, toolChars: JSON.stringify(tools).length, prompt: agentSystemPrompt(project, platform, names) };
+  return { tools, toolChars: JSON.stringify(tools).length, prompt: agentSystemPrompt(project, platform, names, parseNotes(input.instructions)) };
 }
 
 /**
