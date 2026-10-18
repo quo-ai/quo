@@ -15,6 +15,7 @@ const mockSync = {
   createSync: jest.fn(async () => {}),
   deleteCloudCopy: jest.fn(async () => {}),
   deleteAccount: jest.fn(async () => {}),
+  signOutEverywhere: jest.fn(async () => {}),
   disableSync: jest.fn(async () => {}),
   joinSync: jest.fn(async () => {}),
   refreshAccount: jest.fn(async () => mockState.account),
@@ -28,6 +29,7 @@ jest.mock('@/services/sync', () => ({
   JoinError: class JoinError extends Error { code = ''; },
   createSync: (...a: unknown[]) => (mockSync.createSync as (...x: unknown[]) => unknown)(...a),
   deleteAccount: () => mockSync.deleteAccount(),
+  signOutEverywhere: () => mockSync.signOutEverywhere(),
   deleteCloudCopy: () => mockSync.deleteCloudCopy(),
   disableSync: () => mockSync.disableSync(),
   joinSync: (...a: unknown[]) => (mockSync.joinSync as (...x: unknown[]) => unknown)(...a),
@@ -201,6 +203,14 @@ describe('the Sync sheet', () => {
     expect(mockSync.deleteCloudCopy).toHaveBeenCalled();
   });
 
+  it('offers to sign in again when the sign-in stopped working', async () => {
+    mockState.signedIn = false;
+    mockState.status = { phase: 'error', email: 'me@example.com', lastSyncAt: 1, error: { code: 'sign_in_required', message: 'Sign in again to keep syncing.' }, skipped: 0, tooLarge: 0 };
+    const renderer = await openSheet();
+    expect(text(renderer)).toContain('Sign in again to keep syncing.');
+    expect(renderer.root.findByProps({ accessibilityLabel: 'Email' })).toBeTruthy();
+  });
+
   it('shows what is wrong, in words, when syncing needs attention', async () => {
     mockState.signedIn = true;
     mockState.status = { phase: 'error', email: 'me@example.com', lastSyncAt: null, error: { code: 'key_changed', message: 'The recovery key was changed on another device.' }, skipped: 0, tooLarge: 0 };
@@ -247,6 +257,42 @@ describe('deleting the account', () => {
     mockState.status = { phase: 'idle', email: 'me@example.com', lastSyncAt: Date.now(), error: null, skipped: 0, tooLarge: 0 };
     const renderer = await signedInSheet();
     expect(text(renderer)).toContain('Delete my Quo account…');
+  });
+});
+
+describe('signing out of other devices', () => {
+  async function signedInSheet() {
+    mockState.signedIn = true;
+    mockState.account = { email: 'me@example.com', entitled: true };
+    return openSheet();
+  }
+
+  it('asks first, explains what it does, and then does it', async () => {
+    const renderer = await signedInSheet();
+    await act(async () => { buttonLabelled(renderer, 'Sign out of all my other devices')!.props.onPress(); });
+    expect(text(renderer)).toContain('You stay signed in here');
+    expect(mockSync.signOutEverywhere).not.toHaveBeenCalled();
+    await act(async () => { buttonLabelled(renderer, 'Sign out my other devices')!.props.onPress(); });
+    expect(mockSync.signOutEverywhere).toHaveBeenCalledTimes(1);
+    expect(text(renderer)).toContain('Signed out of your other devices');
+  });
+
+  it('can be backed out of, and shows a failure', async () => {
+    const renderer = await signedInSheet();
+    await act(async () => { buttonLabelled(renderer, 'Sign out of all my other devices')!.props.onPress(); });
+    await act(async () => { buttonLabelled(renderer, 'Cancel')!.props.onPress(); });
+    expect(mockSync.signOutEverywhere).not.toHaveBeenCalled();
+    const { ApiError } = jest.requireActual('@/services/sync/api');
+    mockSync.signOutEverywhere.mockRejectedValueOnce(new ApiError(0, 'offline', 'You’re offline, or Quo can’t be reached.'));
+    await act(async () => { buttonLabelled(renderer, 'Sign out of all my other devices')!.props.onPress(); });
+    await act(async () => { buttonLabelled(renderer, 'Sign out my other devices')!.props.onPress(); });
+    expect(text(renderer)).toContain('You’re offline');
+  });
+
+  it('is also there once connected', async () => {
+    mockState.status = { phase: 'idle', email: 'me@example.com', lastSyncAt: Date.now(), error: null, skipped: 0, tooLarge: 0 };
+    const renderer = await signedInSheet();
+    expect(text(renderer)).toContain('Sign out of all my other devices…');
   });
 });
 

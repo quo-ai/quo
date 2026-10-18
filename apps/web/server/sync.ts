@@ -35,17 +35,39 @@ const MAX_RECORDS = 20_000;
 const ID_PATTERN = /^[A-Za-z0-9_.:-]{8,100}$/;
 const BASE64 = /^[A-Za-z0-9+/]+={0,2}$/;
 
-function requireSync(request: Request): string {
-  if (!features.sync) throw new HttpError(503, 'setup_required', SETUP_MESSAGES.sync);
-  const { userId } = identify(request);
-  if (!userId) throw new HttpError(401, 'sign_in_required', 'Sign in to use Quo Sync.');
-  return userId;
+const CALL_WINDOW_MS = 60_000;
+/** Far above anything a working app does (a first sync of 20,000 chats makes about 800 calls over several minutes). */
+const MAX_CALLS_PER_WINDOW = 600;
+const callCounts = new Map<string, { start: number; count: number }>();
+
+/**
+ * Stops one account from being asked for more than MAX_CALLS_PER_WINDOW calls a
+ * minute: a safety net for an app stuck in a retry loop. It counts per server
+ * instance, so it is best effort, not a defence against someone determined.
+ */
+export function takeSyncCall(userId: string, now = Date.now()): boolean {
+  if (callCounts.size > 5_000) {
+    for (const [key, entry] of callCounts) if (now - entry.start >= CALL_WINDOW_MS) callCounts.delete(key);
+  }
+  const entry = callCounts.get(userId);
+  if (!entry || now - entry.start >= CALL_WINDOW_MS) {
+    callCounts.set(userId, { start: now, count: 1 });
+    return true;
+  }
+  entry.count++;
+  return entry.count <= MAX_CALLS_PER_WINDOW;
 }
 
-/** A sign-in token outlives the account it was for (sessions are stateless), so check the account is still there. */
-async function requireAccount(db: Db, userId: string): Promise<void> {
-  const [user] = await db.query('select 1 from users where id = $1', [userId]);
-  if (!user) throw new HttpError(401, 'sign_in_required', 'Sign in to use Quo Sync.');
+/** Who is calling, once sync is switched on, they're signed in, and they aren't calling too often. */
+async function requireSync(request: Request): Promise<{ db: Db; userId: string }> {
+  if (!features.sync) throw new HttpError(503, 'setup_required', SETUP_MESSAGES.sync);
+  const db = await getDb();
+  const { userId } = await identify(db, request);
+  if (!userId) throw new HttpError(401, 'sign_in_required', 'Sign in to use Quo Sync.');
+  if (!takeSyncCall(userId)) {
+    throw new HttpError(429, 'slow_down', 'Quo Sync is being asked too often. It will catch up in a minute.', { 'retry-after': '60' });
+  }
+  return { db, userId };
 }
 
 export async function isSyncEntitled(db: Db, userId: string): Promise<boolean> {
@@ -82,9 +104,7 @@ async function usage(db: Db, userId: string): Promise<{ bytes: number; records: 
 
 /** Where this account stands, for the app's Quo Sync screen. */
 export async function handleSyncStatus(request: Request): Promise<Response> {
-  const userId = requireSync(request);
-  const db = await getDb();
-  await requireAccount(db, userId);
+  const { db, userId } = await requireSync(request);
   const [entitled, account, used] = await Promise.all([isSyncEntitled(db, userId), getAccount(db, userId), usage(db, userId)]);
   return json({
     entitled,
@@ -101,9 +121,7 @@ export async function handleSyncStatus(request: Request): Promise<Response> {
 
 /** Starts sync for the account: stores the verifier made from the new recovery key. */
 export async function handleSyncSetup(request: Request): Promise<Response> {
-  const userId = requireSync(request);
-  const db = await getDb();
-  await requireAccount(db, userId);
+  const { db, userId } = await requireSync(request);
   await requireEntitled(db, userId);
   const { verifier } = await readJson<{ verifier?: unknown }>(request);
   if (typeof verifier !== 'string' || !verifier || verifier.length > MAX_VERIFIER_CHARS || !BASE64.test(verifier)) {
@@ -116,9 +134,7 @@ export async function handleSyncSetup(request: Request): Promise<Response> {
 
 /** Records changed after `since`, oldest first. Allowed after a plan lapses, so people can always get their data out. */
 export async function handleSyncPull(request: Request): Promise<Response> {
-  const userId = requireSync(request);
-  const db = await getDb();
-  await requireAccount(db, userId);
+  const { db, userId } = await requireSync(request);
   const account = await getAccount(db, userId);
   if (!account) throw new HttpError(404, 'sync_not_set_up', 'Quo Sync isn’t turned on for this account.');
 
@@ -167,9 +183,7 @@ function validateRecords(value: unknown): PushedRecord[] {
 }
 
 export async function handleSyncPush(request: Request): Promise<Response> {
-  const userId = requireSync(request);
-  const db = await getDb();
-  await requireAccount(db, userId);
+  const { db, userId } = await requireSync(request);
   await requireEntitled(db, userId);
   const { records: incoming } = await readJson<{ records?: unknown }>(request, 4 * 1024 * 1024);
   const records = validateRecords(incoming);
@@ -220,9 +234,7 @@ export async function handleSyncPush(request: Request): Promise<Response> {
 
 /** Deletes everything Quo Sync holds for this account (also the way to start over with a new recovery key). */
 export async function handleSyncReset(request: Request): Promise<Response> {
-  const userId = requireSync(request);
-  const db = await getDb();
-  await requireAccount(db, userId);
+  const { db, userId } = await requireSync(request);
   await db.tx(async t => {
     await t.query('delete from sync_records where user_id = $1', [userId]);
     await t.query('delete from sync_accounts where user_id = $1', [userId]);

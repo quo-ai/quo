@@ -41,8 +41,8 @@ async function paddle<T>(path: string, body?: unknown): Promise<T> {
   return ((await response.json()) as { data: T }).data;
 }
 
-function requireUser(request: Request): string {
-  const { userId } = identify(request);
+async function requireUser(request: Request): Promise<string> {
+  const { userId } = await identify(await getDb(), request);
   if (!userId) throw new HttpError(401, 'sign_in_required', 'Sign in first.');
   return userId;
 }
@@ -57,7 +57,7 @@ export function handleBillingConfig(): Response {
 
 export async function handleCheckout(request: Request): Promise<Response> {
   if (!features.billing) throw new HttpError(503, 'setup_required', SETUP_MESSAGES.billing);
-  const userId = requireUser(request);
+  const userId = await requireUser(request);
   const { product } = await readJson<{ product?: string }>(request);
   if (!isProduct(product)) throw new HttpError(400, 'unknown_product', 'Unknown product.');
 
@@ -79,7 +79,7 @@ export async function handleCheckout(request: Request): Promise<Response> {
 /** Sandbox only: completes a purchase immediately. */
 export async function handleDevComplete(request: Request): Promise<Response> {
   if (config.production || config.paddle.apiKey) throw new HttpError(404, 'not_found');
-  const userId = requireUser(request);
+  const userId = await requireUser(request);
   const product = new URL(request.url).searchParams.get('product');
   if (!isProduct(product)) throw new HttpError(400, 'unknown_product');
   const db = await getDb();
@@ -98,7 +98,7 @@ export async function handleDevComplete(request: Request): Promise<Response> {
 
 export async function handlePortal(request: Request): Promise<Response> {
   if (!features.billing) throw new HttpError(503, 'setup_required', SETUP_MESSAGES.billing);
-  const userId = requireUser(request);
+  const userId = await requireUser(request);
   if (!config.paddle.apiKey) return json({ url: null, message: 'Subscription management is available once billing is live.' });
   const db = await getDb();
   const [user] = await db.query<{ paddle_customer_id: string | null }>('select paddle_customer_id from users where id = $1', [userId]);

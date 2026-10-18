@@ -529,3 +529,5 @@ code.path { padding: 1px 6px; border-radius: 6px; background: rgba(14, 14, 40, 0
 .memory-confirm { display: flex; gap: 14px; }
 .btn-link.muted { color: var(--text-3); font-weight: 500; font-size: 13px; }
 .btn-link.muted:hover, .btn-link.danger { color: var(--error); }
+.danger-row { display: grid; gap: 4px; margin-bottom: 14px; justify-items: start; }
+.danger-row .note { font-size: 12.5px; }

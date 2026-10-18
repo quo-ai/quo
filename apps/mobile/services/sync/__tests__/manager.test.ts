@@ -226,6 +226,29 @@ describe('turning it off', () => {
   });
 });
 
+describe('signing out everywhere', () => {
+  it('keeps this phone signed in with the fresh token the server hands back', async () => {
+    const { sync } = load();
+    secure.set('quo.sync.token', 'old.token');
+    mockApi.mockImplementation(async (path: string) => {
+      if (path === 'auth/signout-all') return { ok: true, token: 'fresh.token' };
+      if (path === 'me') return { user: { email: 'me@example.com' }, sync: true };
+      return {};
+    });
+    await sync.signOutEverywhere();
+    expect(mockApi).toHaveBeenCalledWith('auth/signout-all', { body: { client: 'app' } });
+    expect(secure.get('quo.sync.token')).toBe('fresh.token');
+  });
+
+  it('changes nothing if the server can’t be reached', async () => {
+    const { sync, api } = load();
+    secure.set('quo.sync.token', 'old.token');
+    mockApi.mockRejectedValue(new api.ApiError(0, 'offline', 'offline'));
+    await expect(sync.signOutEverywhere()).rejects.toMatchObject({ code: 'offline' });
+    expect(secure.get('quo.sync.token')).toBe('old.token');
+  });
+});
+
 describe('deleting the account', () => {
   it('deletes it on the server, then signs out and turns sync off here', async () => {
     const { sync, crypto, bridge } = load();
@@ -310,6 +333,32 @@ describe('when syncing runs', () => {
     mockStatus.mockResolvedValue({ enabled: true, verifier: null });
     await sync.syncNow({ manual: true });
     expect(mockStatus).toHaveBeenCalled();
+  });
+
+  it('asks for a new sign-in when the old one stops working, and carries on once it has one', async () => {
+    const { sync, crypto, bridge, api } = await turnedOn();
+    readyBridge(bridge);
+    secure.set('quo.sync.token', 'revoked.token');
+    mockApi.mockImplementation(async (path: string, init?: { body?: { verifier?: string } }) => {
+      if (path === 'sync/setup') mockVerifier = init!.body!.verifier!;
+      if (path === 'me') return { user: null, sync: false }; // the server no longer knows this sign-in
+      if (path === 'auth/verify') return { token: 'new.token' };
+      return {};
+    });
+    mockStatus.mockRejectedValue(new api.ApiError(401, 'sign_in_required', 'Sign in to use Quo Sync.'));
+    await sync.createSync(crypto.newRecoveryKey().secret, 'me@example.com');
+    await settle();
+    expect(sync.getSyncStatus()).toMatchObject({ phase: 'error', error: { code: 'sign_in_required' } });
+    expect(secure.has('quo.sync.token')).toBe(false); // the dead token was thrown away, so the screen asks again
+
+    mockStatus.mockImplementation(async () => ({ enabled: true, verifier: mockVerifier }));
+    mockApi.mockImplementation(async (path: string) => (path === 'auth/verify' ? { token: 'new.token' } : path === 'me' ? { user: { email: 'me@example.com' }, sync: true } : {}));
+    await sync.verifySignIn('me@example.com', '123456');
+    await jest.advanceTimersByTimeAsync(600); // it starts again shortly after
+    await settle();
+    expect(secure.get('quo.sync.token')).toBe('new.token');
+    expect(sync.getSyncStatus()).toMatchObject({ phase: 'idle', error: null }); // syncing resumed by itself
+    expect(sync.getSyncStatus().lastSyncAt).not.toBeNull();
   });
 
   it('reports being offline calmly, and tries again on its own', async () => {

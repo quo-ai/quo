@@ -1,7 +1,7 @@
 /** Small helpers over the Web Request/Response API (portable to any host). */
 
 export class HttpError extends Error {
-  constructor(public status: number, public code: string, message?: string) {
+  constructor(public status: number, public code: string, message?: string, public headers: Record<string, string> = {}) {
     super(message ?? code);
   }
 }
@@ -14,7 +14,7 @@ export function json(body: unknown, status = 200, headers: HeadersInit = {}): Re
 }
 
 export function errorResponse(error: unknown): Response {
-  if (error instanceof HttpError) return json({ error: error.code, message: error.message }, error.status);
+  if (error instanceof HttpError) return json({ error: error.code, message: error.message }, error.status, error.headers);
   console.error('[api]', error);
   return json({ error: 'server_error', message: 'Something went wrong.' }, 500);
 }

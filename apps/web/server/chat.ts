@@ -43,8 +43,8 @@ export async function handleChat(request: Request): Promise<Response> {
   const messages = validateMessages(body.messages);
   const thinking = Boolean(body.thinking) && model.supportsThinking;
 
-  const identity = identify(request);
   const db = await getDb();
+  const identity = await identify(db, request);
   const freeKeys = { subject: freeSubject(identity), ip: identity.ip };
   const freeLimits = { perSubject: config.freeDailyMessages, perIp: config.freeDailyMessagesPerIp };
   const inputTokens = Math.ceil(messages.reduce((sum, m) => sum + m.content.length, 0) / 3.5) + 8 * messages.length;

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { ArrowLeft, Check, Coins, Crown, LogOut, Mail, Sparkles, X } from 'lucide-react';
 import {
-  ApiError, checkout, deleteAccount, openBillingPortal, signOut, startSignIn, verifySignIn, type Account, type ProductId,
+  ApiError, checkout, deleteAccount, openBillingPortal, signOut, signOutEverywhere, startSignIn, verifySignIn, type Account, type ProductId,
 } from '../cloud/account';
 import { disableSync } from '../sync';
 import { toast } from './Toasts';
@@ -141,6 +141,18 @@ function SignedIn({ account, onClose }: { account: Account; onClose: () => void 
     }
   }
 
+  async function revokeOthers() {
+    setBusy('revoke');
+    try {
+      await signOutEverywhere();
+      toast('Signed out of your other devices.');
+    } catch (err) {
+      toast(err instanceof ApiError ? err.message : 'Couldn’t do that. Try again.');
+    } finally {
+      setBusy(null);
+    }
+  }
+
   async function removeAccount() {
     setBusy('delete');
     try {
@@ -230,6 +242,10 @@ function SignedIn({ account, onClose }: { account: Account; onClose: () => void 
       </div>
 
       <div className="danger-zone">
+        <div className="danger-row">
+          <button className="btn-link muted" disabled={busy === 'revoke'} onClick={() => void revokeOthers()}>Sign out of all other devices</button>
+          <span className="note">Lost a phone or left yourself signed in somewhere? This ends those sign-ins. You stay signed in here.</span>
+        </div>
         {confirmDelete
           ? (
             <>

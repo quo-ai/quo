@@ -60,7 +60,7 @@ export function SyncSheet({ account, onClose, onOpenAccount }: SyncSheetProps) {
         </div>
         <div className="sheet-body">
           {sync.phase !== 'off'
-            ? <Connected cloud={cloud} onChanged={load} />
+            ? <Connected cloud={cloud} onChanged={load} onOpenAccount={onOpenAccount} />
             : (
               <>
                 <p className="auth-lede">Keep your chats and memories on all your devices, privately.</p>
@@ -260,7 +260,7 @@ function Join({ email, onDone }: { email: string; onDone: () => void }) {
   );
 }
 
-function Connected({ cloud, onChanged }: { cloud: Cloud | null; onChanged: () => void }) {
+function Connected({ cloud, onChanged, onOpenAccount }: { cloud: Cloud | null; onChanged: () => void; onOpenAccount: () => void }) {
   const sync = useSyncStatus();
   const [confirm, setConfirm] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -298,6 +298,7 @@ function Connected({ cloud, onChanged }: { cloud: Cloud | null; onChanged: () =>
         <button className="btn btn-soft press" disabled={sync.phase === 'syncing'} onClick={() => void syncNow({ manual: true })}><RefreshCw size={15} /> Sync now</button>
       </div>
       {sync.error && sync.error.code !== 'offline' && <p className="error">{sync.error.message}</p>}
+      {sync.error?.code === 'sign_in_required' && <button className="btn btn-primary press" onClick={onOpenAccount}>Sign in</button>}
       {sync.error?.code === 'offline' && <p className="note">{sync.error.message}</p>}
       {sync.tooLarge > 0 && <p className="note">{sync.tooLarge} {sync.tooLarge === 1 ? 'chat is' : 'chats are'} too big to sync and stay on this device.</p>}
       {sync.skipped > 0 && <p className="note">{sync.skipped} synced {sync.skipped === 1 ? 'chat' : 'chats'} couldn’t be read, so {sync.skipped === 1 ? 'it was' : 'they were'} skipped.</p>}

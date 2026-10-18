@@ -68,6 +68,12 @@ export async function deleteAccount(): Promise<void> {
   await refreshAccount();
 }
 
+/** Ends every other sign-in of this account (a lost phone, a shared computer); this browser stays signed in. */
+export async function signOutEverywhere(): Promise<void> {
+  await api('auth/signout-all', { body: {} });
+  await refreshAccount();
+}
+
 export async function signOut(): Promise<void> {
   await api('auth/signout', { body: {} });
   await refreshAccount();

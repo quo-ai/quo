@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'react';
 import { onConversationChange } from '../chat/store';
 import { onMemoryChange } from '../memory/store';
+import { subscribeAccount } from '../cloud/account';
 import { api, ApiError } from '../cloud/api';
 import { webChatStorage, webMemoryStorage } from './adapters';
 import { checkVerifier, deriveKey, makeVerifier, parseRecoveryKey, webCodec } from './crypto';
@@ -158,6 +159,13 @@ export async function initSync(): Promise<void> {
   };
   onConversationChange(noteChange('chat'));
   onMemoryChange(noteChange('memory'));
+  // Signed out (say, from another device) and signed in again: carry on without being asked.
+  subscribeAccount(account => {
+    if (!account?.user || !engine || status.error?.code !== 'sign_in_required') return;
+    blocked = false;
+    setStatus({ phase: 'idle', error: null });
+    schedule(1_000);
+  });
   const wake = () => {
     if (engine && !document.hidden && Date.now() - lastRunAt > MIN_GAP_MS) void syncNow();
   };

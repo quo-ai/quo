@@ -7,7 +7,7 @@ import { makeStyles, useTheme } from '@/hooks/useTheme';
 import { ApiError } from '@/services/sync/api';
 import { newRecoveryKey } from '@/services/sync/crypto';
 import {
-  createSync, deleteAccount, deleteCloudCopy, disableSync, getCloudStatus, joinSync, JoinError, refreshAccount, signOut, startSignIn, syncNow,
+  createSync, deleteAccount, deleteCloudCopy, disableSync, getCloudStatus, joinSync, JoinError, refreshAccount, signOut, signOutEverywhere, startSignIn, syncNow,
   useSyncAccount, useSyncStatus, verifySignIn,
 } from '@/services/sync';
 import { settingsStyles } from './styles';
@@ -134,7 +134,48 @@ function SyncSheet() {
                 ? <Join email={account?.email ?? ''} onDone={load} />
                 : <TurnOn email={account?.email ?? ''} onDone={load} />}
       {signedIn && sync.phase === 'off' && <SignedInAs email={account?.email} />}
+      {signedIn && sync.phase === 'off' && <SignOutEverywhere />}
       {signedIn && sync.phase === 'off' && <DeleteAccount />}
+    </View>
+  );
+}
+
+/** Ends the sign-in on every other device, for a lost phone. This phone stays signed in. */
+function SignOutEverywhere() {
+  const styles = useStyles();
+  const [confirm, setConfirm] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function run() {
+    setBusy(true);
+    setError(null);
+    try {
+      await signOutEverywhere();
+      setDone(true);
+      setConfirm(false);
+    } catch (err) {
+      setError(errorText(err, 'Couldn’t do that. Try again.'));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (done) return <Text style={styles.fine}>Signed out of your other devices. This phone stays signed in.</Text>;
+  if (!confirm) {
+    return (
+      <TouchableOpacity style={styles.linkRow} onPress={() => setConfirm(true)} accessibilityRole="button">
+        <Text style={styles.fine}>Sign out of all my other devices…</Text>
+      </TouchableOpacity>
+    );
+  }
+  return (
+    <View style={styles.box}>
+      <Text style={styles.body}>Lost a phone, or left yourself signed in somewhere? This ends those sign-ins, so they can no longer reach your Quo account or sync. You stay signed in here. Chats already on those devices stay there.</Text>
+      {error && <Text style={styles.error}>{error}</Text>}
+      <Button label="Sign out my other devices" onPress={() => void run()} busy={busy} />
+      <Button label="Cancel" onPress={() => setConfirm(false)} soft disabled={busy} />
     </View>
   );
 }
@@ -461,11 +502,12 @@ function Connected({ cloud, onChanged }: { cloud: CloudStatus | null; onChanged:
         </View>
         {sync.error && sync.error.code !== 'offline' && <Text style={styles.error}>{sync.error.message}</Text>}
         {sync.error?.code === 'offline' && <Text style={styles.fine}>{sync.error.message}</Text>}
-        {sync.error?.code === 'sign_in_required' && !signedIn && <Text style={styles.fine}>Sign in from the Sync screen after turning sync off, or tap Sync now once you’re signed in.</Text>}
         {sync.tooLarge > 0 && <Text style={styles.fine}>{sync.tooLarge} {sync.tooLarge === 1 ? 'chat is' : 'chats are'} too big to sync and stay on this phone.</Text>}
         {sync.skipped > 0 && <Text style={styles.fine}>{sync.skipped} synced {sync.skipped === 1 ? 'item' : 'items'} couldn’t be read, so {sync.skipped === 1 ? 'it was' : 'they were'} skipped.</Text>}
         <Button label="Sync now" onPress={() => void syncNow({ manual: true })} busy={sync.phase === 'syncing'} soft />
       </View>
+
+      {sync.error?.code === 'sign_in_required' && !signedIn && <SignIn onDone={onChanged} />}
 
       {cloud && (
         <View style={styles.box}>
@@ -492,6 +534,7 @@ function Connected({ cloud, onChanged }: { cloud: CloudStatus | null; onChanged:
           : <Button label="Delete the cloud copy…" onPress={() => setConfirm(true)} soft />}
       </View>
 
+      {signedIn && <SignOutEverywhere />}
       {signedIn && <DeleteAccount />}
 
       <View style={styles.privacyRow}>

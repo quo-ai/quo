@@ -26,12 +26,20 @@ export function clearSessionCookie(): string {
   return `${COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${config.production ? '; Secure' : ''}`;
 }
 
+export interface Session {
+  userId: string;
+  /** When this session was started (ms since the epoch). */
+  issuedAt: number;
+}
+
 /**
- * The signed-in user: from the session cookie (the web app and desktop app),
- * or an `Authorization: Bearer` token (the phone app, which keeps it in secure
- * storage rather than a cookie jar).
+ * The session in the request, if it's genuine and hasn't expired: from the
+ * session cookie (the web app and desktop app), or an `Authorization: Bearer`
+ * token (the phone app, which keeps it in secure storage rather than a cookie
+ * jar). Whether the person has since signed out everywhere is for identity.ts,
+ * which can ask the database.
  */
-export function sessionUserId(request: Request, now = Date.now()): string | null {
+export function readSession(request: Request, now = Date.now()): Session | null {
   const bearer = /^Bearer\s+(\S+)$/i.exec(request.headers.get('authorization') ?? '')?.[1];
   const token = bearer ?? cookies(request)[COOKIE];
   if (!token) return null;
@@ -42,5 +50,5 @@ export function sessionUserId(request: Request, now = Date.now()): string | null
   if (expected.length !== given.length || !timingSafeEqual(expected, given)) return null;
   const [userId, expiry] = Buffer.from(payload, 'base64url').toString().split('.');
   if (!userId || !(Number(expiry) > now)) return null;
-  return userId;
+  return { userId, issuedAt: Number(expiry) - MAX_AGE_S * 1000 };
 }

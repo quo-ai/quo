@@ -86,6 +86,8 @@ const STATEMENTS = [
     primary key (user_id, id)
   )`,
   `create index if not exists sync_records_seq on sync_records(user_id, seq)`,
+  // "Sign out everywhere": sessions issued before this moment (ms since the epoch) no longer work (identity.ts).
+  `alter table users add column if not exists sessions_valid_after bigint`,
   // When the "your synced chats will be deleted" email was sent (syncRetention.ts).
   `alter table sync_accounts add column if not exists warned_at timestamptz`,
   `create table if not exists processed_events (

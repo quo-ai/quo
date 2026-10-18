@@ -52,7 +52,8 @@ export async function accountSummary(db: Db, identity: Identity): Promise<Accoun
 }
 
 export async function handleMe(request: Request): Promise<Response> {
-  return json(await accountSummary(await getDb(), identify(request)));
+  const db = await getDb();
+  return json(await accountSummary(db, await identify(db, request)));
 }
 
 /**
@@ -64,12 +65,12 @@ export async function handleMe(request: Request): Promise<Response> {
  */
 export async function handleAccountDelete(request: Request): Promise<Response> {
   if (!features.accounts) throw new HttpError(503, 'setup_required', SETUP_MESSAGES.accounts);
-  const { userId } = identify(request);
+  const db = await getDb();
+  const { userId } = await identify(db, request);
   if (!userId) throw new HttpError(401, 'sign_in_required', 'Sign in first.');
   const body = await readJson<{ confirm?: boolean }>(request);
   if (body.confirm !== true) throw new HttpError(400, 'confirm_required', 'Confirm that you want to delete your account.');
 
-  const db = await getDb();
   await db.tx(async t => {
     const [user] = await t.query<{ email: string }>('select email from users where id = $1 for update', [userId]);
     if (!user) return; // already gone

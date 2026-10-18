@@ -156,6 +156,8 @@ export async function syncNow({ manual = false } = {}): Promise<void> {
       const problem = explain(error);
       blocked = NEEDS_ACTION.includes(problem.code);
       setStatus({ phase: 'error', error: problem });
+      // The sign-in stopped working (say, from "sign out everywhere"): find out, so the screen can ask for a new one.
+      if (problem.code === 'sign_in_required') void refreshAccount();
     }
   })();
   try {
@@ -218,7 +220,11 @@ export async function verifySignIn(email: string, code: string): Promise<void> {
   signedIn = true;
   blocked = false;
   await refreshAccount();
-  if (engine && status.phase === 'error') setStatus({ phase: 'idle', error: null });
+  if (engine && status.error?.code === 'sign_in_required') {
+    // Syncing was waiting for this: carry on.
+    setStatus({ phase: 'idle', error: null });
+    schedule(500);
+  }
 }
 
 /** Signs out of the account. Sync stays set up on this phone and resumes when you sign in again. */
@@ -227,6 +233,17 @@ export async function signOut(): Promise<void> {
   signedIn = false;
   account = null;
   emit();
+}
+
+/**
+ * Ends every other sign-in of this account (a lost phone, a shared computer) and
+ * keeps this phone signed in with a fresh token. The recovery key isn't affected.
+ */
+export async function signOutEverywhere(): Promise<void> {
+  const result = await api<{ token: string }>('auth/signout-all', { body: { client: 'app' } });
+  await saveToken(result.token);
+  blocked = false;
+  await refreshAccount();
 }
 
 /**

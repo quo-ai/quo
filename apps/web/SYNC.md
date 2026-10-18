@@ -57,7 +57,7 @@ All under `/api/sync/`, for a signed-in user. `server/sync.ts` is the implementa
 
 Every write gets the account's next change number, `seq`. A device pulls "everything after the `seq` I have", and pushes each record with the `baseSeq` it last saw for it. If the stored record has moved on, that record is a **conflict** and isn't written; the device pulls, merges and pushes again. So a write can never silently replace a newer one. Pushes lock the account row, so change numbers are gap-free and ordered. Deleting keeps a marker (`deleted: true`, no blob) so other devices learn about it.
 
-**Signing in.** Quo Web and the desktop app use a signed `HttpOnly` cookie. The phone has no cookie jar to rely on, so it asks for the same signed value as a bearer token (`POST auth/verify` with `"client": "app"` returns `token`, and no cookie is set) and sends `Authorization: Bearer …`, keeping it in secure storage. Tokens last 180 days and, like the cookie, are stateless. Signing out removes the token from the device; deleting the account makes every old token useless.
+**Signing in.** Quo Web and the desktop app use a signed `HttpOnly` cookie. The phone has no cookie jar to rely on, so it asks for the same signed value as a bearer token (`POST auth/verify` with `"client": "app"` returns `token`, and no cookie is set) and sends `Authorization: Bearer …`, keeping it in secure storage. Sessions last 180 days. They are signed tokens, but every request is also checked against the account (`server/identity.ts`): the account must still exist, and the session must have started after the account's `sessions_valid_after` marker. `POST auth/signout-all` sets that marker to now, which ends every earlier session on every device and hands the caller a fresh one (a lost phone, a shared computer). Signing out removes the token from one device; deleting the account makes every old token useless.
 
 ## Merging
 
@@ -81,6 +81,7 @@ A memory edited on two devices: the later edit wins. Deleted on one device but e
 - Included with Quo Pro, or the Sync-only plan (`sync_yearly`). If a plan ends, pulling still works so people can always get their data out; pushing needs a plan. `reset` and account deletion always work.
 - **Retention** (`server/syncRetention.ts`, run daily by the host's scheduler on `GET /api/cron/sync-cleanup` with `Authorization: Bearer $CRON_SECRET`, or by a timer in the standalone server): 180 days after the plan ends the encrypted copy is deleted; the account's email gets one warning 30 days before; deletion markers are pruned after 90 days; subscribing again resets the clock.
 - **Account deletion** (`POST /api/account/delete`, `{ "confirm": true }`) removes the account, its synced data, credits and plan records. It is refused while a plan is running (`409 plan_active`).
+- **Call limit:** 600 calls a minute per account on each server instance (`429 slow_down` with `Retry-After`), a safety net for an app stuck in a retry loop. A first sync of 20,000 chats needs about 800 calls over several minutes, so a working app never meets it. It counts per instance, so it is best effort, not protection against someone determined.
 - Until sign-in or purchases are set up, every call answers `503 setup_required`.
 
 ## What the server can and can't learn
@@ -92,7 +93,5 @@ A malicious server could withhold changes, or replay an older version of a recor
 ## Not done yet
 
 - Syncing attachments (would use object storage rather than the database).
-- Revoking a phone's sign-in token before it expires (sessions are stateless).
-- iOS: the phone code is shared React Native and nothing in it is Android-specific, but it has only been tested on Android's side of the build.
+- iOS: the phone code is shared React Native and nothing in it is Android-specific. CI bundles it for iOS (Metro and Hermes), but nothing has run it on an iPhone, and the app has no iOS build here.
 - Live updates (devices poll: after a change, when the app returns to the front, and every few minutes).
-- Rate limits beyond the size limits.

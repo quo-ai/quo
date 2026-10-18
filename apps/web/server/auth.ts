@@ -5,7 +5,7 @@ import { sendLoginCode } from './email.js';
 import { config, features, SETUP_MESSAGES } from './env.js';
 import { takeFreeMessage } from './freeTier.js';
 import { HttpError, json, readJson } from './http.js';
-import { identify } from './identity.js';
+import { anonymous, identify } from './identity.js';
 import { accountSummary } from './account.js';
 import { clearSessionCookie, createSessionCookie, createSessionToken } from './session.js';
 
@@ -33,7 +33,7 @@ export async function handleAuthStart(request: Request): Promise<Response> {
   const body = await readJson<{ email?: string }>(request);
   const email = normalizeEmail(body.email);
   const db = await getDb();
-  const allowed = await takeFreeMessage(db, { subject: `login:${email}`, ip: `login:${identify(request).ip}` }, { perSubject: 8, perIp: 30 });
+  const allowed = await takeFreeMessage(db, { subject: `login:${email}`, ip: `login:${anonymous(request).ip}` }, { perSubject: 8, perIp: 30 });
   if (!allowed) throw new HttpError(429, 'too_many_codes', 'Too many codes requested. Try again tomorrow.');
 
   const code = String(randomInt(0, 1_000_000)).padStart(6, '0');
@@ -71,7 +71,7 @@ export async function handleAuthVerify(request: Request): Promise<Response> {
   const [user] = await db.query<{ id: string }>('select id from users where email = $1', [email]);
   await grantTrial(db, user.id);
 
-  const summary = await accountSummary(db, { ...identify(request), userId: user.id });
+  const summary = await accountSummary(db, { ...anonymous(request), userId: user.id });
   // The phone app has no cookie jar to rely on: it asks for the token itself and keeps it in secure storage.
   if (body.client === 'app') return json({ ...summary, token: createSessionToken(user.id) });
   return json(summary, 200, { 'set-cookie': createSessionCookie(user.id) });
@@ -79,4 +79,20 @@ export async function handleAuthVerify(request: Request): Promise<Response> {
 
 export function handleSignOut(): Response {
   return json({ ok: true }, 200, { 'set-cookie': clearSessionCookie() });
+}
+
+/**
+ * "Sign out everywhere": every session started before now stops working (a lost
+ * phone, a shared computer). The caller stays signed in, with a fresh session.
+ * Tokens are stateless, so this is a marker on the account, not a list.
+ */
+export async function handleSignOutEverywhere(request: Request): Promise<Response> {
+  const db = await getDb();
+  const { userId } = await identify(db, request);
+  if (!userId) throw new HttpError(401, 'sign_in_required', 'Sign in first.');
+  const body = await readJson<{ client?: string }>(request);
+  const now = Date.now();
+  await db.query('update users set sessions_valid_after = $2 where id = $1', [userId, now]);
+  if (body.client === 'app') return json({ ok: true, token: createSessionToken(userId, now) });
+  return json({ ok: true }, 200, { 'set-cookie': createSessionCookie(userId, now) });
 }

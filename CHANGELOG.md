@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Photos and documents** — attach PDFs and text files (and photos, with models that read images) to a message; they're read on your computer and only go to offline models.
 - **Voice input and read aloud** — speak instead of typing (Whisper runs on your computer after a one-time ~80 MB download) and have replies read out with your system's voices.
 - **Quo Sync** — end-to-end encrypted sync of chats and memories between Quo Web, the desktop app and the Android app, with a recovery key only you hold; Quo can't read them. Part of Quo Pro, or on its own. Needs sign-in and purchases to be switched on.
+- **Sign out of all devices** — ends every other sign-in of your account (a lost phone, a shared computer); available in Plan & credits in Quo Web and the desktop app, and in Settings → Sync in the Android app.
 - **Delete your account** — from Settings → Sync in the Android app, or Plan & credits in Quo Web and the desktop app; it removes your synced data, credits and plan records.
 - **Sync clean-up** — synced data stays for 180 days after a plan ends (with one warning email 30 days before it is deleted).
 - **Open source** — Apache 2.0 licence, contributing guide, code of conduct, security policy, issue templates; website and brand assets refreshed for launch.

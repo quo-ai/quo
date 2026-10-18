@@ -10,6 +10,7 @@ let handleApi: typeof import('../routes.js').handleApi;
 let config: typeof import('../env.js').config;
 let getDb: typeof import('../db.js').getDb;
 let cleanupSync: typeof import('../syncRetention.js').cleanupSync;
+let takeSyncCall: typeof import('../sync.js').takeSyncCall;
 let log: MockInstance<typeof console.log>;
 
 beforeAll(async () => {
@@ -17,6 +18,7 @@ beforeAll(async () => {
   ({ config } = await import('../env.js'));
   ({ getDb } = await import('../db.js'));
   ({ cleanupSync } = await import('../syncRetention.js'));
+  ({ takeSyncCall } = await import('../sync.js'));
   log = vi.spyOn(console, 'log').mockImplementation(() => {});
 });
 
@@ -44,6 +46,11 @@ async function startSignIn(email: string): Promise<string> {
 async function signInWithApp(email: string): Promise<Auth> {
   const verify = await call(null, 'POST', 'auth/verify', { email, code: await startSignIn(email), client: 'app' });
   return { token: (await verify.json()).token };
+}
+
+async function signInWithCookie(email: string): Promise<Auth> {
+  const verify = await call(null, 'POST', 'auth/verify', { email, code: await startSignIn(email) });
+  return { cookie: verify.headers.get('set-cookie')!.split(';')[0] };
 }
 
 async function buy(auth: Auth, product: string) {
@@ -339,5 +346,105 @@ describe('deleting an account', () => {
     } finally {
       config.production = false;
     }
+  });
+});
+
+describe('signing out everywhere', () => {
+  const email = 'lost-phone@example.com';
+  const meEmail = async (auth: Auth) => (await (await call(auth, 'GET', 'me')).json()).user?.email ?? null;
+
+  it('ends every other session, whether web or phone, and keeps the one that asked', async () => {
+    const web = await signInWithCookie(email);
+    const laptop = await signInWithCookie(email);
+    const phone = await signInWithApp(email);
+    for (const auth of [web, laptop, phone]) expect(await meEmail(auth)).toBe(email);
+
+    const response = await call(web, 'POST', 'auth/signout-all', {});
+    expect(response.status).toBe(200);
+    const stillWeb: Auth = { cookie: response.headers.get('set-cookie')!.split(';')[0] };
+
+    expect(await meEmail(web)).toBeNull(); // the old cookie, even the one that asked
+    expect(await meEmail(laptop)).toBeNull();
+    expect(await meEmail(phone)).toBeNull();
+    expect(await meEmail(stillWeb)).toBe(email); // but the browser carries on, with a fresh session
+  });
+
+  it('turns a revoked phone away from everything that needs an account', async () => {
+    const phone = await signInWithApp('revoked-phone@example.com');
+    await buy(phone, 'sync_yearly');
+    await call(phone, 'POST', 'sync/setup', { verifier: blob('v') });
+    const web = await signInWithCookie('revoked-phone@example.com');
+    expect((await call(web, 'POST', 'auth/signout-all', {})).status).toBe(200);
+    expect((await call(phone, 'GET', 'sync/status')).status).toBe(401);
+    expect((await call(phone, 'GET', 'sync/pull?since=0')).status).toBe(401);
+    expect((await call(phone, 'POST', 'sync/push', { records: [] })).status).toBe(401);
+    expect((await call(phone, 'POST', 'billing/checkout', { product: 'pro_monthly' })).status).toBe(401);
+    expect((await call(phone, 'POST', 'account/delete', { confirm: true })).status).toBe(401);
+  });
+
+  it('gives the phone a fresh token when the phone is the one that asks', async () => {
+    const old = await signInWithApp('phone-asks@example.com');
+    const response = await call(old, 'POST', 'auth/signout-all', { client: 'app' });
+    expect(response.headers.get('set-cookie')).toBeNull();
+    const fresh: Auth = { token: (await response.json()).token };
+    expect(await meEmail(old)).toBeNull();
+    expect(await meEmail(fresh)).toBe('phone-asks@example.com');
+  });
+
+  it('lets people sign in again afterwards, and revoke again later', async () => {
+    const first = await signInWithApp('again@example.com');
+    await call(first, 'POST', 'auth/signout-all', {});
+    const second = await signInWithApp('again@example.com');
+    expect(await meEmail(second)).toBe('again@example.com');
+    await call(second, 'POST', 'auth/signout-all', {});
+    expect(await meEmail(second)).toBeNull();
+  });
+
+  it('is for signed-in people only, and only touches their own account', async () => {
+    expect((await call(null, 'POST', 'auth/signout-all', {})).status).toBe(401);
+    expect((await call({ token: 'nonsense' }, 'POST', 'auth/signout-all', {})).status).toBe(401);
+    const mine = await signInWithApp('revoker@example.com');
+    const theirs = await signInWithApp('bystander@example.com');
+    await call(mine, 'POST', 'auth/signout-all', {});
+    expect(await meEmail(theirs)).toBe('bystander@example.com');
+  });
+
+  it('cannot be triggered from another website', async () => {
+    const web = await signInWithCookie('csrf@example.com');
+    const forged = await call(web, 'POST', 'auth/signout-all', {}, { 'sec-fetch-site': 'cross-site' });
+    expect(forged.status).toBe(403);
+    expect(await meEmail(web)).toBe('csrf@example.com');
+  });
+
+  it('also stops the tokens of a deleted account working anywhere', async () => {
+    const auth = await signInWithApp('deleted-token@example.com');
+    expect((await call(auth, 'POST', 'account/delete', { confirm: true })).status).toBe(200);
+    expect((await call(auth, 'POST', 'billing/checkout', { product: 'sync_yearly' })).status).toBe(401);
+    expect(await meEmail(auth)).toBeNull();
+  });
+});
+
+describe('the Quo Sync call limit', () => {
+  it('lets a working app through and stops one stuck in a loop, then lets it back in', () => {
+    const user = 'limit-user';
+    const start = 1_000_000;
+    for (let i = 0; i < 600; i++) expect(takeSyncCall(user, start + i)).toBe(true);
+    expect(takeSyncCall(user, start + 700)).toBe(false);
+    expect(takeSyncCall(user, start + 30_000)).toBe(false);
+    expect(takeSyncCall(user, start + 61_000)).toBe(true); // a new minute
+    expect(takeSyncCall('someone-else', start + 700)).toBe(true); // others are unaffected
+  });
+
+  it('answers 429 with when to come back, and never for anything else', async () => {
+    const auth = await signInWithApp('looping@example.com');
+    const db = await getDb();
+    const [{ id }] = await db.query<{ id: string }>('select id from users where email = $1', ['looping@example.com']);
+    expect((await call(auth, 'GET', 'sync/status')).status).toBe(200);
+    for (let i = 0; i < 700; i++) takeSyncCall(id);
+    const limited = await call(auth, 'GET', 'sync/status');
+    expect(limited.status).toBe(429);
+    expect(limited.headers.get('retry-after')).toBe('60');
+    expect((await limited.json()).error).toBe('slow_down');
+    expect((await call(auth, 'GET', 'me')).status).toBe(200); // the rest of the API isn't affected
   });
 });

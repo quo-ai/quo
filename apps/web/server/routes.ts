@@ -1,5 +1,5 @@
 import { handleAccountDelete, handleMe } from './account.js';
-import { handleAuthStart, handleAuthVerify, handleSignOut } from './auth.js';
+import { handleAuthStart, handleAuthVerify, handleSignOut, handleSignOutEverywhere } from './auth.js';
 import { handleBillingConfig, handleCheckout, handleDevComplete, handlePaddleWebhook, handlePortal } from './billing.js';
 import { handleChat } from './chat.js';
 import { publicCatalog } from './cloudModels.js';
@@ -22,6 +22,7 @@ const ROUTES: Record<string, Handler> = {
   'POST auth/start': handleAuthStart,
   'POST auth/verify': handleAuthVerify,
   'POST auth/signout': handleSignOut,
+  'POST auth/signout-all': handleSignOutEverywhere,
   'POST chat': handleChat,
   'GET billing/config': handleBillingConfig,
   'POST billing/checkout': handleCheckout,
