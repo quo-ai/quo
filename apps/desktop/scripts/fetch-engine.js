@@ -43,8 +43,8 @@ async function download(url, file) {
   return hash.digest('hex');
 }
 
-function run(command, args) {
-  const result = spawnSync(command, args, { stdio: 'inherit' });
+function run(command, args, env = {}) {
+  const result = spawnSync(command, args, { stdio: 'inherit', env: { ...process.env, ...env } });
   if (result.status !== 0) throw new Error(`${command} failed (${result.error?.message ?? `exit ${result.status}`})`);
 }
 
@@ -54,7 +54,8 @@ function extract(archive, destination) {
   if (archive.endsWith('.zip')) {
     // Not `tar`: on Windows runners GNU tar comes first on the path and reads "D:\..." as a remote host.
     if (process.platform === 'win32') {
-      run('powershell', ['-NoProfile', '-NonInteractive', '-Command', 'Expand-Archive -LiteralPath $args[0] -DestinationPath $args[1] -Force', archive, destination]);
+      // Paths go in the environment: -Command doesn't bind extra arguments to $args, and this needs no quoting.
+      run('powershell', ['-NoProfile', '-NonInteractive', '-Command', 'Expand-Archive -LiteralPath $env:QUO_ZIP -DestinationPath $env:QUO_DEST -Force'], { QUO_ZIP: archive, QUO_DEST: destination });
     } else {
       run('unzip', ['-q', archive, '-d', destination]);
     }
