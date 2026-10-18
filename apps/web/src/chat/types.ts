@@ -1,3 +1,5 @@
+import type { AgentStep } from '../agent/types';
+
 export interface MessageStats {
   tokens: number;
   tokensPerSecond: number;
@@ -34,6 +36,8 @@ export interface Message {
   x?: Extra;
   /** The user stopped the reply before it finished. */
   stopped?: boolean;
+  /** Code mode: what the agent did to produce this reply. Kept on this device; not synced. */
+  steps?: AgentStep[];
   /** Cloud replies: credits charged (0 when free). */
   charged?: number;
   cloud?: boolean;

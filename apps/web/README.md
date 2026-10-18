@@ -79,6 +79,10 @@ Optional, and never chosen for the user (see below).
 - **Providers:** routed through Quo's API (`server/`), which counts tokens and stores no message content; zero-data-retention providers only.
 - **Payments:** Paddle as merchant of record (handles VAT and sales tax).
 
+## Code mode (the coding agent)
+
+`POST /api/chat` with `agent: { tools, project, platform }` is one step of a coding agent: the conversation so far, including the tools the model called and what they returned. The server adds the system prompt and the tool list (`server/agentTools.ts`: the safety rules live there, so the app can't drop them), checks the conversation's shape strictly (user, assistant with tool calls, and tool results that answer a call; never a system message), only allows paid models marked `agent: true` in the catalog, and streams the reply as text plus one `tool_calls` event before `done`. Each step is billed like a message. The tools run in the desktop app (`apps/desktop/src/agent`); the loop, which calls this endpoint and the tools in turn, is `src/agent/loop.ts`. Without an OpenRouter key the sandbox stand-in plays a scripted agent (looks at the folder; "create a file" writes one; "run" runs `echo`), so the whole loop works locally. Design and safety rules: `apps/desktop/README.md` → Code mode.
+
 ## Getting Quo onto the computer
 
 Quo Web is the fastest way in; the install prompt and desktop app keep people coming back.

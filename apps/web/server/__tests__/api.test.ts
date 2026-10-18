@@ -81,7 +81,8 @@ describe('API (sandbox)', () => {
     const done = stream.at(-1)!;
     expect(done.event).toBe('done');
     expect(done.data.charged).toBeGreaterThan(0);
-    expect(done.data.balance).toBeCloseTo(25 - done.data.charged, 1);
+    // The balance is shown to a tenth of a credit and the charge to a hundredth.
+    expect(Math.abs(done.data.balance - (25 - done.data.charged))).toBeLessThan(0.1);
   });
 
   it('completes a simulated Pro purchase with monthly credits', async () => {

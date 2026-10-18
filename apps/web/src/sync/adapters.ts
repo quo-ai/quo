@@ -49,7 +49,8 @@ export function fromWire(wire: WireChat, local?: Conversation): Conversation {
     const attachments: Attachment[] | undefined = message.attachments?.map(
       (attachment): Attachment => mine.get(message.id)?.attachments?.find(own => own.id === attachment.id && !own.omitted) ?? attachment,
     );
-    return present({ ...message, attachments });
+    // What the coding agent did stays on the device it ran on, and a copy from elsewhere doesn't have it.
+    return present({ ...message, attachments, steps: mine.get(message.id)?.steps });
   });
   return present({ ...wire, messages });
 }

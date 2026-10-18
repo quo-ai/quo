@@ -15,13 +15,25 @@ function subscribe(channel, callback) {
   return () => ipcRenderer.removeListener(channel, listener);
 }
 
-// Contract with the web app (apps/web/src/platform.ts): `platform` and `version`
-// always exist; `engine` and `models` exist only when this build includes the
-// native llama.cpp engine, and the web app falls back to its in-browser engine
-// without them. Every call resolves to { ok } or { error: { code, message } }.
+// Contract with the web app (apps/web/src/platform.ts): `platform`, `version` and
+// `agent` (Code mode) always exist; `engine` and `models` exist only when this
+// build includes the native llama.cpp engine, and the web app falls back to its
+// in-browser engine without them. Every call resolves to { ok } or { error: { code, message } }.
 contextBridge.exposeInMainWorld('quoDesktop', {
   platform: process.platform,
   version,
+  // Code mode: the project folder is chosen in a native dialog and edits and commands
+  // are approved in native dialogs, so none of this takes a path or an approval from the page.
+  agent: {
+    projects: () => invoke('agent:projects'),
+    pick: () => invoke('agent:pick'),
+    forget: id => invoke('agent:forget', { id }),
+    start: projectId => invoke('agent:start', { projectId }),
+    tool: (sessionId, name, args) => invoke('agent:tool', { sessionId, name, args }),
+    abort: sessionId => invoke('agent:abort', { sessionId }),
+    end: sessionId => invoke('agent:end', { sessionId }),
+    clearRepos: () => invoke('agent:clear-repos'),
+  },
   ...(hasEngine && {
     engine: {
       info: () => invoke('engine:info'),

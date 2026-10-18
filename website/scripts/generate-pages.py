@@ -123,6 +123,7 @@ privacy = f'''<h1>Privacy Policy</h1>
 <p>Files you attach (PDFs, text files and photos) are read on your computer and only ever go to an offline model, never to the cloud model. Voice input turns your speech into text on your computer: the speech model (about 80 MB) is downloaded once from Hugging Face, and your audio is neither saved nor sent anywhere. Read aloud uses your system’s own voices. The desktop app runs the AI in a separate program on your computer (llama.cpp) that can only be reached from your own computer, with a key that only the app knows.</p>
 <h3>Optional cloud model</h3>
 <p>Quo Web and the desktop app also offer a free cloud model, clearly marked and used only when you pick it. When you do, the messages in that chat are sent through our server to OpenRouter, which passes them to the model’s provider (for example OpenAI) to write the reply. We only use providers that don’t keep or train on your messages, and our server doesn’t store them either.</p>
+<p>In <strong>Code mode</strong> (desktop app, paid cloud models, only when you turn it on and choose a project folder), the files Quo reads from that folder, and the output of commands you approve, are sent to the model’s provider as part of the conversation, in the same way. Quo never reads secrets files (such as .env files and keys), changes a file or runs a command only after you confirm it in a window the page can’t click, and has no internet access other than downloading public GitHub repositories you or the model ask to look at.</p>
 <p>To keep the free allowance fair, our server counts how many cloud messages are sent each day per device and per IP address. It stores these counts under one-way keyed hashes, never the IP address or the app’s random device ID itself, and deletes them after two days. There are no accounts on Quo Web yet.</p>
 
 <h2>Why we use your data (legal bases)</h2>
@@ -237,6 +238,8 @@ faq = [
      'Only to download an AI model. After that, Quo works fully offline.'),
     ('Where are my chats stored?',
      'On your device. If you turn on Quo Sync (optional, and it needs a Quo account), encrypted copies are also kept so your other devices can have them, and we can’t read them. Without Quo Sync there is no server copy, so if you uninstall the app or clear your chats, they are gone for good.'),
+    ('What is Code mode?',
+     'In the desktop app, with a capable cloud model, Code lets Quo work on one of your project folders: read and search the code, make changes, run your tests, and read public GitHub repositories for reference. You choose the folder, you confirm every change and every command in a pop-up, and it never reads files like .env or private keys. The files it reads are sent to the model provider, so it isn’t offline. It uses credits, so a long session costs more than a short chat.'),
     ('What is Quo Sync?',
      'It keeps your chats and memories in step between your devices (the Android app, Quo Web and the desktop app), end-to-end encrypted: they’re scrambled on your device with a key only you hold, so we can’t read them. Turn it on in <strong>Settings → Sync</strong> in the Android app, or from the sidebar in Quo Web and the desktop app. It’s included with Quo Pro, or can be bought on its own. Photos, files and models aren’t synced.'),
     ('I lost my Quo Sync recovery key.',

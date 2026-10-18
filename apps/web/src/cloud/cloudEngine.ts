@@ -1,5 +1,6 @@
 import type { ChatTurn, GenerationUpdate } from '../engine/localEngine';
 import { apiFetch, ApiError } from './api';
+import { readEvents } from './sse';
 
 /**
  * Cloud replies from /api/chat (server-sent events). Streams the full text
@@ -36,33 +37,19 @@ export async function generateCloud(
       body: { model: modelId, messages, thinking: options.thinking },
       signal: controller.signal,
     });
-    const reader = response.body!.pipeThrough(new TextDecoderStream()).getReader();
-    let buffer = '';
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buffer += value;
-      let split: number;
-      while ((split = buffer.indexOf('\n\n')) >= 0) {
-        const block = buffer.slice(0, split);
-        buffer = buffer.slice(split + 2);
-        const event = /^event: (.+)$/m.exec(block)?.[1];
-        const data = /^data: (.+)$/m.exec(block)?.[1];
-        if (!event || !data) continue;
-        const payload = JSON.parse(data);
-        if (event === 'delta') {
-          result.content += payload.c ?? '';
-          result.reasoning += payload.r ?? '';
-          options.onUpdate({ content: result.content, reasoning: result.reasoning });
-        } else if (event === 'done') {
-          result.charged = payload.charged ?? 0;
-          result.balance = payload.balance ?? null;
-          result.freeRemaining = payload.freeRemaining ?? null;
-        } else if (event === 'error') {
-          throw new ApiError(502, payload.error, payload.message);
-        }
+    await readEvents(response, (event, payload) => {
+      if (event === 'delta') {
+        result.content += (payload.c as string | undefined) ?? '';
+        result.reasoning += (payload.r as string | undefined) ?? '';
+        options.onUpdate({ content: result.content, reasoning: result.reasoning });
+      } else if (event === 'done') {
+        result.charged = (payload.charged as number | undefined) ?? 0;
+        result.balance = (payload.balance as number | null | undefined) ?? null;
+        result.freeRemaining = (payload.freeRemaining as number | null | undefined) ?? null;
+      } else if (event === 'error') {
+        throw new ApiError(502, payload.error as string, payload.message as string);
       }
-    }
+    });
   } catch (error) {
     if (controller.signal.aborted) result.stopped = true;
     else throw error;

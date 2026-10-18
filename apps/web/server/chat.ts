@@ -6,13 +6,21 @@ import { config, features, SETUP_MESSAGES } from './env.js';
 import { freeRemaining, refundFreeMessage, takeFreeMessage } from './freeTier.js';
 import { HttpError, readJson } from './http.js';
 import { freeSubject, identify } from './identity.js';
-import { streamChat, UpstreamError, type ChatMessage } from './openrouter.js';
+import { agentSystemPrompt, AGENT_TOOL_NAMES, READ_ONLY_TOOLS, toolDefinitions, type Platform } from './agentTools.js';
+import { streamChat, UpstreamError, type ChatMessage, type ToolCall } from './openrouter.js';
 
 /**
  * POST /api/chat — cloud chat, streamed as server-sent events:
  *   event: delta  data: {"c": "text", "r": "reasoning"}
  *   event: done   data: {"charged": credits, "balance": credits|null, "freeRemaining": n|null}
  *   event: error  data: {"error": code, "message": text}
+ *
+ * With `agent` set (Code mode, desktop app only) the request is one step of a coding
+ * agent: the conversation so far, including the tools the model called and what they
+ * returned. The server adds the system prompt and the tool list, the model replies
+ * with text and/or tool calls, and the call arrives as one more event before `done`:
+ *   event: tool_calls  data: {"calls": [{"id", "name", "arguments"}], "finish": "tool_calls"}
+ * Only paid agent-capable models can be used, and each step is billed like a message.
  *
  * The free default model uses the daily allowance first; everything else
  * (and the default model beyond the allowance) draws credits: reserved
@@ -27,27 +35,41 @@ const RESERVE_MARGIN = 1.2;
 
 interface ChatRequest {
   model?: string;
-  messages?: ChatMessage[];
+  messages?: unknown;
   thinking?: boolean;
+  agent?: { tools?: unknown; project?: unknown; platform?: unknown };
 }
+
+const MAX_AGENT_MESSAGES = 600;
+const MAX_AGENT_CHARS = 1_200_000;
+const MAX_TOOL_RESULT_CHARS = 80_000;
+const MAX_TOOL_ARGS_CHARS = 60_000;
+const MAX_REQUEST_BYTES = 2_000_000;
+const ID_PATTERN = /^[A-Za-z0-9_.:-]{1,80}$/;
+const NAME_PATTERN = /^[A-Za-z0-9_-]{1,64}$/;
 
 const sse = (event: string, data: unknown) => `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
 const toCredits = (millicredits: number) => Math.round(millicredits / 100) / 10;
+// What one reply cost gets two decimals: the cheapest models cost a few hundredths of a credit, and "0.0" would read as free.
+const toCharge = (millicredits: number) => Math.round(millicredits / 10) / 100;
 
 export async function handleChat(request: Request): Promise<Response> {
   if (!features.cloud) throw new HttpError(503, 'cloud_unavailable', 'Cloud models aren’t available right now.');
-  const body = await readJson<ChatRequest>(request);
+  const body = await readJson<ChatRequest>(request, MAX_REQUEST_BYTES);
   const model = getCloudModel(body.model ?? '');
   if (!model) throw new HttpError(400, 'unknown_model', 'That model isn’t available.');
   if (!isFreeModel(model) && !features.accounts) throw new HttpError(503, 'setup_required', SETUP_MESSAGES.paidModels);
-  const messages = validateMessages(body.messages);
-  const thinking = Boolean(body.thinking) && model.supportsThinking;
+  const agent = body.agent ? parseAgent(body.agent, model) : null;
+  const history = agent ? validateAgentMessages(body.messages) : validateMessages(body.messages);
+  // Code mode: the server's own instructions go first; the app can't supply or drop them.
+  const messages: ChatMessage[] = agent ? [{ role: 'system', content: agent.prompt }, ...history] : history;
+  const thinking = !agent && Boolean(body.thinking) && model.supportsThinking;
 
   const db = await getDb();
   const identity = await identify(db, request);
   const freeKeys = { subject: freeSubject(identity), ip: identity.ip };
   const freeLimits = { perSubject: config.freeDailyMessages, perIp: config.freeDailyMessagesPerIp };
-  const inputTokens = Math.ceil(messages.reduce((sum, m) => sum + m.content.length, 0) / 3.5) + 8 * messages.length;
+  const inputTokens = Math.ceil((messages.reduce((sum, m) => sum + charsOf(m), 0) + (agent?.toolChars ?? 0)) / 3.5) + 8 * messages.length;
 
   // Decide how this request is paid for.
   let mode: 'free' | 'credits';
@@ -98,12 +120,14 @@ export async function handleChat(request: Request): Promise<Response> {
         usage = await streamChat(model, messages, {
           maxTokens,
           thinking,
+          tools: agent?.tools,
           signal: upstream.signal,
           onDelta: delta => {
             outputChars += (delta.content?.length ?? 0) + (delta.reasoning?.length ?? 0);
             send('delta', { c: delta.content, r: delta.reasoning });
           },
         });
+        outputChars += usage.toolCalls.reduce((sum, call) => sum + call.function.arguments.length, 0);
       } catch (error) {
         if (!upstream.signal.aborted) {
           console.error('[chat] upstream', error instanceof UpstreamError ? `${error.status} ${error.message}` : error);
@@ -134,8 +158,10 @@ export async function handleChat(request: Request): Promise<Response> {
 
       if (failure) send('error', { error: failure.code, message: failure.message });
       else {
+        if (usage?.toolCalls.length) send('tool_calls', { calls: usage.toolCalls.map(call => ({ id: call.id, name: call.function.name, arguments: call.function.arguments })), finish: usage.finishReason });
         send('done', {
-          charged: toCredits(charged),
+          finish: usage?.finishReason ?? null,
+          charged: toCharge(charged),
           balance: balance === null ? null : toCredits(balance),
           freeRemaining: isFreeModel(model) ? await freeRemaining(db, freeKeys, freeLimits).catch(() => null) : null,
         });
@@ -161,19 +187,80 @@ export async function handleChat(request: Request): Promise<Response> {
   });
 }
 
+const charsOf = (message: ChatMessage) =>
+  message.content.length + (message.role === 'assistant' ? (message.tool_calls ?? []).reduce((sum, call) => sum + call.function.arguments.length + call.function.name.length, 0) : 0);
+
 function validateMessages(input: unknown): ChatMessage[] {
   if (!Array.isArray(input) || input.length === 0 || input.length > MAX_MESSAGES) {
     throw new HttpError(400, 'bad_messages', 'Send between 1 and 100 messages.');
   }
   let chars = 0;
-  const messages = input.map(raw => {
-    const message = raw as Partial<ChatMessage>;
+  const messages = input.map((raw): ChatMessage => {
+    const message = raw as { role?: string; content?: unknown };
     if (!['system', 'user', 'assistant'].includes(message.role ?? '') || typeof message.content !== 'string') {
       throw new HttpError(400, 'bad_messages', 'Each message needs a role and text.');
     }
     chars += message.content.length;
-    return { role: message.role!, content: message.content };
+    return { role: message.role as 'system' | 'user' | 'assistant', content: message.content };
   });
   if (chars > MAX_CHARS) throw new HttpError(413, 'too_long', 'This conversation is too long. Start a new chat.');
+  return messages;
+}
+
+/** Code mode's setup, checked: an agent-capable paid model, and a known set of tools. */
+function parseAgent(input: NonNullable<ChatRequest['agent']>, model: NonNullable<ReturnType<typeof getCloudModel>>) {
+  if (!model.agent || isFreeModel(model)) throw new HttpError(400, 'agent_unsupported', 'This model can’t be used for Code mode. Choose one of the frontier models.');
+  const requested = Array.isArray(input.tools) ? input.tools.filter((name): name is string => typeof name === 'string') : [];
+  const names = AGENT_TOOL_NAMES.filter(name => requested.includes(name));
+  if (!READ_ONLY_TOOLS.every(name => names.includes(name))) throw new HttpError(400, 'bad_tools', 'Code mode needs at least the tools that read files.');
+  const platform: Platform = input.platform === 'win32' || input.platform === 'darwin' ? input.platform : 'linux';
+  const project = (typeof input.project === 'string' ? input.project : '').replace(/[^\p{L}\p{N} ._-]/gu, '').trim().slice(0, 60) || 'project';
+  const tools = toolDefinitions(names);
+  return { tools, toolChars: JSON.stringify(tools).length, prompt: agentSystemPrompt(project, platform, names) };
+}
+
+/**
+ * The conversation of a Code-mode step: the user's messages, the model's (with the tools it
+ * called), and the tools' results, each result answering a call the model made. Nothing else,
+ * and the server's system prompt is never taken from the app.
+ */
+function validateAgentMessages(input: unknown): ChatMessage[] {
+  if (!Array.isArray(input) || input.length === 0 || input.length > MAX_AGENT_MESSAGES) throw new HttpError(400, 'bad_messages', 'Send a conversation of up to 600 messages.');
+  let chars = 0;
+  const called = new Set<string>();
+  const messages = input.map((raw): ChatMessage => {
+    const message = raw as { role?: string; content?: unknown; tool_calls?: unknown; tool_call_id?: unknown };
+    if (typeof message.content !== 'string') throw new HttpError(400, 'bad_messages', 'Each message needs text.');
+    if (message.role === 'user') {
+      chars += message.content.length;
+      return { role: 'user', content: message.content };
+    }
+    if (message.role === 'assistant') {
+      const calls: ToolCall[] = [];
+      if (message.tool_calls !== undefined) {
+        if (!Array.isArray(message.tool_calls) || message.tool_calls.length > 20) throw new HttpError(400, 'bad_messages', 'Too many tool calls in one step.');
+        for (const raw of message.tool_calls) {
+          const call = raw as { id?: unknown; function?: { name?: unknown; arguments?: unknown } };
+          const { id, function: fn } = call;
+          if (typeof id !== 'string' || !ID_PATTERN.test(id) || typeof fn?.name !== 'string' || !NAME_PATTERN.test(fn.name) || typeof fn.arguments !== 'string' || fn.arguments.length > MAX_TOOL_ARGS_CHARS) {
+            throw new HttpError(400, 'bad_messages', 'A tool call isn’t valid.');
+          }
+          called.add(id);
+          calls.push({ id, type: 'function', function: { name: fn.name, arguments: fn.arguments } });
+        }
+      }
+      chars += message.content.length + calls.reduce((sum, call) => sum + call.function.arguments.length, 0);
+      return calls.length ? { role: 'assistant', content: message.content, tool_calls: calls } : { role: 'assistant', content: message.content };
+    }
+    if (message.role === 'tool') {
+      if (typeof message.tool_call_id !== 'string' || !called.has(message.tool_call_id)) throw new HttpError(400, 'bad_messages', 'A tool result doesn’t answer a tool call.');
+      if (message.content.length > MAX_TOOL_RESULT_CHARS) throw new HttpError(413, 'too_long', 'A tool result is too long.');
+      chars += message.content.length;
+      return { role: 'tool', tool_call_id: message.tool_call_id, content: message.content };
+    }
+    throw new HttpError(400, 'bad_messages', 'Messages can come from the user, the model or a tool.');
+  });
+  if (messages[messages.length - 1].role === 'assistant') throw new HttpError(400, 'bad_messages', 'The conversation must end with the user or a tool result.');
+  if (chars > MAX_AGENT_CHARS) throw new HttpError(413, 'too_long', 'This session has got too long. Start a new one.');
   return messages;
 }

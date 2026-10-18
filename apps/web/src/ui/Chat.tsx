@@ -5,8 +5,12 @@ import { buildContext } from '../chat/context';
 import { listMemories, memoryPrompt } from '../memory/store';
 import { titleFrom } from '../chat/store';
 import { newId, type Attachment, type Conversation, type Message } from '../chat/types';
+import { askAgentModel } from '../agent/stream';
+import { runAgent } from '../agent/loop';
+import { CodeSession, lastProjectId, pickProject, recentProjects } from '../agent/session';
+import type { AgentMessage } from '../agent/types';
 import { ApiError } from '../cloud/api';
-import { NativeError } from '../native';
+import { agentBridge, NativeError, type CodeProject } from '../native';
 import { applyUsage, type Account } from '../cloud/account';
 import { generateCloud, stopCloud } from '../cloud/cloudEngine';
 import { localEngine } from '../engine/localEngine';
@@ -14,7 +18,9 @@ import { CLOUD_CONTEXT, type ModelChoice } from '../models';
 import { Markdown } from './Markdown';
 import { beginGeneration, endGeneration } from '../sync';
 import { canSpeak, hasVoices, onVoicesChanged, speak, stopSpeaking } from '../voice/readAloud';
+import { AgentSteps } from './AgentSteps';
 import { AttachmentChips, MessageAttachments } from './Attachments';
+import { CodeChip } from './CodeChip';
 import { QuoMark } from './QuoMark';
 import { toast } from './Toasts';
 import { useVoiceInput } from './useVoiceInput';
@@ -65,6 +71,9 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [dragging, setDragging] = useState(false);
   const [speakingId, setSpeakingId] = useState<string | null>(null);
+  const [code, setCode] = useState<CodeSession | null>(null);
+  const [codeStarting, setCodeStarting] = useState(false);
+  const agentRun = useRef<AbortController | null>(null);
   const [voicesReady, setVoicesReady] = useState(hasVoices);
   const fileInput = useRef<HTMLInputElement>(null);
   const scroller = useRef<HTMLDivElement>(null);
@@ -77,6 +86,8 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
   const vision = choice?.kind === 'local' && Boolean(choice.model.vision);
   // Files stay on this device: attachments only go to offline models.
   const canAttach = Boolean(choice) && !cloud;
+  // Code mode: the desktop app, and a cloud model that can do it.
+  const codeAvailable = Boolean(agentBridge()) && choice?.kind === 'cloud' && choice.model.agent;
 
   const voice = useVoiceInput(text => {
     setInput(current => (current.trim() ? `${current.trimEnd()} ${text}` : text));
@@ -113,8 +124,65 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
 
   const stop = () => {
     stopCloud();
+    agentRun.current?.abort();
+    code?.stop();
     void localEngine.stop();
   };
+
+  // Code mode belongs to one chat and one capable model; leaving either ends it, along with what was allowed.
+  const modelId = choice?.model.id;
+  useEffect(() => {
+    if (!code) return;
+    if (!codeAvailable) {
+      code.end();
+      setCode(null);
+    }
+  }, [code, codeAvailable]);
+  const endCode = () =>
+    setCode(session => {
+      session?.end();
+      return null;
+    });
+  // Sending the first message creates the conversation (no id, then an id): that's the same chat, so it stays.
+  const lastConversation = useRef(conversation?.id);
+  useEffect(() => {
+    const before = lastConversation.current;
+    lastConversation.current = conversation?.id;
+    if (before !== undefined && before !== conversation?.id) endCode();
+  }, [conversation?.id]);
+  useEffect(endCode, [modelId]);
+  useEffect(() => () => code?.end(), [code]);
+
+  async function startCode(project: CodeProject) {
+    code?.end();
+    setCode(await CodeSession.start(project));
+  }
+
+  async function toggleCode() {
+    if (code) {
+      code.end();
+      return setCode(null);
+    }
+    setCodeStarting(true);
+    try {
+      const last = (await recentProjects()).find(project => project.id === lastProjectId());
+      const project = last ?? (await pickProject());
+      if (project) await startCode(project);
+    } catch (error) {
+      toast(error instanceof NativeError ? error.message : 'Couldn’t turn on Code mode.');
+    } finally {
+      setCodeStarting(false);
+    }
+  }
+
+  async function changeFolder() {
+    try {
+      const project = await pickProject();
+      if (project) await startCode(project);
+    } catch (error) {
+      toast(error instanceof NativeError ? error.message : 'Couldn’t use that folder.');
+    }
+  }
 
   // Esc cancels a recording.
   useEffect(() => {
@@ -155,7 +223,25 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
 
     beginGeneration(); // Quo Sync waits until the reply is finished
     try {
-      if (choice.kind === 'cloud') {
+      if (choice.kind === 'cloud' && code && choice.model.agent) {
+        // Code mode: the model works on the project with the desktop app's tools, until it has nothing left to do.
+        setStatus('generating');
+        const controller = new AbortController();
+        agentRun.current = controller;
+        const conversationSoFar: AgentMessage[] = prior.filter(m => m.content).map(m => ({ role: m.role, content: m.content }));
+        try {
+          const outcome = await runAgent(conversationSoFar, {
+            signal: controller.signal,
+            askModel: (messages, onText) => askAgentModel(choice.model.id, messages, { tools: code.info.tools, project: code.project.name, platform: code.info.platform, signal: controller.signal, onText }),
+            runTool: (name, args) => code.run(name, args),
+            onUpdate: ({ steps, text }) => update({ content: text, steps }, false),
+          });
+          applyUsage({ balance: outcome.balance, freeRemaining: null });
+          update({ content: outcome.text, steps: outcome.steps, charged: outcome.charged, stopped: outcome.stopped || undefined }, true);
+        } finally {
+          agentRun.current = null;
+        }
+      } else if (choice.kind === 'cloud') {
         setStatus('generating');
         const history = buildContext(CLOUD_PROMPT, prior, CLOUD_CONTEXT.contextSize, CLOUD_CONTEXT.maxTokens);
         const result = await generateCloud(choice.model.id, history, {
@@ -191,7 +277,7 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
         : err instanceof NativeError && err.code !== 'failed'
           ? { code: 'local_failed', message: err.message }
           : { code: 'local_failed', message: 'The model couldn’t answer. Try a smaller model, or reload the page.' });
-      current = { ...current, messages: current.messages.filter(m => m.id !== assistant.id || m.content) };
+      current = { ...current, messages: current.messages.filter(m => m.id !== assistant.id || m.content || m.steps?.length) };
       onChange(current, true);
     } finally {
       endGeneration();
@@ -281,6 +367,7 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
             <QuoMark />
             <h1>What’s on your mind?</h1>
             <p>{!choice ? 'Choose a model to start.'
+              : code ? `Code mode is on in ${code.project.name}. Ask about the code, or ask for a change. Nothing is changed or run without your OK.`
               : cloud ? `${choice.model.name} answers in the cloud${choice.model.free ? ', free every day' : ''}. For complete privacy, switch to an offline model anytime.`
                 : `${choice.model.name} runs on this device. Nothing you type leaves it.${vision ? ' Attach photos and documents with the paperclip.' : ''}`}</p>
             <div className="suggestions">
@@ -307,6 +394,7 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
           const streaming = isLast && busy;
           return (
             <article key={message.id} className={`msg assistant${isLast ? ' last' : ''}`}>
+              {message.steps?.length ? <AgentSteps steps={message.steps} /> : null}
               {message.reasoning && (
                 <details className="reasoning" open={!message.content}>
                   <summary><Brain size={14} /> {message.content ? 'Thought process' : 'Thinking…'}</summary>
@@ -396,7 +484,8 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
                 {voice.state === 'transcribing' ? <Loader2 size={18} className="spin" /> : voice.state === 'recording' ? <Square size={13} fill="currentColor" /> : <Mic size={18} />}
               </button>
             )}
-            {supportsThinking && (
+            {codeAvailable && <CodeChip active={Boolean(code)} starting={codeStarting} disabled={busy} project={code?.project.name ?? null} onToggle={() => void toggleCode()} onChangeFolder={() => void changeFolder()} />}
+            {supportsThinking && !code && (
               <button type="button" className="chip press" aria-pressed={thinking} onClick={() => setThinking(t => !t)} title="Reason step by step before answering">
                 <Brain size={14} /> Think
               </button>
@@ -421,7 +510,7 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
           </div>
         </form>
         <div className="composer-hint">
-          {cloud ? 'Cloud replies via OpenRouter · Quo doesn’t store your messages' : 'Runs privately on this device'} · Enter to send · Shift+Enter for a new line
+          {code ? 'Code mode · files Quo reads are sent to the model’s provider · edits and commands need your OK' : cloud ? 'Cloud replies via OpenRouter · Quo doesn’t store your messages' : 'Runs privately on this device'} · Enter to send · Shift+Enter for a new line
         </div>
       </div>
     </>
@@ -432,7 +521,8 @@ function replyMeta(message: Message): string {
   if (message.stopped) return 'Stopped';
   if (message.cloud) {
     const cost = message.charged ? `${message.charged} credit${message.charged === 1 ? '' : 's'}` : 'Free';
-    return `${message.modelName ?? 'Cloud'} · ${cost}`;
+    const steps = message.steps?.length ? ` · ${message.steps.length} step${message.steps.length === 1 ? '' : 's'}` : '';
+    return `${message.modelName ?? 'Cloud'}${steps} · ${cost}`;
   }
   return message.stats && message.stats.tokens > 1 ? `${message.stats.tokensPerSecond.toFixed(1)} tokens/s` : '';
 }

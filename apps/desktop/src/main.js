@@ -5,6 +5,7 @@ const os = require('node:os');
 const path = require('node:path');
 const { app, BrowserWindow, session, shell, systemPreferences } = require('electron');
 const { APP_HOST, APP_URL, API_ORIGIN, registerScheme, handleAppProtocol, setEngineTarget } = require('./protocol');
+const { setupAgent } = require('./agent/ipc');
 const { engineAvailable, setupEngine } = require('./engine/ipc');
 const { MIN_SIZE, loadWindowState, trackWindowState } = require('./windowState');
 const { buildMenu } = require('./menu');
@@ -153,6 +154,7 @@ function start() {
   }
   handleAppProtocol(session.defaultSession, webRoot);
   restrictPermissions(session.defaultSession);
+  setupAgent();
   hasEngine = engineAvailable();
   if (hasEngine) {
     const { engine } = setupEngine();

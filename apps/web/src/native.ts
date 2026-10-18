@@ -110,11 +110,41 @@ export interface NativeBridge {
   };
 }
 
+/**
+ * Code mode (apps/desktop/src/agent). The page never names a folder or approves anything:
+ * the project is chosen in a native dialog and held here only as an id, and edits and
+ * commands are approved in native dialogs too.
+ */
+export interface CodeProject {
+  id: string;
+  name: string;
+}
+
+export interface CodeSessionInfo {
+  sessionId: string;
+  name: string;
+  platform: string;
+  /** The tools this build implements. */
+  tools: string[];
+}
+
+export interface DesktopAgent {
+  projects: () => Promise<NativeResult<CodeProject[]>>;
+  pick: () => Promise<NativeResult<CodeProject | null>>;
+  forget: (id: string) => Promise<NativeResult<unknown>>;
+  start: (projectId: string) => Promise<NativeResult<CodeSessionInfo>>;
+  tool: (sessionId: string, name: string, args: Record<string, unknown>) => Promise<NativeResult<{ ok: boolean; text: string; display?: Record<string, unknown> }>>;
+  abort: (sessionId: string) => Promise<NativeResult<unknown>>;
+  end: (sessionId: string) => Promise<NativeResult<unknown>>;
+  clearRepos: () => Promise<NativeResult<unknown>>;
+}
+
 declare global {
   interface Window {
     quoDesktop?: {
       platform: string;
       version: string;
+      agent?: DesktopAgent;
       engine?: NativeBridge['engine'];
       models?: NativeBridge['models'];
     };
@@ -129,3 +159,6 @@ export function nativeBridge(): NativeBridge | null {
 }
 
 export const hasNativeEngine = (): boolean => nativeBridge() !== null;
+
+/** Code mode's bridge, or null in the browser and in desktop builds from before it. */
+export const agentBridge = (): DesktopAgent | null => (typeof window === 'undefined' ? null : window.quoDesktop?.agent ?? null);

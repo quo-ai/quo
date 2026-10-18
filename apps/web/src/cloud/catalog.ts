@@ -9,6 +9,8 @@ export interface CloudModel {
   free: boolean;
   /** `frontier`: the most capable models, locked until the person has credits. `everyday`: quick and cheap. */
   tier: 'frontier' | 'everyday';
+  /** Can run Code mode (desktop app): reliable tool use and strong at code. */
+  agent: boolean;
   /** When the model came out (ISO date). */
   released: string;
   supportsThinking: boolean;

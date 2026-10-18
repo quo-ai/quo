@@ -3,7 +3,7 @@ import type { CloudCatalog, CloudModel } from '../catalog';
 import { groupModels } from '../groups';
 
 const model = (id: string, tier: CloudModel['tier'], free = false): CloudModel => ({
-  id, name: id, provider: 'P', description: 'd', free, tier, released: '2026-01-01', supportsThinking: true, creditsPerMessage: 1,
+  id, name: id, provider: 'P', description: 'd', free, tier, agent: false, released: '2026-01-01', supportsThinking: true, creditsPerMessage: 1,
 });
 
 describe('grouping the cloud models', () => {
