@@ -22,10 +22,12 @@ interface SidebarProps {
   onOpenModels: () => void;
   onOpenSync: () => void;
   onOpenMemories: () => void;
+  /** What Quo Pro is (shown to people who aren't signed in or on Pro). */
+  onOpenPro: () => void;
   onGetApp: () => void;
 }
 
-export function Sidebar({ conversations, currentId, installedCount, account, onOpenAccount, onNewChat, onOpen, onDelete, onCollapse, onOpenModels, onOpenSync, onOpenMemories, onGetApp }: SidebarProps) {
+export function Sidebar({ conversations, currentId, installedCount, account, onOpenAccount, onNewChat, onOpen, onDelete, onCollapse, onOpenModels, onOpenSync, onOpenMemories, onOpenPro, onGetApp }: SidebarProps) {
   const sync = useSyncStatus();
   const [query, setQuery] = useState('');
   const groups = useMemo(() => groupConversations(conversations, Date.now(), query), [conversations, query]);
@@ -99,7 +101,7 @@ export function Sidebar({ conversations, currentId, installedCount, account, onO
           ) : account && (
             <div className="signin-row">
               <button className="footer-btn press" onClick={onOpenAccount}><UserRound size={18} /> Sign in</button>
-              <button className="btn btn-primary press get-pro" onClick={onOpenAccount}>Get Pro</button>
+              <button className="btn btn-primary press get-pro" onClick={onOpenPro}>Get Pro</button>
             </div>
           )}
         </div>

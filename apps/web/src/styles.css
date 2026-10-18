@@ -545,3 +545,43 @@ code.path { padding: 1px 6px; border-radius: 6px; background: rgba(14, 14, 40, 0
 .paywall-about { margin: 0 0 6px; font-size: 14.5px; color: var(--text-2); }
 .paywall .perks { margin-top: 14px; }
 .paywall .plan-actions { margin-top: 4px; }
+
+/* Quo Pro: the chip beside the picker, the promo in it, the info sheet and the first-screen teaser */
+.pro-chip { display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 12px; border: 0; border-radius: 999px; font-weight: 600; font-size: 13px; color: var(--indigo); box-shadow: 0 0 0 1px rgba(59, 46, 255, 0.2); }
+.pro-chip .pro-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.05em; padding: 2px 6px; border-radius: 999px; color: #fff; background: var(--indigo); }
+@media (max-width: 760px) { .pro-chip .pro-label { display: none; } }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; font-weight: 600; padding: 4px 10px; border-radius: 999px; color: var(--indigo); background: rgba(59, 46, 255, 0.07); }
+.chip svg { opacity: 0.65; }
+.chip.more { background: transparent; color: var(--text-3); padding-left: 2px; }
+.pro-promo { display: flex; align-items: center; gap: 12px; width: 100%; margin: 0 0 6px; padding: 10px 12px; border: 0; border-radius: 16px; text-align: left; color: var(--text-3); background: linear-gradient(135deg, rgba(59, 46, 255, 0.1), rgba(143, 135, 255, 0.16)); box-shadow: 0 0 0 1px rgba(59, 46, 255, 0.16); }
+.pro-promo .grow { flex: 1; min-width: 0; }
+.pro-promo strong { display: block; font-size: 14px; color: var(--ink); }
+.pro-promo .grow > span { display: block; font-size: 12.5px; }
+.pro-promo-icon { flex: none; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 11px; color: var(--indigo); background: rgba(255, 255, 255, 0.7); }
+.sheet-head h2 svg { vertical-align: -3px; margin-right: 4px; color: var(--indigo); }
+.pro-section { margin-top: 18px; }
+.pro-section h3 { margin: 0 0 8px; font-size: 11.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-3); }
+.pro-section .note { margin: 8px 0 0; }
+.pro-section .perks { margin: 0; }
+.pro-rows { display: grid; }
+.pro-row { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; font-size: 14px; border-bottom: 1px solid var(--hairline); }
+.pro-row:last-child { border-bottom: 0; }
+.pro-row span { color: var(--text-2); }
+.pro-actions { margin-top: 20px; }
+.welcome-pro { margin: 26px auto 0; padding: 16px 18px; max-width: 500px; border-radius: 20px; text-align: left; background: rgba(255, 255, 255, 0.6); box-shadow: 0 0 0 0.5px rgba(14, 14, 60, 0.08); }
+.welcome-pro-head { display: flex; align-items: center; gap: 7px; font-weight: 700; font-size: 14.5px; color: var(--ink); }
+.welcome-pro-head svg { color: var(--indigo); }
+.welcome-pro p { margin: 6px 0 10px; font-size: 13.5px; color: var(--text-2); }
+.welcome-pro .btn-link { display: inline-block; margin-top: 10px; font-size: 13.5px; }
+.auth-pro { margin-top: 6px; padding: 14px 16px; border-radius: var(--r-card); background: rgba(59, 46, 255, 0.05); }
+.auth-pro-head { display: flex; align-items: center; gap: 7px; font-weight: 700; font-size: 14px; color: var(--ink); }
+.auth-pro-head svg { color: var(--indigo); }
+.auth-pro .perks { margin: 8px 0; }
+.auth-pro .note { margin: 0; font-size: 12.5px; }
+
+/* An open picker sits above the banners under the toolbar, so none of it is covered. */
+.toolbar:has(.popover) { z-index: 25; }
+.sheet-foot { flex: none; padding: 14px 24px 20px; border-top: 1px solid var(--hairline); }
+.sheet-foot .sandbox-note { margin: 0 0 12px; }
+.sheet-foot .plan-actions { margin: 0; }

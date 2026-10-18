@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { PanelLeftOpen, SquarePen } from 'lucide-react';
+import { Crown, PanelLeftOpen, SquarePen } from 'lucide-react';
 import { allLocalModels, getLocalModel, LOCAL_MODELS, type LocalModel } from './catalog';
 import { refreshCustomModels, useCustomModels } from './customModels';
 import { nativeBridge } from './native';
@@ -7,6 +7,7 @@ import { deleteConversation, listConversations, saveConversation } from './chat/
 import type { Conversation } from './chat/types';
 import { getAccount, refreshAccount, subscribeAccount, type Account } from './cloud/account';
 import { isUnlocked } from './cloud/access';
+import { frontierModels } from './cloud/pro';
 import { cachedCatalog, loadCatalog, type CloudCatalog, type CloudModel } from './cloud/catalog';
 import { deviceNotice, getDeviceProfile, type DeviceProfile } from './device';
 import { localEngine } from './engine/localEngine';
@@ -26,6 +27,7 @@ import { OfflineModelCard } from './ui/OfflineModelCard';
 import { MOD_KEY, Sidebar } from './ui/Sidebar';
 import { MemorySheet } from './ui/MemorySheet';
 import { PaywallSheet } from './ui/PaywallSheet';
+import { ProSheet } from './ui/ProSheet';
 import { SyncSheet } from './ui/SyncSheet';
 import { toast, Toasts } from './ui/Toasts';
 import { Welcome } from './ui/Welcome';
@@ -96,6 +98,7 @@ export function App() {
   const [syncOpen, setSyncOpen] = useState(false);
   const [memoriesOpen, setMemoriesOpen] = useState(false);
   const [paywall, setPaywall] = useState<CloudModel | null>(null);
+  const [proOpen, setProOpen] = useState(false);
   const [wantedKey, setWanted] = useState<string | null>(storedWanted);
   const [noticeHidden, setNoticeHidden] = useState(false);
   const [collapsed, setCollapsed] = useState(() => isNarrow() || localStorage.getItem(SIDEBAR_KEY) === '1');
@@ -248,6 +251,11 @@ export function App() {
     choose(wantedKey);
   });
 
+  function continueFromPro() {
+    setProOpen(false);
+    setAccountOpen(true);
+  }
+
   function continueFromPaywall() {
     if (!paywall) return;
     const key = `cloud:${paywall.id}`;
@@ -304,6 +312,8 @@ export function App() {
   }
 
   const showWelcome = !choice && !current;
+  // Anyone not on Pro, once the server has answered, is shown what Pro adds.
+  const showProPromo = Boolean(account) && account!.plan !== 'pro' && frontierModels(catalog).length > 0;
   const notice = device ? deviceNotice(device) : null;
   const showNotice = Boolean(notice) && !noticeHidden && !isNoticeDismissed(notice!);
 
@@ -335,6 +345,7 @@ export function App() {
           onOpenModels={() => setModelsOpen(true)}
           onOpenSync={() => setSyncOpen(true)}
           onOpenMemories={() => setMemoriesOpen(true)}
+          onOpenPro={() => setProOpen(true)}
           onGetApp={() => setGetAppOpen(true)}
         />
         <div className="drawer-scrim" onClick={() => setSidebar(true)} />
@@ -360,7 +371,13 @@ export function App() {
                 onChoose={choose}
                 onManage={() => setModelsOpen(true)}
                 onOpenAccount={() => setAccountOpen(true)}
+                onOpenPro={() => setProOpen(true)}
               />
+            )}
+            {!showWelcome && showProPromo && (
+              <button className="pro-chip glass press" onClick={() => setProOpen(true)} aria-label="Frontier models with Quo Pro">
+                <Crown size={15} /> <span className="pro-label">Frontier models</span> <span className="pro-tag">Pro</span>
+              </button>
             )}
             <span className="spacer" />
             {pendingOffline && (
@@ -375,7 +392,7 @@ export function App() {
           {showNotice && <DeviceBanner notice={notice!} onDismiss={() => setNoticeHidden(true)} onGetApp={() => setGetAppOpen(true)} />}
 
           {showWelcome
-            ? <Welcome device={device} downloads={downloads} onBrowseModels={() => setModelsOpen(true)} cloudModel={freeCloud} onUseCloud={chatInCloudWhileWaiting} />
+            ? <Welcome device={device} downloads={downloads} onBrowseModels={() => setModelsOpen(true)} cloudModel={freeCloud} onUseCloud={chatInCloudWhileWaiting} catalog={catalog} account={account} onOpenPro={() => setProOpen(true)} />
             : (
               <Chat
                 ref={chatRef}
@@ -403,6 +420,7 @@ export function App() {
       )}
       {accountOpen && <AccountSheet account={account} onClose={closeAccount} />}
       {memoriesOpen && <MemorySheet onClose={closeMemories} />}
+      {proOpen && <ProSheet catalog={catalog} account={account} onClose={() => setProOpen(false)} onContinue={continueFromPro} />}
       {paywall && <PaywallSheet model={paywall} account={account} currentName={choice?.model.name ?? null} onClose={() => setPaywall(null)} onContinue={continueFromPaywall} />}
       {syncOpen && <SyncSheet account={account} onClose={closeSync} onOpenAccount={() => { setSyncOpen(false); setAccountOpen(true); }} />}
       {getAppOpen && <GetAppSheet slowBrowser={slowBrowser} onClose={closeGetApp} />}

@@ -4,6 +4,7 @@ import {
   ApiError, checkout, deleteAccount, openBillingPortal, signOut, signOutEverywhere, startSignIn, verifySignIn, type Account, type ProductId,
 } from '../cloud/account';
 import { PRICES } from '../cloud/prices';
+import { ProPerks } from './ProPerks';
 import { disableSync } from '../sync';
 import { toast } from './Toasts';
 
@@ -123,6 +124,11 @@ function SignIn() {
       {error && <p className="error">{error}</p>}
       <button className="btn btn-primary btn-block btn-lg press" disabled={busy || !email}>{busy ? 'Sending…' : 'Email me a code'}</button>
       <p className="note">No password needed. Offline models never need an account.</p>
+      <div className="auth-pro">
+        <div className="auth-pro-head"><Crown size={15} /> With Quo Pro</div>
+        <ProPerks />
+        <p className="note">{PRICES.proMonthly} or {PRICES.proYearly}, or credit packs from {PRICES.smallestPack}.</p>
+      </div>
     </form>
   );
 }
@@ -211,12 +217,7 @@ function SignedIn({ account, onClose }: { account: Account; onClose: () => void 
       ) : (
         <div className="plan-card">
           <div className="plan-head"><Sparkles size={18} /> <strong>Quo Pro</strong></div>
-          <ul className="perks">
-            <li><Check size={15} /> 1,000 credits every month</li>
-            <li><Check size={15} /> Claude, GPT, Gemini and top open models</li>
-            <li><Check size={15} /> Quo Sync included, to keep your chats on all your devices</li>
-            <li><Check size={15} /> Offline models stay free and unlimited</li>
-          </ul>
+          <ProPerks />
           <div className="plan-actions">
             <button className="btn btn-primary press" disabled={Boolean(busy)} onClick={() => void buy('pro_monthly')}>{PRICES.proMonthly}</button>
             <button className="btn btn-soft press" disabled={Boolean(busy)} onClick={() => void buy('pro_yearly')}>{PRICES.proYearly} <span className="save">Save 31%</span></button>

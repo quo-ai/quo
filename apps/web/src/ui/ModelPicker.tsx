@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { Check, ChevronDown, Cloud, CreditCard, Crown, Download, HardDrive, Lock, Settings2, Zap } from 'lucide-react';
+import { Check, ChevronDown, ChevronRight, Cloud, CreditCard, Crown, Download, HardDrive, Lock, Settings2, Zap } from 'lucide-react';
 import { allLocalModels, modelSizeBytes } from '../catalog';
 import { useCustomModels } from '../customModels';
 import type { Account } from '../cloud/account';
 import { lockOf } from '../cloud/access';
 import { isNewModel, type CloudCatalog, type CloudModel } from '../cloud/catalog';
+import { frontierModels } from '../cloud/pro';
 import type { ModelChoice } from '../models';
 import type { DownloadState } from '../storage/downloads';
 import { describeCost, formatBytes, percent } from './format';
@@ -18,6 +19,7 @@ interface ModelPickerProps {
   onChoose: (key: string) => void;
   onManage: () => void;
   onOpenAccount: () => void;
+  onOpenPro: () => void;
 }
 
 /**
@@ -25,7 +27,7 @@ interface ModelPickerProps {
  * Every cloud model is listed, the most capable ones included. The ones this
  * person can't use yet are locked, and choosing one opens the paywall (App.choose).
  */
-export function ModelPicker({ choice, catalog, account, downloads, onChoose, onManage, onOpenAccount }: ModelPickerProps) {
+export function ModelPicker({ choice, catalog, account, downloads, onChoose, onManage, onOpenAccount, onOpenPro }: ModelPickerProps) {
   const [open, setOpen] = useState(false);
   const anchor = useRef<HTMLDivElement>(null);
 
@@ -58,6 +60,8 @@ export function ModelPicker({ choice, catalog, account, downloads, onChoose, onM
   const frontier = catalog?.models.filter(model => !model.free && model.tier === 'frontier') ?? [];
   const everyday = catalog?.models.filter(model => !model.free && model.tier !== 'frontier') ?? [];
   const credits = account?.user ? Math.floor(account.credits ?? 0) : 0;
+  // Anyone not on Pro is told, right at the top, what the frontier models are and how to get them.
+  const showPromo = Boolean(account) && account!.plan !== 'pro' && frontier.length > 0;
 
   const cloudRow = (model: CloudModel) => {
     const key = `cloud:${model.id}`;
@@ -96,6 +100,16 @@ export function ModelPicker({ choice, catalog, account, downloads, onChoose, onM
 
       {open && (
         <div className="popover glass thick wide" role="menu">
+          {showPromo && (
+            <button className="pro-promo press" role="menuitem" onClick={() => { onOpenPro(); setOpen(false); }}>
+              <span className="pro-promo-icon"><Crown size={18} /></span>
+              <span className="grow">
+                <strong>{frontier.length} frontier models with Quo Pro</strong>
+                <span>{frontierModels(catalog).slice(0, 3).map(model => model.name).join(', ')} and more</span>
+              </span>
+              <ChevronRight size={17} />
+            </button>
+          )}
           <div className="popover-scroll">
             <div className="popover-section"><HardDrive size={13} /> On this device · private · offline</div>
             {installed.map(model => {
