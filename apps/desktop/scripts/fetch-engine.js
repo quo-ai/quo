@@ -43,19 +43,32 @@ async function download(url, file) {
   return hash.digest('hex');
 }
 
+function run(command, args) {
+  const result = spawnSync(command, args, { stdio: 'inherit' });
+  if (result.status !== 0) throw new Error(`${command} failed (${result.error?.message ?? `exit ${result.status}`})`);
+}
+
 function extract(archive, destination) {
   fs.rmSync(destination, { recursive: true, force: true });
   fs.mkdirSync(destination, { recursive: true });
-  // bsdtar (macOS, Windows) reads zip and tar.gz; GNU tar (Linux) only needs tar.gz.
-  // --strip-components drops the archive's top-level folder when it has one.
-  const strip = archive.endsWith('.zip') ? [] : ['--strip-components=1'];
-  const result = spawnSync('tar', ['-xf', archive, '-C', destination, ...strip], { stdio: 'inherit' });
-  if (result.status !== 0) throw new Error(`Could not unpack ${archive}`);
+  if (archive.endsWith('.zip')) {
+    // Not `tar`: on Windows runners GNU tar comes first on the path and reads "D:\..." as a remote host.
+    if (process.platform === 'win32') {
+      run('powershell', ['-NoProfile', '-NonInteractive', '-Command', 'Expand-Archive -LiteralPath $args[0] -DestinationPath $args[1] -Force', archive, destination]);
+    } else {
+      run('unzip', ['-q', archive, '-d', destination]);
+    }
+    return;
+  }
+  // --strip-components drops the archive's top-level folder.
+  run('tar', ['-xzf', archive, '-C', destination, '--strip-components=1']);
 }
 
-// Only llama-server and its libraries ship; the release's other tools (CLI,
-// benchmarks, the RPC server, ...) are removed.
-const UNUSED = [/^llama(-(?!server(\.exe)?$)[a-z0-9-]+)?(\.exe)?$/, /^ggml-rpc-server/, /^(lib)?llama-(?!server-impl)[a-z-]+-impl/, /^(lib)?ggml-rpc/];
+// Only llama-server and its libraries ship. The release's other programs (CLI,
+// benchmarks, the RPC server, ...) are removed along with the libraries only they
+// use. Every other shared library stays: the macOS llama-server links some that
+// Linux loads on demand (libggml-rpc), so which ones are needed differs by OS.
+const UNUSED = [/^llama(-(?!server(\.exe)?$)[a-z0-9-]+)?(\.exe)?$/, /^ggml-rpc-server(\.exe)?$/, /^(lib)?llama-(?!server-impl)[a-z-]+-impl/];
 function prune(directory) {
   for (const name of fs.readdirSync(directory)) {
     if (UNUSED.some(pattern => pattern.test(name))) fs.rmSync(path.join(directory, name), { force: true });
