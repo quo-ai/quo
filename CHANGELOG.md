@@ -9,8 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - **Quo Web** — Quo in the browser: offline models run on the computer (WebGPU in Chrome and Edge), saved chats, thinking mode, resumable model downloads, installable as an app. Optional, clearly marked cloud models.
-- **Quo for desktop** — macOS, Windows and Linux app (Electron) wrapping Quo Web, so the graphics card works whatever the browser. Built and published by GitHub Actions.
+- **Quo for desktop** — macOS, Windows and Linux app (Electron). Built and published by GitHub Actions.
 - **Get the app / Install Quo** — one-time install prompt after the first answer, a "Get the app" sheet, and browser / phone banners that point to the faster option.
+- **Native AI engine in the desktop app** — models now run in llama.cpp on the graphics card (Metal, Vulkan) or processor, instead of in the browser: far faster replies (hundreds of tokens a second on a graphics card instead of about a dozen), documents read in seconds instead of over a minute, and no 2 GB model limit. Bigger models (Qwen3.5 up to 27B), models that read photos, and models you already have from LM Studio or Ollama are used in place with no second download. Falls back to the in-browser engine where it isn't available.
+- **Photos and documents** — attach PDFs and text files (and photos, with models that read images) to a message; they're read on your computer and only go to offline models.
+- **Voice input and read aloud** — speak instead of typing (Whisper runs on your computer after a one-time ~80 MB download) and have replies read out with your system's voices.
+- **Quo Sync** — end-to-end encrypted sync of chats between Quo Web and the desktop app, with a recovery key only you hold; Quo can't read your chats. Part of Quo Pro, or on its own. Needs sign-in and purchases to be switched on.
 - **Open source** — Apache 2.0 licence, contributing guide, code of conduct, security policy, issue templates; website and brand assets refreshed for launch.
 
 ## [1.5.0] - 2026-10-04

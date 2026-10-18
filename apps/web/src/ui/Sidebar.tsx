@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
-import { Boxes, Crown, MonitorDown, PanelLeftClose, Plus, Search, Trash2, UserRound } from 'lucide-react';
-import { accountsEnabled, type Account } from '../cloud/account';
+import { Boxes, CloudAlert, Crown, MonitorDown, PanelLeftClose, Plus, RefreshCw, Search, Trash2, UserRound } from 'lucide-react';
+import type { Account } from '../cloud/account';
 import { groupConversations } from '../chat/groups';
 import type { Conversation } from '../chat/types';
+import { useSyncStatus } from '../sync';
 import { QuoMark } from './QuoMark';
 
 const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
@@ -19,10 +20,12 @@ interface SidebarProps {
   onDelete: (conversation: Conversation) => void;
   onCollapse: () => void;
   onOpenModels: () => void;
+  onOpenSync: () => void;
   onGetApp: () => void;
 }
 
-export function Sidebar({ conversations, currentId, installedCount, account, onOpenAccount, onNewChat, onOpen, onDelete, onCollapse, onOpenModels, onGetApp }: SidebarProps) {
+export function Sidebar({ conversations, currentId, installedCount, account, onOpenAccount, onNewChat, onOpen, onDelete, onCollapse, onOpenModels, onOpenSync, onGetApp }: SidebarProps) {
+  const sync = useSyncStatus();
   const [query, setQuery] = useState('');
   const groups = useMemo(() => groupConversations(conversations, Date.now(), query), [conversations, query]);
 
@@ -72,10 +75,14 @@ export function Sidebar({ conversations, currentId, installedCount, account, onO
             <Boxes size={18} /> Offline models
             <span className="count">{installedCount ? `${installedCount} on device` : 'None yet'}</span>
           </button>
+          <button className="footer-btn press" onClick={onOpenSync}>
+            {sync.phase === 'error' && sync.error?.code !== 'offline' ? <CloudAlert size={18} /> : <RefreshCw size={18} className={sync.phase === 'syncing' ? 'spin' : undefined} />} Quo Sync
+            <span className="count">{sync.phase === 'off' ? 'Off' : sync.phase === 'syncing' ? 'Syncing…' : sync.phase === 'error' ? (sync.error?.code === 'offline' ? 'Offline' : 'Needs attention') : 'On'}</span>
+          </button>
           <button className="footer-btn press" onClick={onGetApp}>
             <MonitorDown size={18} /> Get the app
           </button>
-          {/* Sign-in only when the API is reachable and has accounts switched on. */}
+          {/* Shown whenever the API is reachable; a service that isn't set up yet explains itself when used. */}
           {account?.user ? (
             <button className="footer-btn account-btn press" onClick={onOpenAccount}>
               <span className="avatar">{account.user.email[0].toUpperCase()}</span>
@@ -85,7 +92,7 @@ export function Sidebar({ conversations, currentId, installedCount, account, onO
               </span>
               {account.plan === 'pro' && <span className="badge"><Crown size={11} /> Pro</span>}
             </button>
-          ) : accountsEnabled(account) && (
+          ) : account && (
             <div className="signin-row">
               <button className="footer-btn press" onClick={onOpenAccount}><UserRound size={18} /> Sign in</button>
               <button className="btn btn-primary press get-pro" onClick={onOpenAccount}>Get Pro</button>

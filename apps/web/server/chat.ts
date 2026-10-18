@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { costToMillicredits, CREDIT_USD, estimateCost, getCloudModel, isFreeModel } from './cloudModels.js';
 import { MILLI, getBalance, reserveCredits, settleCredits } from './credits.js';
 import { getDb } from './db.js';
-import { config, features } from './env.js';
+import { config, features, SETUP_MESSAGES } from './env.js';
 import { freeRemaining, refundFreeMessage, takeFreeMessage } from './freeTier.js';
 import { HttpError, readJson } from './http.js';
 import { freeSubject, identify } from './identity.js';
@@ -39,6 +39,7 @@ export async function handleChat(request: Request): Promise<Response> {
   const body = await readJson<ChatRequest>(request);
   const model = getCloudModel(body.model ?? '');
   if (!model) throw new HttpError(400, 'unknown_model', 'That model isn’t available.');
+  if (!isFreeModel(model) && !features.accounts) throw new HttpError(503, 'setup_required', SETUP_MESSAGES.paidModels);
   const messages = validateMessages(body.messages);
   const thinking = Boolean(body.thinking) && model.supportsThinking;
 

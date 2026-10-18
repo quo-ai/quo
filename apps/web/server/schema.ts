@@ -65,6 +65,27 @@ const STATEMENTS = [
   )`,
   // Free-usage keys are hashed (freeTier.ts); remove any stored before that.
   `delete from free_usage where key like '%:%'`,
+  // Quo Sync (sync.ts). The server only ever holds ciphertext: blob is
+  // base64 of an AES-GCM message the user's devices encrypted, and verifier
+  // lets a new device check a recovery key before it touches any data.
+  `create table if not exists sync_accounts (
+    user_id uuid primary key references users(id),
+    verifier text not null,
+    seq integer not null default 0,
+    created_at timestamptz not null default now()
+  )`,
+  `create table if not exists sync_records (
+    user_id uuid not null references users(id),
+    id text not null,
+    kind text not null,
+    seq integer not null,
+    blob text,
+    deleted boolean not null default false,
+    size integer not null default 0,
+    updated_at timestamptz not null default now(),
+    primary key (user_id, id)
+  )`,
+  `create index if not exists sync_records_seq on sync_records(user_id, seq)`,
   `create table if not exists processed_events (
     id text primary key,
     created_at timestamptz not null default now()

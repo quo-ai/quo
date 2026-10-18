@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { PanelLeftOpen, SquarePen } from 'lucide-react';
-import { getLocalModel, LOCAL_MODELS, type LocalModel } from './catalog';
+import { allLocalModels, getLocalModel, LOCAL_MODELS, type LocalModel } from './catalog';
+import { refreshCustomModels, useCustomModels } from './customModels';
+import { nativeBridge } from './native';
 import { deleteConversation, listConversations, saveConversation } from './chat/store';
 import type { Conversation } from './chat/types';
 import { getAccount, refreshAccount, subscribeAccount, type Account } from './cloud/account';
@@ -11,6 +13,7 @@ import { isAppInstalled } from './install';
 import { choiceKey, type ModelChoice } from './models';
 import { cancelDownload, initDownloads, startDownload, subscribeDownloads, type DownloadState } from './storage/downloads';
 import { isPersisted } from './storage/persistence';
+import { initSync, onSyncedChats } from './sync';
 import { AccountSheet } from './ui/AccountSheet';
 import { Chat, type ChatAction, type ChatHandle } from './ui/Chat';
 import { DeviceBanner, isNoticeDismissed } from './ui/DeviceBanner';
@@ -20,6 +23,7 @@ import { ModelPicker } from './ui/ModelPicker';
 import { ModelsSheet } from './ui/ModelsSheet';
 import { OfflineModelCard } from './ui/OfflineModelCard';
 import { MOD_KEY, Sidebar } from './ui/Sidebar';
+import { SyncSheet } from './ui/SyncSheet';
 import { toast, Toasts } from './ui/Toasts';
 import { Welcome } from './ui/Welcome';
 
@@ -64,6 +68,7 @@ export function App() {
   const [modelsOpen, setModelsOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const [getAppOpen, setGetAppOpen] = useState(false);
+  const [syncOpen, setSyncOpen] = useState(false);
   const [noticeHidden, setNoticeHidden] = useState(false);
   const [collapsed, setCollapsed] = useState(() => isNarrow() || localStorage.getItem(SIDEBAR_KEY) === '1');
   const chatRef = useRef<ChatHandle>(null);
@@ -72,6 +77,7 @@ export function App() {
   const closeModels = useCallback(() => setModelsOpen(false), []);
   const closeAccount = useCallback(() => setAccountOpen(false), []);
   const closeGetApp = useCallback(() => setGetAppOpen(false), []);
+  const closeSync = useCallback(() => setSyncOpen(false), []);
 
   const select = useCallback((key: string) => {
     localStorage.setItem(CHOICE_KEY, key);
@@ -97,16 +103,26 @@ export function App() {
         previousStatus.current[id] = state.status;
       }
     });
-    void initDownloads();
+    // Models the user added come first, so they count as installed from the start.
+    void refreshCustomModels().then(initDownloads);
     void isPersisted().then(setPersisted);
     void listConversations().then(setConversations).catch(() => {});
     void getDeviceProfile().then(setDevice);
     void loadCatalog().then(setCatalog);
     void refreshAccount();
+    void initSync();
+    // Chats that arrived from another device.
+    const unsubscribeSynced = onSyncedChats(() => void listConversations().then(setConversations).catch(() => {}));
     const unsubscribeAccount = subscribeAccount(setAccount);
+    // The native engine can stop on its own (out of memory, a crash); the next message restarts it.
+    const unsubscribeEngine = nativeBridge()?.engine.onEvent(event => {
+      if (event.type === 'exit') toast('The AI engine stopped. It restarts with your next message.');
+    });
     return () => {
       unsubscribe();
+      unsubscribeSynced();
       unsubscribeAccount();
+      unsubscribeEngine?.();
     };
   }, [select]);
 
@@ -128,7 +144,8 @@ export function App() {
     return () => window.removeEventListener('focus', onFocus);
   }, []);
 
-  const installed = LOCAL_MODELS.filter(m => downloads[m.id]?.status === 'installed');
+  useCustomModels();
+  const installed = allLocalModels().filter(m => downloads[m.id]?.status === 'installed');
   const choice = resolveChoice(selectedKey, installed, catalog);
   const current = conversations.find(c => c.id === currentId) ?? null;
   const freeCloud = catalog?.models.find(m => m.id === catalog.defaultModel && m.free) ?? null;
@@ -256,6 +273,7 @@ export function App() {
           onDelete={removeConversation}
           onCollapse={() => setSidebar(true)}
           onOpenModels={() => setModelsOpen(true)}
+          onOpenSync={() => setSyncOpen(true)}
           onGetApp={() => setGetAppOpen(true)}
         />
         <div className="drawer-scrim" onClick={() => setSidebar(true)} />
@@ -323,6 +341,7 @@ export function App() {
         />
       )}
       {accountOpen && <AccountSheet account={account} onClose={closeAccount} />}
+      {syncOpen && <SyncSheet account={account} onClose={closeSync} onOpenAccount={() => { setSyncOpen(false); setAccountOpen(true); }} />}
       {getAppOpen && <GetAppSheet slowBrowser={slowBrowser} onClose={closeGetApp} />}
       <Toasts />
     </>

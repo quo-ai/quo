@@ -38,10 +38,27 @@ function quoApi(): Plugin {
   };
 }
 
+/**
+ * Transformers.js's default WebAssembly runtime (27 MB) gets bundled even
+ * though voice input points it at the smaller CPU build (voice/whisper.worker.ts).
+ * Nothing loads the others, so they're left out.
+ */
+function dropUnusedSpeechRuntimes(): Plugin {
+  return {
+    name: 'drop-unused-speech-runtimes',
+    generateBundle(_options, bundle) {
+      for (const name of Object.keys(bundle)) {
+        if (/ort-wasm-simd-threaded\.(asyncify|jsep|jspi)[^/]*\.(wasm|mjs)$/.test(name)) delete bundle[name];
+      }
+    },
+  };
+}
+
 export default defineConfig({
   plugins: [
     quoApi(),
     react(),
+    dropUnusedSpeechRuntimes(),
     // Offline app shell: the service worker precaches the app, styles and
     // the wllama wasm, so Quo opens and runs with no connection (models are
     // already in OPFS). New versions install in the background and apply on
@@ -76,7 +93,13 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,wasm,png,svg}'],
-        globIgnores: ['checkout.html', 'screenshots/**'],
+        // Voice input and PDF reading load on demand; they're cached when first used (below).
+        globIgnores: ['checkout.html', 'screenshots/**', '**/ort-wasm-*', '**/pdf.worker*', '**/pdf-*.js'],
+        runtimeCaching: [{
+          urlPattern: ({ url }: { url: URL }) => /\/assets\/(ort-wasm-|pdf)/.test(url.pathname),
+          handler: 'CacheFirst',
+          options: { cacheName: 'quo-optional-features', expiration: { maxEntries: 12 } },
+        }],
         // The wllama wasm is ~9 MB.
         maximumFileSizeToCacheInBytes: 20 * 1024 * 1024,
         navigateFallback: '/index.html',

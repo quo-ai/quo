@@ -1,8 +1,11 @@
 import { LOCAL_MODELS, getLocalModel, type LocalModel } from '../catalog';
+import { subscribeCustomModels } from '../customModels';
+import { nativeBridge } from '../native';
 import type { DownloadEvent, DownloadRequest } from './download.worker';
 import { localEngine } from '../engine/localEngine';
 import { chooseFolder, forgetFolder, getUsableFolder, reconnectFolder } from './folder';
 import { cleanUpBrowserCopy, deleteModel, getModelDiskState, moveModelToFolder, type ModelLocation } from './modelStore';
+import { cancelNative, listenForDownloads, refreshNative, removeNative, startNative, type DownloadStore } from './nativeDownloads';
 import { requestPersistence } from './persistence';
 
 /**
@@ -72,6 +75,13 @@ function setPending(modelId: string, active: boolean) {
   localStorage.setItem(PENDING_KEY, JSON.stringify([...ids]));
 }
 
+/** The desktop app's downloader shares this state; it only differs in where the work happens. */
+const nativeStore: DownloadStore = {
+  get: modelId => states[modelId],
+  set: (modelId, state) => setState(modelId, state, false),
+  setPending,
+};
+
 export function subscribeDownloads(listener: Listener): () => void {
   listeners.add(listener);
   listener({ ...states });
@@ -79,10 +89,20 @@ export function subscribeDownloads(listener: Listener): () => void {
 }
 
 /** Reads what's on disk, then resumes downloads that were interrupted. */
+let watchingCustomModels = false;
+
 export async function initDownloads(): Promise<void> {
+  if (nativeBridge()) {
+    listenForDownloads(nativeStore);
+    // Models the user adds count as installed straight away.
+    if (!watchingCustomModels) {
+      watchingCustomModels = true;
+      subscribeCustomModels(() => void refreshAll());
+    }
+  }
   // Nothing is loaded yet, so browser copies superseded by a folder copy
   // (kept last time because the engine was using them) can go now.
-  if (await getUsableFolder()) await Promise.all(LOCAL_MODELS.map(cleanUpBrowserCopy));
+  if (!nativeBridge() && (await getUsableFolder())) await Promise.all(LOCAL_MODELS.map(cleanUpBrowserCopy));
   await refreshAll();
   for (const modelId of pending()) {
     const model = getLocalModel(modelId);
@@ -103,6 +123,7 @@ async function refreshFromDisk(model: LocalModel): Promise<void> {
 }
 
 export async function refreshAll(): Promise<void> {
+  if (nativeBridge()) return refreshNative(nativeStore);
   await Promise.all(LOCAL_MODELS.map(refreshFromDisk));
 }
 
@@ -145,6 +166,7 @@ export async function stopUsingModelsFolder(): Promise<void> {
 }
 
 export async function startDownload(model: LocalModel): Promise<void> {
+  if (nativeBridge()) return startNative(model, nativeStore);
   if (workers.has(model.id)) return;
   setPending(model.id, true);
   void requestPersistence();
@@ -211,10 +233,12 @@ export async function startDownload(model: LocalModel): Promise<void> {
 
 export function cancelDownload(modelId: string): void {
   setPending(modelId, false);
+  if (nativeBridge()) return cancelNative(modelId);
   workers.get(modelId)?.postMessage({ type: 'cancel' } satisfies DownloadRequest);
 }
 
 export async function removeModel(model: LocalModel): Promise<void> {
+  if (nativeBridge()) return removeNative(model, nativeStore);
   cancelDownload(model.id);
   await finished.get(model.id); // the worker must release its file handles first
   await deleteModel(model.id);

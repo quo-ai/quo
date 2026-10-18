@@ -1,5 +1,6 @@
-import { CheckCircle2, Download, FolderClosed, Pause, Play, Trash2 } from 'lucide-react';
-import { LOCAL_MODELS, modelSizeBytes, type LocalModel } from '../catalog';
+import { CheckCircle2, Download, Eye, FolderClosed, Pause, Play, Trash2 } from 'lucide-react';
+import { allLocalModels, modelSizeBytes, type LocalModel } from '../catalog';
+import { forgetCustomModel, useCustomModels } from '../customModels';
 import { modelFit, recommendedModelId, type DeviceProfile } from '../device';
 import { cancelDownload, removeModel, startDownload, type DownloadState } from '../storage/downloads';
 import { downloadErrorText, formatBytes, percent } from './format';
@@ -18,10 +19,11 @@ const FIT_NOTE = {
 } as const;
 
 export function ModelList({ device, downloads, activeModelId, onUse }: ModelListProps) {
+  useCustomModels(); // re-render when models are added or forgotten
   const recommended = device ? recommendedModelId(device) : null;
   return (
     <div>
-      {LOCAL_MODELS.map(model => (
+      {allLocalModels().map(model => (
         <ModelCard
           key={model.id}
           model={model}
@@ -54,6 +56,7 @@ function ModelCard({ model, state, active, recommended, fitNote, onUse }: {
       <div className="model-head">
         <span className="model-name">{model.name}</span>
         {recommended && <span className="badge">Recommended</span>}
+        {model.vision && <span className="badge" title="Can read photos and screenshots"><Eye size={11} /> Reads images</span>}
         {active && <span className="badge green"><CheckCircle2 size={12} /> In use</span>}
         <span className="model-size">{formatBytes(total)}</span>
       </div>
@@ -82,7 +85,13 @@ function ModelCard({ model, state, active, recommended, fitNote, onUse }: {
           <button className="btn btn-primary press" onClick={onUse}>Use this model</button>
         )}
         {status === 'installed' && (
-          <button className="btn btn-ghost press" onClick={() => void removeModel(model)}><Trash2 size={15} /> Remove</button>
+          <button
+            className="btn btn-ghost press"
+            onClick={() => void (model.custom ? forgetCustomModel(model.id) : removeModel(model))}
+            title={model.custom ? 'Stops using it in Quo; the file stays where it is' : undefined}
+          >
+            <Trash2 size={15} /> {model.custom ? 'Forget' : 'Remove'}
+          </button>
         )}
         {(status === 'idle' || status === 'error') && (
           <button className="btn btn-primary press" onClick={() => void startDownload(model)}><Download size={16} /> Download</button>

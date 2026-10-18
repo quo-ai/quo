@@ -21,17 +21,6 @@ export const DESKTOP_DOWNLOADS: Record<DesktopOS, { label: string; detail: strin
   linux: { label: 'Linux', detail: 'AppImage', url: `${RELEASES}/Quo-linux-x86_64.AppImage` },
 };
 
-interface QuoDesktopBridge {
-  platform: string;
-  version: string;
-}
-
-declare global {
-  interface Window {
-    quoDesktop?: QuoDesktopBridge;
-  }
-}
-
 /** Running inside the Quo desktop app (Electron preload sets window.quoDesktop). */
 export const isDesktopApp = (): boolean => typeof window !== 'undefined' && Boolean(window.quoDesktop);
 

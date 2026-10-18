@@ -1,16 +1,22 @@
-import { forwardRef, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
-import { AlertCircle, ArrowUp, Brain, Check, Cloud, Copy, HardDrive, RotateCcw, Square } from 'lucide-react';
+import { forwardRef, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState, type DragEvent, type KeyboardEvent, type ReactNode } from 'react';
+import { AlertCircle, ArrowUp, Brain, Check, Cloud, Copy, HardDrive, Loader2, Mic, Paperclip, RotateCcw, Square, Volume2, VolumeX } from 'lucide-react';
+import { ACCEPT_DOCUMENTS, ACCEPT_IMAGES, AttachmentError, MAX_ATTACHMENTS, readAttachment } from '../attachments';
 import { buildContext } from '../chat/context';
 import { titleFrom } from '../chat/store';
-import { newId, type Conversation, type Message } from '../chat/types';
+import { newId, type Attachment, type Conversation, type Message } from '../chat/types';
 import { ApiError } from '../cloud/api';
-import { accountsEnabled, applyUsage, type Account } from '../cloud/account';
+import { NativeError } from '../native';
+import { applyUsage, type Account } from '../cloud/account';
 import { generateCloud, stopCloud } from '../cloud/cloudEngine';
 import { localEngine } from '../engine/localEngine';
 import { CLOUD_CONTEXT, type ModelChoice } from '../models';
 import { Markdown } from './Markdown';
+import { beginGeneration, endGeneration } from '../sync';
+import { canSpeak, hasVoices, onVoicesChanged, speak, stopSpeaking } from '../voice/readAloud';
+import { AttachmentChips, MessageAttachments } from './Attachments';
 import { QuoMark } from './QuoMark';
 import { toast } from './Toasts';
+import { useVoiceInput } from './useVoiceInput';
 
 const LOCAL_PROMPT = 'You are Quo, a helpful private AI assistant running entirely on the user’s device. Be clear and concise. Use markdown when it helps readability.';
 const CLOUD_PROMPT = 'You are Quo, a helpful AI assistant. Be clear and concise. Use markdown when it helps readability.';
@@ -55,6 +61,11 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
   const [status, setStatus] = useState<'idle' | 'loading' | 'generating'>('idle');
   const [failure, setFailure] = useState<Failure | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [dragging, setDragging] = useState(false);
+  const [speakingId, setSpeakingId] = useState<string | null>(null);
+  const [voicesReady, setVoicesReady] = useState(hasVoices);
+  const fileInput = useRef<HTMLInputElement>(null);
   const scroller = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const stickToBottom = useRef(true);
@@ -62,6 +73,17 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
   const busy = status !== 'idle';
   const cloud = choice?.kind === 'cloud';
   const supportsThinking = choice?.model.supportsThinking ?? false;
+  const vision = choice?.kind === 'local' && Boolean(choice.model.vision);
+  // Files stay on this device: attachments only go to offline models.
+  const canAttach = Boolean(choice) && !cloud;
+
+  const voice = useVoiceInput(text => {
+    setInput(current => (current.trim() ? `${current.trimEnd()} ${text}` : text));
+    inputRef.current?.focus();
+  });
+
+  useEffect(() => onVoicesChanged(() => setVoicesReady(hasVoices())), []);
+  useEffect(() => () => stopSpeaking(), []);
 
   useImperativeHandle(ref, () => ({ focus: () => inputRef.current?.focus() }), []);
 
@@ -73,6 +95,9 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
 
   useEffect(() => {
     setFailure(null);
+    setAttachments([]);
+    stopSpeaking();
+    setSpeakingId(null);
     stickToBottom.current = true;
     inputRef.current?.focus();
   }, [conversation?.id]);
@@ -90,6 +115,16 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
     void localEngine.stop();
   };
 
+  // Esc cancels a recording.
+  useEffect(() => {
+    if (voice.state !== 'recording') return;
+    const onKey = (event: globalThis.KeyboardEvent) => {
+      if (event.key === 'Escape') voice.cancel();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [voice]);
+
   // Esc stops a reply in progress.
   useEffect(() => {
     if (!busy) return;
@@ -100,16 +135,16 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
     return () => document.removeEventListener('keydown', onKey);
   }, [busy]);
 
-  async function run(base: Conversation | null, userText: string, created: boolean) {
+  async function run(base: Conversation | null, userText: string, created: boolean, sent: Attachment[] = []) {
     if (!choice) return;
     setFailure(null);
     stickToBottom.current = true;
     const now = Date.now();
-    const user: Message = { id: newId(), role: 'user', content: userText };
+    const user: Message = { id: newId(), role: 'user', content: userText, ...(sent.length ? { attachments: sent } : {}) };
     const assistant: Message = { id: newId(), role: 'assistant', content: '', modelId: choice.model.id, modelName: choice.model.name, cloud };
     let current: Conversation = base
       ? { ...base, updatedAt: now, messages: [...base.messages, user, assistant] }
-      : { id: newId(), title: titleFrom(userText), createdAt: now, updatedAt: now, messages: [user, assistant] };
+      : { id: newId(), title: titleFrom(userText || sent[0]?.name || 'New chat'), createdAt: now, updatedAt: now, messages: [user, assistant] };
     const update = (patch: Partial<Message>, persist: boolean) => {
       current = { ...current, messages: current.messages.map(m => (m.id === assistant.id ? { ...m, ...patch } : m)) };
       onChange(current, persist);
@@ -117,6 +152,7 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
     onChange(current, true, created);
     const prior = current.messages.filter(m => m.id !== assistant.id);
 
+    beginGeneration(); // Quo Sync waits until the reply is finished
     try {
       if (choice.kind === 'cloud') {
         setStatus('generating');
@@ -148,19 +184,52 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
       if (!(err instanceof ApiError)) console.error(err);
       setFailure(err instanceof ApiError
         ? { code: err.code, message: err.message }
-        : { code: 'local_failed', message: 'The model couldn’t answer. Try a smaller model, or reload the page.' });
+        : err instanceof NativeError && err.code !== 'failed'
+          ? { code: 'local_failed', message: err.message }
+          : { code: 'local_failed', message: 'The model couldn’t answer. Try a smaller model, or reload the page.' });
       current = { ...current, messages: current.messages.filter(m => m.id !== assistant.id || m.content) };
       onChange(current, true);
     } finally {
+      endGeneration();
       setStatus('idle');
     }
   }
 
   function send(text = input) {
     const trimmed = text.trim();
-    if (!trimmed || busy || !choice) return;
+    if ((!trimmed && !attachments.length) || busy || !choice) return;
+    const sent = attachments;
     setInput('');
-    void run(conversation, trimmed, !conversation);
+    setAttachments([]);
+    void run(conversation, trimmed, !conversation, sent);
+  }
+
+  async function attach(files: FileList | File[]) {
+    if (!canAttach) return;
+    for (const file of Array.from(files)) {
+      if (attachments.length >= MAX_ATTACHMENTS) return void toast(`You can attach up to ${MAX_ATTACHMENTS} files at a time.`);
+      try {
+        const attachment = await readAttachment(file, { images: vision });
+        setAttachments(list => (list.length >= MAX_ATTACHMENTS ? list : [...list, attachment]));
+      } catch (error) {
+        toast(error instanceof AttachmentError ? error.message : `Couldn’t read ${file.name}.`);
+      }
+    }
+  }
+
+  function onDrop(event: DragEvent) {
+    event.preventDefault();
+    setDragging(false);
+    if (event.dataTransfer.files.length) void attach(event.dataTransfer.files);
+  }
+
+  function toggleSpeaking(message: Message) {
+    if (speakingId === message.id) {
+      stopSpeaking();
+      return setSpeakingId(null);
+    }
+    setSpeakingId(message.id);
+    speak(message.content, () => setSpeakingId(id => (id === message.id ? null : id)));
   }
 
   /** Regenerates the last reply (or retries a failed turn) with the current model. */
@@ -169,7 +238,7 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
     const list = conversation.messages;
     const lastUserIndex = list.map(m => m.role).lastIndexOf('user');
     if (lastUserIndex < 0) return;
-    void run({ ...conversation, messages: list.slice(0, lastUserIndex) }, list[lastUserIndex].content, false);
+    void run({ ...conversation, messages: list.slice(0, lastUserIndex) }, list[lastUserIndex].content, false, list[lastUserIndex].attachments);
   }
 
   async function copy(message: Message) {
@@ -209,7 +278,7 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
             <h1>What’s on your mind?</h1>
             <p>{!choice ? 'Choose a model to start.'
               : cloud ? `${choice.model.name} answers in the cloud${choice.model.free ? ', free every day' : ''}. For complete privacy, switch to an offline model anytime.`
-                : `${choice.model.name} runs on this device. Nothing you type leaves it.`}</p>
+                : `${choice.model.name} runs on this device. Nothing you type leaves it.${vision ? ' Attach photos and documents with the paperclip.' : ''}`}</p>
             <div className="suggestions">
               {SUGGESTIONS.map(s => (
                 <button key={s.title} className="suggestion glass press" onClick={() => send(s.prompt)} disabled={busy || !choice}>
@@ -226,7 +295,8 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
           if (message.role === 'user') {
             return (
               <article key={message.id} className="msg user">
-                <div className="bubble">{message.content}</div>
+                <MessageAttachments items={message.attachments ?? []} />
+                {message.content && <div className="bubble">{message.content}</div>}
               </article>
             );
           }
@@ -247,6 +317,11 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
                   <button className="icon-btn press" onClick={() => void copy(message)} aria-label="Copy reply" title="Copy">
                     {copiedId === message.id ? <Check size={16} color="var(--indigo)" /> : <Copy size={15} />}
                   </button>
+                  {voicesReady && canSpeak() && (
+                    <button className="icon-btn press" onClick={() => toggleSpeaking(message)} aria-label={speakingId === message.id ? 'Stop reading' : 'Read aloud'} title={speakingId === message.id ? 'Stop reading' : 'Read aloud'}>
+                      {speakingId === message.id ? <VolumeX size={15} color="var(--indigo)" /> : <Volume2 size={15} />}
+                    </button>
+                  )}
                   {isLast && (
                     <button className="icon-btn press" onClick={retry} aria-label="Try again" title="Try again">
                       <RotateCcw size={15} />
@@ -260,12 +335,19 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
         })}
 
         {failure && !busy && (
-          <FailureCard failure={failure} offlineReady={offlineReady} signedIn={Boolean(account?.user)} accounts={accountsEnabled(account)} onAction={onAction} onRetry={retry} />
+          <FailureCard failure={failure} offlineReady={offlineReady} signedIn={Boolean(account?.user)} onAction={onAction} onRetry={retry} />
         )}
       </div>
 
       <div className="composer-wrap">
-        <form className="composer glass" onSubmit={event => { event.preventDefault(); send(); }}>
+        <form
+          className={`composer glass${dragging ? ' dragging' : ''}`}
+          onSubmit={event => { event.preventDefault(); send(); }}
+          onDragOver={event => { if (canAttach) { event.preventDefault(); setDragging(true); } }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={onDrop}
+        >
+          <AttachmentChips items={attachments} onRemove={id => setAttachments(list => list.filter(item => item.id !== id))} />
           <textarea
             ref={inputRef}
             value={input}
@@ -276,15 +358,51 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
             aria-label="Message"
           />
           <div className="composer-bar">
+            <input
+              ref={fileInput}
+              type="file"
+              multiple
+              hidden
+              accept={vision ? `${ACCEPT_IMAGES},${ACCEPT_DOCUMENTS}` : ACCEPT_DOCUMENTS}
+              onChange={event => {
+                if (event.target.files) void attach(event.target.files);
+                event.target.value = '';
+              }}
+            />
+            <button
+              type="button"
+              className="icon-btn round press attach-btn"
+              disabled={!canAttach || busy}
+              onClick={() => fileInput.current?.click()}
+              aria-label="Attach files"
+              title={cloud ? 'Files stay on your device, so they only work with offline models' : vision ? 'Attach photos, PDFs and text files' : 'Attach PDFs and text files'}
+            >
+              <Paperclip size={18} />
+            </button>
+            {voice.supported && (
+              <button
+                type="button"
+                className={`icon-btn round press mic-btn${voice.state === 'recording' ? ' recording' : ''}`}
+                disabled={busy || voice.state === 'transcribing'}
+                onClick={() => void voice.toggle()}
+                aria-label={voice.state === 'recording' ? 'Stop recording' : 'Speak your message'}
+                aria-pressed={voice.state === 'recording'}
+                title={voice.state === 'recording' ? 'Stop (Esc to cancel)' : 'Speak your message. It’s turned into text on this device.'}
+              >
+                {voice.state === 'transcribing' ? <Loader2 size={18} className="spin" /> : voice.state === 'recording' ? <Square size={13} fill="currentColor" /> : <Mic size={18} />}
+              </button>
+            )}
             {supportsThinking && (
               <button type="button" className="chip press" aria-pressed={thinking} onClick={() => setThinking(t => !t)} title="Reason step by step before answering">
                 <Brain size={14} /> Think
               </button>
             )}
             <span className="engine-note">
-              {status === 'loading' ? 'Loading model…'
+              {voice.state === 'recording' ? `Listening… ${Math.floor(voice.seconds / 60)}:${String(voice.seconds % 60).padStart(2, '0')}`
+                : voice.state === 'transcribing' ? (voice.download !== null ? `Getting the speech model… ${Math.round(voice.download * 100)}%` : 'Turning speech into text…')
+                : status === 'loading' ? 'Loading model…'
                 : cloud ? <><Cloud size={13} /> Cloud{freeLeft !== null ? ` · ${freeLeft} free today` : ''}</>
-                  : choice ? <><HardDrive size={13} /> {info?.backend === 'webgpu' ? 'On your GPU' : 'On this device'} · private</> : ''}
+                  : choice ? <><HardDrive size={13} /> <span title={info?.device ?? undefined}>{info?.gpu ? 'On your GPU' : 'On this device'}</span> · private</> : ''}
             </span>
             <span className="spacer" />
             {busy ? (
@@ -292,7 +410,7 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
                 <Square size={14} fill="currentColor" />
               </button>
             ) : (
-              <button key="send" type="submit" className="send" disabled={!input.trim() || !choice} aria-label="Send" title="Send (Enter)">
+              <button key="send" type="submit" className="send" disabled={(!input.trim() && !attachments.length) || !choice} aria-label="Send" title="Send (Enter)">
                 <ArrowUp size={20} strokeWidth={2.4} />
               </button>
             )}
@@ -316,12 +434,10 @@ function replyMeta(message: Message): string {
 }
 
 /** A failed turn with the next sensible step, never a dead end. */
-function FailureCard({ failure, offlineReady, signedIn, accounts, onAction, onRetry }: {
+function FailureCard({ failure, offlineReady, signedIn, onAction, onRetry }: {
   failure: Failure;
   offlineReady: boolean;
   signedIn: boolean;
-  /** Sign-in and purchases exist on this server. */
-  accounts: boolean;
   onAction: (action: ChatAction) => void;
   onRetry: () => void;
 }) {
@@ -331,10 +447,14 @@ function FailureCard({ failure, offlineReady, signedIn, accounts, onAction, onRe
   switch (failure.code) {
     case 'free_limit':
       title = 'You’ve used today’s free cloud messages.';
-      actions = <>{offline}{accounts && <button className="btn btn-primary press" onClick={() => onAction(signedIn ? 'get-pro' : 'sign-in')}>{signedIn ? 'Get Pro' : 'Sign in for more'}</button>}</>;
+      actions = <>{offline}<button className="btn btn-primary press" onClick={() => onAction(signedIn ? 'get-pro' : 'sign-in')}>{signedIn ? 'Get Pro' : 'Sign in for more'}</button></>;
       break;
     case 'insufficient_credits':
       actions = <><button className="btn btn-primary press" onClick={() => onAction('top-up')}>Get credits</button><button className="btn btn-soft press" onClick={() => onAction('use-free')}>Use the free model</button>{offline}</>;
+      break;
+    case 'setup_required':
+      // Not an error in the app: this part of Quo isn't configured yet.
+      actions = <><button className="btn btn-primary press" onClick={() => onAction('use-free')}>Use the free model</button>{offline}</>;
       break;
     case 'sign_in_required':
       actions = <><button className="btn btn-primary press" onClick={() => onAction('sign-in')}>Sign in</button><button className="btn btn-soft press" onClick={() => onAction('use-free')}>Use the free model</button></>;

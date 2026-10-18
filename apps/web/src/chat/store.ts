@@ -32,11 +32,35 @@ export async function listConversations(): Promise<Conversation[]> {
   return all.reverse();
 }
 
+export async function getConversation(id: string): Promise<Conversation | undefined> {
+  return (await db()).get('conversations', id);
+}
+
+type ChangeListener = (id: string, deleted: boolean) => void;
+const changeListeners = new Set<ChangeListener>();
+
+/** Told whenever the user saves or deletes a chat on this device (Quo Sync listens). */
+export function onConversationChange(listener: ChangeListener): () => void {
+  changeListeners.add(listener);
+  return () => changeListeners.delete(listener);
+}
+
 export async function saveConversation(conversation: Conversation): Promise<void> {
   await (await db()).put('conversations', conversation);
+  changeListeners.forEach(listener => listener(conversation.id, false));
 }
 
 export async function deleteConversation(id: string): Promise<void> {
+  await (await db()).delete('conversations', id);
+  changeListeners.forEach(listener => listener(id, true));
+}
+
+/** For Quo Sync: write what came from another device without counting it as a local edit. */
+export async function putConversationFromSync(conversation: Conversation): Promise<void> {
+  await (await db()).put('conversations', conversation);
+}
+
+export async function removeConversationFromSync(id: string): Promise<void> {
   await (await db()).delete('conversations', id);
 }
 

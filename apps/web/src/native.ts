@@ -1,0 +1,131 @@
+/**
+ * The desktop app's native engine, as seen from the web app. The preload
+ * script (apps/desktop/src/preload.js) adds `engine` and `models` to
+ * `window.quoDesktop` only in builds that include llama.cpp; everywhere else
+ * these are absent and Quo uses its in-browser engine.
+ *
+ * Every call resolves to `{ ok }` or `{ error: { code, message } }`;
+ * `unwrap` turns that into a value or a thrown NativeError.
+ */
+
+export interface NativeFailure {
+  code: string;
+  message: string;
+}
+
+export type NativeResult<T> = { ok: T; error?: undefined } | { ok?: undefined; error: NativeFailure };
+
+export class NativeError extends Error {
+  constructor(public code: string, message: string) {
+    super(message);
+  }
+}
+
+export function unwrap<T>(result: NativeResult<T>): T {
+  if (result.error) throw new NativeError(result.error.code, result.error.message);
+  return result.ok as T;
+}
+
+export interface GpuDevice {
+  id: string;
+  /** 'vulkan' | 'metal' | 'cuda' | … */
+  backend: string;
+  name: string;
+  totalMiB: number;
+  freeMiB: number;
+}
+
+export interface NativeInfo {
+  available: boolean;
+  release: string;
+  platform: string;
+  arch: string;
+  ramBytes: number;
+  freeRamBytes: number;
+  cpus: number;
+  devices: GpuDevice[];
+  modelsDir: string;
+}
+
+export interface NativeStatus {
+  running: boolean;
+  modelId?: string;
+  backend?: string;
+  device?: string | null;
+  vision?: boolean;
+}
+
+export interface ModelFileRequest {
+  url: string;
+  name: string;
+  sizeBytes: number;
+}
+
+export interface ModelDiskInfo {
+  installed: boolean;
+  downloadedBytes: number;
+  totalBytes: number;
+}
+
+export interface ModelEvent {
+  modelId: string;
+  type: 'progress' | 'waiting' | 'verifying' | 'done' | 'error';
+  loaded?: number;
+  total?: number;
+  code?: string;
+}
+
+/** A model the user already has on this computer, used where it is. */
+export interface CustomModelEntry {
+  id: string;
+  name: string;
+  path: string;
+  sizeBytes: number;
+  mmprojPath?: string;
+  source?: 'lmstudio' | 'ollama';
+}
+
+export interface NativeBridge {
+  engine: {
+    info: () => Promise<NativeResult<NativeInfo>>;
+    status: () => Promise<NativeResult<NativeStatus>>;
+    start: (options: { modelId: string; contextSize: number }) => Promise<NativeResult<NativeStatus>>;
+    stop: () => Promise<NativeResult<unknown>>;
+    onEvent: (callback: (event: { type: 'exit'; code: number | null; signal: string | null }) => void) => () => void;
+  };
+  models: {
+    state: (modelId: string, files: ModelFileRequest[]) => Promise<NativeResult<ModelDiskInfo>>;
+    download: (modelId: string, files: ModelFileRequest[]) => Promise<NativeResult<boolean>>;
+    cancel: (modelId: string) => Promise<NativeResult<unknown>>;
+    remove: (modelId: string) => Promise<NativeResult<unknown>>;
+    reveal: () => Promise<NativeResult<unknown>>;
+    onEvent: (callback: (event: ModelEvent) => void) => () => void;
+    custom: {
+      list: () => Promise<NativeResult<CustomModelEntry[]>>;
+      scan: () => Promise<NativeResult<CustomModelEntry[]>>;
+      add: (path: string, options?: { name?: string; mmprojPath?: string }) => Promise<NativeResult<CustomModelEntry>>;
+      pick: () => Promise<NativeResult<CustomModelEntry | null>>;
+      remove: (id: string) => Promise<NativeResult<unknown>>;
+    };
+  };
+}
+
+declare global {
+  interface Window {
+    quoDesktop?: {
+      platform: string;
+      version: string;
+      engine?: NativeBridge['engine'];
+      models?: NativeBridge['models'];
+    };
+  }
+}
+
+/** The native engine's bridge, or null in the browser and in builds without llama.cpp. */
+export function nativeBridge(): NativeBridge | null {
+  if (typeof window === 'undefined') return null;
+  const { engine, models } = window.quoDesktop ?? {};
+  return engine && models ? { engine, models } : null;
+}
+
+export const hasNativeEngine = (): boolean => nativeBridge() !== null;

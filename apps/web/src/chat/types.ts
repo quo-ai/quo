@@ -4,10 +4,26 @@ export interface MessageStats {
   timeToFirstTokenMs: number;
 }
 
+/** A file attached to a message. Images are shrunk first; documents are read to text. */
+export interface Attachment {
+  id: string;
+  kind: 'image' | 'document';
+  name: string;
+  /** Images: a downscaled JPEG as a data URL. */
+  dataUrl?: string;
+  width?: number;
+  height?: number;
+  /** Documents: the extracted text. */
+  text?: string;
+  /** Synced from another device, which keeps the file's contents. */
+  omitted?: boolean;
+}
+
 export interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
+  attachments?: Attachment[];
   reasoning?: string;
   modelId?: string;
   stats?: MessageStats;

@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Check, ChevronDown, Cloud, CreditCard, Download, HardDrive, Settings2 } from 'lucide-react';
-import { LOCAL_MODELS, modelSizeBytes } from '../catalog';
-import { accountsEnabled, type Account } from '../cloud/account';
+import { allLocalModels, modelSizeBytes } from '../catalog';
+import { useCustomModels } from '../customModels';
+import type { Account } from '../cloud/account';
 import type { CloudCatalog } from '../cloud/catalog';
 import type { ModelChoice } from '../models';
 import type { DownloadState } from '../storage/downloads';
@@ -44,8 +45,10 @@ export function ModelPicker({ choice, catalog, account, downloads, onChoose, onM
     setOpen(false);
   };
   const selected = choice ? `${choice.kind}:${choice.model.id}` : null;
-  const installed = LOCAL_MODELS.filter(m => downloads[m.id]?.status === 'installed');
-  const notInstalled = LOCAL_MODELS.filter(m => downloads[m.id]?.status !== 'installed');
+  useCustomModels();
+  const models = allLocalModels();
+  const installed = models.filter(m => downloads[m.id]?.status === 'installed');
+  const notInstalled = models.filter(m => downloads[m.id]?.status !== 'installed' && !m.custom);
   const cloudModels = catalog ? [...catalog.models].sort((a, b) => Number(b.free) - Number(a.free)) : [];
   const signedIn = Boolean(account?.user);
 
@@ -106,7 +109,7 @@ export function ModelPicker({ choice, catalog, account, downloads, onChoose, onM
           </div>
 
           <div className="menu-divider" />
-          {account && accountsEnabled(account) && (
+          {account && (
             <button className="menu-item press" role="menuitem" onClick={() => { onOpenAccount(); setOpen(false); }}>
               <CreditCard size={18} color="var(--text-2)" />
               <span className="grow"><span className="title">{account.plan === 'pro' ? 'Plan & credits' : 'Get Pro & credits'}</span></span>

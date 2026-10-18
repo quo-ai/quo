@@ -6,18 +6,17 @@ import { api, ApiError } from './api';
 export interface Account {
   user: { email: string } | null;
   plan: 'free' | 'pro';
+  /** Quo Sync is included (Pro, or the Sync plan). */
+  sync?: boolean;
   subscription: { plan: string; status: string; renewsAt: string | null } | null;
   credits: number | null;
   free: { limit: number; remaining: number };
   billing: { live: boolean };
-  /** What the server offers; anything off is hidden in the app. */
+  /** Which services the server has set up (anything off answers `setup_required`). */
   features: { cloud: boolean; accounts: boolean; billing: boolean };
 }
 
-/** Sign-in is offered only when the server has email set up. */
-export const accountsEnabled = (account: Account | null): boolean => Boolean(account?.features?.accounts);
-
-export type ProductId = 'pro_monthly' | 'pro_yearly' | 'pack_1000' | 'pack_2750' | 'pack_6000';
+export type ProductId = 'pro_monthly' | 'pro_yearly' | 'sync_yearly' | 'pack_1000' | 'pack_2750' | 'pack_6000';
 
 let current: Account | null = null;
 const listeners = new Set<(account: Account | null) => void>();

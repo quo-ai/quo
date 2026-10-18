@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { createHmac, randomUUID } from 'node:crypto';
-import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
 // Sandbox configuration: stand-in model, logged codes, simulated purchases.
 vi.stubEnv('OPENROUTER_API_KEY', '');
@@ -106,5 +106,59 @@ describe('API (sandbox)', () => {
     expect(verifyPaddleSignature(`ts=${ts};h1=${h1}`, body, 'secret')).toBe(true);
     expect(verifyPaddleSignature(`ts=${ts};h1=${h1}`, body + ' ', 'secret')).toBe(false);
     expect(verifyPaddleSignature(`ts=${ts - 600};h1=${h1}`, body, 'secret')).toBe(false);
+  });
+});
+
+describe('API (production, services not set up yet)', () => {
+  // Visible in the app, but each answers with a clear setup_required error.
+  let config: typeof import('../env.js').config;
+
+  beforeAll(async () => {
+    ({ config } = await import('../env.js'));
+    config.production = true;
+    config.resendKey = null;
+    config.paddle.apiKey = null;
+    config.openRouterKey = 'test-key';
+  });
+  afterAll(() => {
+    config.production = false;
+    config.openRouterKey = null;
+  });
+
+  it('still lists every cloud model', async () => {
+    const catalog = await (await call('GET', 'models')).json();
+    expect(catalog.models.length).toBeGreaterThan(3);
+  });
+
+  it('reports what is set up', async () => {
+    const me = await (await call('GET', 'me')).json();
+    expect(me.features).toEqual({ cloud: true, accounts: false, billing: false });
+  });
+
+  it('answers paid models, sign-in and purchases with setup_required', async () => {
+    const catalog = await (await call('GET', 'models')).json();
+    const paid = catalog.models.find((m: { free: boolean }) => !m.free).id;
+    for (const response of [
+      await ask(paid),
+      await call('POST', 'auth/start', { email: 'someone@example.com' }),
+      await call('POST', 'auth/verify', { email: 'someone@example.com', code: '123456' }),
+      await call('POST', 'billing/checkout', { product: 'pack_1000' }),
+      await call('POST', 'billing/portal', {}),
+    ]) {
+      expect(response.status).toBe(503);
+      const body = await response.json();
+      expect(body.error).toBe('setup_required');
+      expect(body.message).toMatch(/set up|coming soon/i);
+    }
+  });
+
+  it('hides cloud models entirely when there is no OpenRouter key', async () => {
+    config.openRouterKey = null;
+    const catalog = await (await call('GET', 'models')).json();
+    expect(catalog.models).toEqual([]);
+    const chat = await ask('openai/gpt-6-luna');
+    expect(chat.status).toBe(503);
+    expect((await chat.json()).error).toBe('cloud_unavailable');
+    config.openRouterKey = 'test-key';
   });
 });

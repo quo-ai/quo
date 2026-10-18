@@ -1,4 +1,5 @@
-import { DEFAULT_LOCAL_MODEL_ID, type LocalModel } from './catalog';
+import { DEFAULT_LOCAL_MODEL_ID, LOCAL_MODELS, modelSizeBytes, type LocalModel } from './catalog';
+import { nativeBridge, unwrap, type NativeInfo } from './native';
 import { isDesktopApp } from './platform';
 
 /**
@@ -24,6 +25,8 @@ export interface DeviceProfile {
   multiThread: boolean;
   /** Phone or tablet browser: memory limits make local models impractical. */
   mobile: boolean;
+  /** The desktop app's native engine: the real graphics card and memory. Null in a browser. */
+  native?: NativeInfo | null;
 }
 
 interface GpuAdapterLike {
@@ -38,7 +41,33 @@ export function getDeviceProfile(): Promise<DeviceProfile> {
   return cached;
 }
 
+async function detectNative(): Promise<DeviceProfile | null> {
+  const bridge = nativeBridge();
+  if (!bridge) return null;
+  try {
+    const info = unwrap(await bridge.engine.info());
+    if (!info.available) return null;
+    const best = [...info.devices].sort((a, b) => b.freeMiB - a.freeMiB)[0];
+    return {
+      gpu: Boolean(best),
+      webgpu: Boolean(best),
+      jspi: true,
+      browser: 'chrome',
+      gpuName: best?.name ?? null,
+      memoryGB: info.ramBytes / 2 ** 30,
+      cores: info.cpus,
+      multiThread: true,
+      mobile: false,
+      native: info,
+    };
+  } catch {
+    return null;
+  }
+}
+
 async function detect(): Promise<DeviceProfile> {
+  const native = await detectNative();
+  if (native) return native;
   const nav = navigator as Navigator & { deviceMemory?: number; userAgentData?: { mobile?: boolean } };
   const webgpu = (navigator as unknown as {
     gpu?: { requestAdapter: (options?: object) => Promise<GpuAdapterLike | null> };
@@ -92,6 +121,12 @@ const BROWSER_LABEL: Record<BrowserName, string> = {
 
 /** Why replies may be slow here, and what would help; null when all is well. */
 export function deviceNotice(device: DeviceProfile): DeviceNotice | null {
+  if (device.native) {
+    return device.gpu ? null : {
+      id: 'native-cpu',
+      message: 'Quo couldn’t find a supported graphics card, so it runs on your processor and replies may be slower. Smaller models are quicker.',
+    };
+  }
   if (device.mobile) {
     return { id: 'mobile', message: 'Phone browsers have limited memory for AI models. For the best experience on a phone, use the Quo app.' };
   }
@@ -117,8 +152,28 @@ export function deviceNotice(device: DeviceProfile): DeviceNotice | null {
 
 export type ModelFit = 'good' | 'slow' | 'too-big';
 
+/**
+ * Memory available to the native engine, in GB. For the graphics card this is
+ * its free memory, but at least 70% of the total: what a browser or the desktop
+ * happens to be using right now shouldn't change which models are suggested.
+ */
+function nativeMemory(device: DeviceProfile): { vramGB: number; ramGB: number } {
+  const best = Math.max(0, ...(device.native?.devices ?? []).map(d => Math.max(d.freeMiB, d.totalMiB * 0.7)));
+  return { vramGB: best / 1024, ramGB: (device.native?.ramBytes ?? 0) / 2 ** 30 };
+}
+
 /** How well a model should run here. deviceMemory caps at 8, so 8 means "8 or more". */
 export function modelFit(model: LocalModel, device: DeviceProfile): ModelFit {
+  if (device.native) {
+    // Model files plus room for the context; a model bigger than the graphics
+    // card still runs, partly on the processor, which is slower.
+    const { vramGB, ramGB } = nativeMemory(device);
+    const need = (modelSizeBytes(model) / 2 ** 30) * 1.15;
+    if (vramGB && need + 1 <= vramGB) return 'good';
+    if (need > ramGB * 0.8) return 'too-big';
+    if (!vramGB) return need > 4 || need > ramGB * 0.5 ? 'slow' : 'good';
+    return 'slow';
+  }
   const memory = device.memoryGB ?? 8;
   if (memory < model.minMemoryGB / 2) return 'too-big';
   if (memory < model.minMemoryGB) return 'slow';
@@ -126,7 +181,18 @@ export function modelFit(model: LocalModel, device: DeviceProfile): ModelFit {
   return 'good';
 }
 
-export function recommendedModelId(device: DeviceProfile): string {
+// Largest first; the biggest one that runs well here is suggested.
+const NATIVE_PREFERENCE = ['qwen35-9b', 'qwen35-4b', 'qwen35-2b', 'qwen35-0.8b'];
+
+export function recommendedModelId(device: DeviceProfile, models: LocalModel[] = LOCAL_MODELS): string {
+  if (device.native) {
+    const available = new Set(models.map(model => model.id));
+    const pick = NATIVE_PREFERENCE.find(id => {
+      const model = models.find(candidate => candidate.id === id);
+      return available.has(id) && model && modelFit(model, device) === 'good' && (device.gpu || modelSizeBytes(model) < 3e9);
+    });
+    return pick ?? DEFAULT_LOCAL_MODEL_ID;
+  }
   const memory = device.memoryGB ?? 8;
   return device.gpu && memory >= 8 ? 'qwen35-2b' : DEFAULT_LOCAL_MODEL_ID;
 }

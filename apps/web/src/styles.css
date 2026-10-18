@@ -463,3 +463,49 @@ svg { flex: none; }
   .offline-card { width: auto; max-width: 220px; }
   .packs { grid-template-columns: 1fr 1fr 1fr; }
 }
+
+/* ---------- Attachments, voice input ---------- */
+.chips-row { display: flex; flex-wrap: wrap; gap: 8px; padding: 2px 4px 8px; }
+.attach-chip { display: inline-flex; align-items: center; gap: 8px; max-width: 240px; height: 36px; padding: 0 6px 0 4px; border-radius: 999px; background: rgba(14, 14, 40, 0.055); font-size: 13px; color: var(--text); animation: rise 0.3s var(--ease) both; }
+.attach-chip img { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; }
+.attach-icon { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: rgba(59, 46, 255, 0.1); color: var(--indigo); }
+.attach-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.attach-remove { display: grid; place-items: center; width: 22px; height: 22px; border: 0; border-radius: 50%; background: transparent; color: var(--text-3); }
+.attach-remove:hover { background: rgba(14, 14, 40, 0.1); color: var(--text); }
+
+.msg-attachments { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; max-width: 82%; margin-bottom: 6px; }
+.msg-image { max-width: min(280px, 100%); max-height: 240px; width: auto; height: auto; border-radius: 18px; box-shadow: 0 0 0 0.5px rgba(14, 14, 60, 0.12), 0 8px 20px -12px rgba(30, 20, 120, 0.4); }
+.msg-file { display: inline-flex; align-items: center; gap: 8px; max-width: 280px; padding: 9px 14px; border-radius: 16px; background: rgba(59, 46, 255, 0.08); color: var(--indigo); font-size: 13.5px; font-weight: 600; }
+.msg-file small { font-weight: 500; color: var(--text-3); white-space: nowrap; }
+
+.composer.dragging { box-shadow: var(--glass-shadow), 0 0 0 3px rgba(59, 46, 255, 0.35); }
+.attach-btn, .mic-btn { flex: none; width: 34px; height: 34px; }
+.mic-btn.recording { color: #fff; background: #d92d4a; animation: record-pulse 1.4s ease-in-out infinite; }
+.mic-btn.recording:hover:not(:disabled) { background: #c4243f; color: #fff; }
+@keyframes record-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(217, 45, 74, 0.45); } 50% { box-shadow: 0 0 0 8px rgba(217, 45, 74, 0); } }
+.spin { animation: spin 0.9s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ---------- Models you already have (desktop app) ---------- */
+.found-list { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 8px; }
+.found-list li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border-radius: 14px; background: rgba(14, 14, 40, 0.04); }
+.found-name { display: grid; min-width: 0; }
+.found-name strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
+.found-name small { color: var(--text-3); font-size: 12.5px; }
+.found-list .btn { height: 32px; padding: 0 14px; flex: none; }
+code.path { padding: 1px 6px; border-radius: 6px; background: rgba(14, 14, 40, 0.06); font-size: 12.5px; word-break: break-all; }
+
+/* ---------- Quo Sync ---------- */
+.sync-points { list-style: none; margin: 14px 0 6px; padding: 0; display: grid; gap: 10px; }
+.sync-points li { display: flex; gap: 12px; align-items: flex-start; font-size: 14px; color: var(--text-2); line-height: 1.45; }
+.sync-points svg { flex: none; margin-top: 2px; color: var(--indigo); }
+.recovery-key { margin: 12px 0; padding: 14px 16px; border-radius: 14px; background: rgba(14, 14, 40, 0.05); font: 600 15.5px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.04em; word-break: break-word; user-select: all; cursor: text; color: var(--ink); }
+.check { display: flex; gap: 10px; align-items: flex-start; margin-top: 14px; font-size: 13.5px; color: var(--text-2); cursor: pointer; }
+.check input { margin-top: 3px; accent-color: var(--indigo); }
+.field.mono { font: 500 13.5px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.02em; text-transform: uppercase; }
+.sync-state { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: var(--r-card); background: rgba(255, 255, 255, 0.55); box-shadow: 0 0 0 0.5px rgba(14, 14, 60, 0.08); }
+.sync-state > svg { flex: none; color: var(--indigo); }
+.sync-state > div { flex: 1; min-width: 0; display: grid; }
+.sync-state small { color: var(--text-3); font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sync-state.error > svg { color: var(--error); }
+.sync-state .btn { flex: none; height: 34px; padding: 0 14px; font-size: 13.5px; }

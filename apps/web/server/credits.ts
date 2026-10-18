@@ -82,7 +82,7 @@ interface SubscriptionRow {
 export async function ensureMonthlyGrant(db: Db, userId: string, now = new Date()): Promise<void> {
   const subs = await db.query<SubscriptionRow>(
     `select id, started_at, current_period_end from subscriptions
-     where user_id = $1 and status = any($2) order by started_at`,
+     where user_id = $1 and status = any($2) and plan like 'pro\\_%' order by started_at`,
     [userId, ACTIVE_STATUSES],
   );
   for (const sub of subs) {

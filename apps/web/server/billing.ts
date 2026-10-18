@@ -1,7 +1,7 @@
 import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
 import { addMonths, grantPack, PACK_CREDITS, type PackId } from './credits.js';
 import { getDb, type Db } from './db.js';
-import { config } from './env.js';
+import { config, features, SETUP_MESSAGES } from './env.js';
 import { HttpError, json, readJson } from './http.js';
 import { identify } from './identity.js';
 
@@ -20,6 +20,7 @@ import { identify } from './identity.js';
 export const PRODUCTS = {
   pro_monthly: { label: 'Quo Pro · monthly', price: '$12 / month', credits: 1000 },
   pro_yearly: { label: 'Quo Pro · yearly', price: '$99 / year', credits: 1000 },
+  sync_yearly: { label: 'Quo Sync · yearly', price: '$24 / year', credits: 0 },
   pack_1000: { label: '1,000 credits', price: '$12', credits: 1000 },
   pack_2750: { label: '2,750 credits', price: '$30', credits: 2750 },
   pack_6000: { label: '6,000 credits', price: '$60', credits: 6000 },
@@ -55,16 +56,14 @@ export function handleBillingConfig(): Response {
 }
 
 export async function handleCheckout(request: Request): Promise<Response> {
+  if (!features.billing) throw new HttpError(503, 'setup_required', SETUP_MESSAGES.billing);
   const userId = requireUser(request);
   const { product } = await readJson<{ product?: string }>(request);
   if (!isProduct(product)) throw new HttpError(400, 'unknown_product', 'Unknown product.');
 
-  if (!config.paddle.apiKey) {
-    if (config.production) throw new HttpError(503, 'billing_unavailable', 'Purchases aren’t available yet.');
-    return json({ url: `/api/billing/dev-complete?product=${product}` });
-  }
+  if (!config.paddle.apiKey) return json({ url: `/api/billing/dev-complete?product=${product}` }); // development only
   const priceId = config.paddle.prices[product];
-  if (!priceId) throw new HttpError(503, 'billing_unavailable', 'This product isn’t available yet.');
+  if (!priceId) throw new HttpError(503, 'setup_required', SETUP_MESSAGES.billing);
   const db = await getDb();
   const [user] = await db.query<{ email: string; paddle_customer_id: string | null }>(
     'select email, paddle_customer_id from users where id = $1', [userId],
@@ -91,13 +90,14 @@ export async function handleDevComplete(request: Request): Promise<Response> {
     const now = new Date();
     await db.query(
       `insert into subscriptions (id, user_id, plan, status, started_at, current_period_end) values ($1, $2, $3, 'active', $4, $5)`,
-      [id, userId, product, now, addMonths(now, product === 'pro_yearly' ? 12 : 1)],
+      [id, userId, product, now, addMonths(now, product === 'pro_yearly' || product === 'sync_yearly' ? 12 : 1)],
     );
   }
   return new Response(null, { status: 302, headers: { location: `/?checkout=success&product=${product}` } });
 }
 
 export async function handlePortal(request: Request): Promise<Response> {
+  if (!features.billing) throw new HttpError(503, 'setup_required', SETUP_MESSAGES.billing);
   const userId = requireUser(request);
   if (!config.paddle.apiKey) return json({ url: null, message: 'Subscription management is available once billing is live.' });
   const db = await getDb();

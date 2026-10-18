@@ -2,7 +2,7 @@ import { createHash, randomInt, randomUUID, timingSafeEqual } from 'node:crypto'
 import { grantTrial } from './credits.js';
 import { getDb } from './db.js';
 import { sendLoginCode } from './email.js';
-import { config, features } from './env.js';
+import { config, features, SETUP_MESSAGES } from './env.js';
 import { takeFreeMessage } from './freeTier.js';
 import { HttpError, json, readJson } from './http.js';
 import { identify } from './identity.js';
@@ -29,7 +29,7 @@ function normalizeEmail(value: unknown): string {
 }
 
 export async function handleAuthStart(request: Request): Promise<Response> {
-  if (!features.accounts) throw new HttpError(503, 'accounts_unavailable', 'Accounts aren’t available yet.');
+  if (!features.accounts) throw new HttpError(503, 'setup_required', SETUP_MESSAGES.accounts);
   const body = await readJson<{ email?: string }>(request);
   const email = normalizeEmail(body.email);
   const db = await getDb();
@@ -48,6 +48,7 @@ export async function handleAuthStart(request: Request): Promise<Response> {
 }
 
 export async function handleAuthVerify(request: Request): Promise<Response> {
+  if (!features.accounts) throw new HttpError(503, 'setup_required', SETUP_MESSAGES.accounts);
   const body = await readJson<{ email?: string; code?: string }>(request);
   const email = normalizeEmail(body.email);
   const code = String(body.code ?? '').replace(/\D/g, '');

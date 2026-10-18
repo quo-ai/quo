@@ -61,8 +61,9 @@ export const costToMillicredits = (usd: number) => Math.ceil((usd / CREDIT_USD) 
 
 /** What clients see: no internal prices, just what a typical message costs. */
 export function publicCatalog() {
-  // Paid models need an account to pay with; without accounts only the free one is offered.
-  const available = !features.cloud ? [] : features.accounts ? cloudModels() : cloudModels().filter(isFreeModel);
+  // Everything is listed so people can see what's coming; paid models answer
+  // with `setup_required` until accounts exist (see chat.ts).
+  const available = features.cloud ? cloudModels() : [];
   return {
     defaultModel: config.defaultCloudModel,
     models: available.map(model => ({

@@ -37,11 +37,12 @@ The app is static (`dist/`) and must be served with cross-origin isolation heade
 | `SESSION_SECRET` | production | Signs session cookies; long random string |
 | `APP_URL` | production | Public URL, e.g. `https://quoai-app.vercel.app` |
 | `OPENROUTER_API_KEY` | for cloud models | Without it, cloud models are hidden |
-| `RESEND_API_KEY`, `EMAIL_FROM` | for sign-in | Emails sign-in codes; needs a verified sending domain. Without it, sign-in, paid models and purchases are hidden |
-| `PADDLE_*` | for purchases | Paddle merchant of record; without it, purchases are hidden |
+| `RESEND_API_KEY`, `EMAIL_FROM` | for sign-in | Emails sign-in codes; needs a verified sending domain. Without it, sign-in, paid models and Quo Sync answer `setup_required` |
+| `PADDLE_*` (incl. `PADDLE_PRICE_SYNC_YEARLY`) | for purchases | Paddle merchant of record; without it, purchases answer `setup_required` |
+| `SYNC_LIMIT_MB` | optional | Most encrypted data one account may keep (default 250) |
 | `DEFAULT_CLOUD_MODEL`, `FREE_DAILY_MESSAGES`, `FREE_DAILY_MESSAGES_PER_IP` | optional | Free tier (defaults: GPT-6 Luna, 20 per device, 60 per IP, per day) |
 
-The server reports what's switched on in `/api/me` (`features`), and the app only shows what works. The database schema is created automatically on first use.
+The server reports what's switched on in `/api/me` (`features`). Services that aren't set up yet **stay visible** in the app and answer `503 setup_required` with a plain message when used (sign-in, paid models, purchases, Quo Sync), so the app shows "coming soon" instead of hiding them; set the variables and they just work. The database schema is created automatically on first use.
 
 **Vercel (temporary):** project `quoai-app` in London (`lhr1`), with the Neon integration providing `DATABASE_URL`. Deploy with `bash scripts/deploy.sh` (it uploads a copy from outside git; Vercel builds it).
 
@@ -60,7 +61,10 @@ The server reports what's switched on in `/api/me` (`features`), and the app onl
 | Storage | OPFS (`models/<id>/`): not cleared by "clear cached images and files". `navigator.storage.persist()` requested on first download so the browser won't evict it. |
 | Survives "clear site data" | Chromium: optional "keep models in a folder on this computer" (File System Access API) — not built yet. Other browsers: re-download or import from file. |
 | Safari | Install to Dock/Home Screen (PWA) to escape the 7-day storage cap. |
-| Size limit | Files must be < 2 GiB; larger models (Qwen3.5 4B, Gemma 4 E2B) need splitting with `llama-gguf-split` and hosting as parts (Cloudflare R2, zero egress). |
+| Size limit | Files must be < 2 GiB; larger models (Qwen3.5 4B, Gemma 4 E2B) need splitting with `llama-gguf-split` and hosting as parts (Cloudflare R2, zero egress). The desktop app has no such limit. |
+| Desktop app | `window.quoDesktop.engine` (see `src/native.ts`) switches the app to llama.cpp running natively: a larger catalog (Qwen3.5 up to 27B, Gemma 4, Llama 3.2, Phi-4 mini) with image input, real GPU memory for recommendations, and models you already have from LM Studio or Ollama. Same `InferenceEngine` interface (`src/engine/`), so the chat code doesn't know the difference. See `apps/desktop/README.md`. |
+| Files | Paperclip or drag and drop: PDFs (pdf.js, loaded only when used) and text files are read to text in `<document>` tags; photos are shrunk to 1024 px JPEGs for models that read images (desktop). Offline models only: files never go to cloud models. |
+| Voice | Mic button: Whisper (base, multilingual) via Transformers.js in a worker on the processor, about 8x faster than real time. ~80 MB downloaded on first use and cached. Its WebAssembly runtime ships with the app (not a CDN). Read aloud uses the system's built-in voices. |
 | Offline | Service worker caches the app shell (not built yet); models already local. |
 | Phones | Too memory-limited in mobile browsers; point to the native apps. |
 
@@ -83,6 +87,10 @@ Quo Web is the fastest way in; the install prompt and desktop app keep people co
 - **Desktop app** (`apps/desktop/`): Electron serves this build with its own Chromium, so WebGPU, JSPI and cross-origin isolation are always available. It sets `window.quoDesktop`; Quo Web then hides install/desktop prompts, says "on your computer" instead of "in your browser", and opens checkout in the system browser.
 - **Offline first**: Quo Web never picks a cloud model by itself. During the first download it offers "Chat in the cloud while you wait" as an explicit choice and switches to the offline model when it's ready (`quo.cloudUntilOffline`).
 
+## Quo Sync
+
+End-to-end encrypted sync of chats between a user's devices (Quo Web and the desktop app). The server stores only ciphertext; the key is made from a recovery key that the user holds. The design, crypto format, protocol and limits are in [SYNC.md](SYNC.md). It's part of Quo Pro, or a Sync-only plan (`sync_yearly`), and needs sign-in, so until those are set up it answers `setup_required`.
+
 ## Privacy
 
 - Local chats never leave the device. Cloud chats go through Quo's server to the provider, which counts tokens and stores no content; zero-data-retention providers only; first use of a cloud model shows that the message leaves the device.
@@ -95,4 +103,5 @@ Quo Web is the fastest way in; the install prompt and desktop app keep people co
 3. **Deploy** ✔ Live at https://quoai-app.vercel.app with the API and a Neon database (temporary; moves to its own host and domain later, see Hosting).
 4. **Accounts and billing:** passwordless sign-in, Paddle subscription + packs, credit ledger.
 5. **Cloud models:** gateway proxy (OpenRouter + direct providers where cheaper), metering, model picker with "Cloud" labelling, trial credits.
-6. **Later:** end-to-end encrypted sync, local documents and images.
+6. **Done:** local documents, images (desktop) and voice input; end-to-end encrypted sync (needs sign-in and purchases switched on).
+7. **Later:** sync on the phone apps (the format in SYNC.md is meant for it), memories, attachments in sync.

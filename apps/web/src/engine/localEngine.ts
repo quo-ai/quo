@@ -2,7 +2,9 @@ import { Wllama } from '@wllama/wllama/esm/index.js';
 import wasmUrl from '@wllama/wllama/esm/wasm/wllama.wasm?url';
 import type { LocalModel } from '../catalog';
 import { getDeviceProfile } from '../device';
+import { hasNativeEngine } from '../native';
 import { getModelBlobs } from '../storage/modelStore';
+import { NativeEngine } from './nativeEngine';
 
 /**
  * In-browser inference via wllama (llama.cpp → WebAssembly): WebGPU when the
@@ -11,12 +13,21 @@ import { getModelBlobs } from '../storage/modelStore';
  *
  * Completions are serialized: starting one aborts and awaits the previous,
  * so two generations never run against the same context.
+ *
+ * The desktop app uses the native llama.cpp engine instead (nativeEngine.ts)
+ * through the same interface; `localEngine` at the bottom is whichever applies.
  */
+
+export type ContentPart = { type: 'text'; text: string } | { type: 'image_url'; image_url: { url: string } };
 
 export interface ChatTurn {
   role: 'system' | 'user' | 'assistant';
-  content: string;
+  /** Plain text, or text and images (images only reach engines that can read them). */
+  content: string | ContentPart[];
 }
+
+export const textOf = (content: string | ContentPart[]): string =>
+  typeof content === 'string' ? content : content.map(part => (part.type === 'text' ? part.text : '')).join('\n').trim();
 
 export interface GenerationUpdate {
   /** Full visible text so far (not a delta). */
@@ -33,11 +44,32 @@ export interface GenerationResult extends GenerationUpdate {
 }
 
 export interface EngineInfo {
-  backend: 'webgpu' | 'cpu';
-  threads: number;
+  /** 'webgpu', 'cpu', or the native engine's 'vulkan' | 'metal' | 'cuda' | … */
+  backend: string;
+  /** Running on a graphics card. */
+  gpu: boolean;
+  /** The graphics card's name, when known. */
+  device?: string | null;
+  /** The loaded model can read images. */
+  vision?: boolean;
+  threads?: number;
 }
 
-class LocalEngine {
+/** What the app needs from an inference engine. */
+export interface InferenceEngine {
+  readonly modelId: string | null;
+  load(model: LocalModel): Promise<void>;
+  unload(): Promise<void>;
+  info(): EngineInfo | null;
+  stop(): Promise<void>;
+  generate(
+    model: LocalModel,
+    messages: ChatTurn[],
+    options: { thinking: boolean; onUpdate: (update: GenerationUpdate) => void },
+  ): Promise<GenerationResult>;
+}
+
+class LocalEngine implements InferenceEngine {
   private wllama: Wllama | null = null;
   private loadedModelId: string | null = null;
   private usingGpu = false;
@@ -87,6 +119,7 @@ class LocalEngine {
     if (!this.wllama) return null;
     return {
       backend: this.usingGpu ? 'webgpu' : 'cpu',
+      gpu: this.usingGpu,
       threads: this.wllama.getNumThreads(),
     };
   }
@@ -122,7 +155,7 @@ class LocalEngine {
 
       try {
         const stream = await wllama.createChatCompletion({
-          messages,
+          messages: messages.map(turn => ({ role: turn.role, content: textOf(turn.content) })),
           stream: true,
           max_tokens: model.maxTokens,
           abortSignal: controller.signal,
@@ -169,4 +202,4 @@ class LocalEngine {
   }
 }
 
-export const localEngine = new LocalEngine();
+export const localEngine: InferenceEngine = hasNativeEngine() ? new NativeEngine() : new LocalEngine();

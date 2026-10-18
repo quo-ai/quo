@@ -1,9 +1,12 @@
 import { useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
+import { hasNativeEngine } from '../native';
 import type { LocalModel } from '../catalog';
 import type { DeviceProfile } from '../device';
 import type { DownloadState } from '../storage/downloads';
+import { ExternalModels } from './ExternalModels';
 import { ModelList } from './ModelList';
+import { NativeStorage } from './NativeStorage';
 import { StorageSettings } from './StorageSettings';
 
 interface ModelsSheetProps {
@@ -37,11 +40,17 @@ export function ModelsSheet({ device, downloads, activeModelId, persisted, onUse
         <div className="sheet-body">
           <div className="sheet-section-title">Runs on this device · free · works offline</div>
           <ModelList device={device} downloads={downloads} activeModelId={activeModelId} onUse={onUse} />
+          {hasNativeEngine() && (
+            <>
+              <div className="sheet-section-title">Models you already have</div>
+              <ExternalModels />
+            </>
+          )}
           <div className="sheet-section-title">Storage</div>
-          <StorageSettings persisted={persisted} />
+          {hasNativeEngine() ? <NativeStorage /> : <StorageSettings persisted={persisted} />}
           {device && (
             <p className="note" style={{ marginTop: 14 }}>
-              {device.gpu ? `Using your graphics card${device.gpuName ? ` (${device.gpuName})` : ''} for faster replies.` : 'Running on your processor. Chrome or Edge can use your graphics card for faster replies.'}
+              {device.native ? (device.gpu ? `Using your graphics card (${device.gpuName}) for fast replies.` : 'No supported graphics card found, so models run on your processor.') : device.gpu ? `Using your graphics card${device.gpuName ? ` (${device.gpuName})` : ''} for faster replies.` : 'Running on your processor. Chrome or Edge can use your graphics card for faster replies.'}
             </p>
           )}
         </div>
