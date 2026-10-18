@@ -21,8 +21,8 @@ const { AgentError, redactSecrets, scrubbedEnv } = require('./safety');
  * can adjust.
  */
 
-const TOOL_NAMES = ['list_directory', 'read_file', 'find_files', 'search_text', 'edit_file', 'write_file', 'run_command', 'open_repo'];
-const PLAN_TOOLS = ['list_directory', 'read_file', 'find_files', 'search_text', 'open_repo'];
+const TOOL_NAMES = ['list_directory', 'read_file', 'find_files', 'search_text', 'edit_file', 'write_file', 'run_command', 'open_repo', 'web_search', 'fetch_url'];
+const PLAN_TOOLS = ['list_directory', 'read_file', 'find_files', 'search_text', 'open_repo', 'web_search', 'fetch_url'];
 const CHANGING_TOOLS = new Set(['edit_file', 'write_file', 'run_command']);
 const MAX_CALLS = 500;
 const COMMAND_CHARS = 4000;
@@ -38,7 +38,9 @@ const preview = diff => {
 };
 
 class AgentSession {
-  constructor({ root, name, approve, repos, env = process.env, autoReadOnly = true, compact = false }) {
+  constructor({ root, name, approve, repos, web = null, webSession = 'code', env = process.env, autoReadOnly = true, compact = false }) {
+    this.web = web; // search and page reading (web/service.js), or none
+    this.webSession = webSession;
     this.rootReal = fs.realpathSync.native(root);
     this.name = name;
     this.approve = approve;
@@ -94,6 +96,8 @@ class AgentSession {
         case 'write_file': return await this.change(await files.planWrite(this.ctx, args));
         case 'run_command': return await this.command(args, signal);
         case 'open_repo': return await this.openRepo(args);
+        case 'web_search': return ok(await this.needWeb().search(this.webSession, args.query, { count: args.count, maxChars: this.webChars }));
+        case 'fetch_url': return ok(await this.needWeb().read(this.webSession, args.url, { maxChars: this.webChars }));
       }
     } catch (error) {
       if (error instanceof AgentError) return fail(error.code, error.message);
@@ -145,6 +149,15 @@ class AgentSession {
     const output = readOnly ? hideSecretDiffs(result.output) : result.output;
     const text = redactSecrets(`$ ${command}\n${output.trimEnd() || '(no output)'}\n[${status}]`);
     return { ok: true, text, display: { kind: 'command', command, exitCode: result.exitCode, timedOut: result.timedOut, aborted: result.aborted, ...(readOnly ? { auto: true } : {}), output: clip(redactSecrets(output.trimEnd()), 4000) } };
+  }
+
+  needWeb() {
+    if (!this.web) throw new AgentError('unavailable', 'Web access isn’t available here.');
+    return this.web;
+  }
+
+  get webChars() {
+    return this.compact ? 5000 : 14_000;
   }
 
   async openRepo(args) {

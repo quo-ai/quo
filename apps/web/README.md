@@ -95,6 +95,12 @@ Code mode with these models uses the same tools and prompt as Quo's cloud models
 
 A new provider in either format is one line in `registry.ts` and one in the desktop `registry.js` (a test compares them); set `usage` to whether it accepts `stream_options`.
 
+## Web search and the connection
+
+`web/support.ts` says whether a chat can search and how: *tools* (the desktop app runs `web_search` and `fetch_url`: the user's own key, offline models, and Quo's models in Code mode) or *native* (OpenRouter's web plugin and Anthropic's search tool, which is what works in a browser). `chat/replies.ts` `replyWithWeb` is a chat with those tools and no project, using the Code mode loop. It starts on for cloud models and the user's own keys and off for offline models (`web/settings.ts`), because an offline chat with tools would lose photos, documents and thinking and stop being offline; the Web chip changes it per chat. Quo's own free model has no web search: every search costs money.
+
+`net/status.ts` knows whether the internet is reachable (the browser's flag, then a request to Quo's own address after a failure, retried while offline; nothing else is contacted). While offline the Web chip is off and an Offline pill shows. `net/fallback.ts` moves a chat to the offline model when a cloud model can't be used (no internet, free messages or credits gone, a refused key), as the user chose in Models & storage → Web: switch (with Undo, and the message runs again there), ask, or nothing. It only ever moves toward the offline model; when the connection returns it offers to go back.
+
 ## Getting Quo onto the computer
 
 Quo Web is the fastest way in; the install prompt and desktop app keep people coming back.

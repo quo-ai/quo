@@ -84,7 +84,7 @@ function setupProviders() {
   });
 
   app.on('will-quit', () => requests.abortAll());
-  return { requests };
+  return { requests, keys };
 }
 
 module.exports = { setupProviders };

@@ -26,6 +26,8 @@ export interface ChatRequest {
   signal?: AbortSignal;
   /** More fields for an OpenAI-style server, such as sampling settings for a model on this computer. They never replace the ones above. */
   extra?: Record<string, unknown>;
+  /** Let the provider search the web itself (Anthropic's search tool). */
+  webSearch?: boolean;
 }
 
 export interface ChatReply {

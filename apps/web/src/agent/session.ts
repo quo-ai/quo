@@ -1,3 +1,4 @@
+import { WEB_TOOLS } from '../../shared/agentTools';
 import { agentBridge, NativeError, unwrap, type CodeProject, type CodeSessionInfo, type DesktopAgent, type UndoResult } from '../native';
 import type { ToolResult } from './types';
 
@@ -23,12 +24,15 @@ const remember = (id: string) => {
 export class CodeSession {
   /** Plan mode: only reading. The desktop app enforces it too, so this is what the model is offered, not the rule. */
   plan = false;
+  /** Web search is on for this chat (the Web chip): the web tools are offered to the model only then. */
+  webOn = true;
 
   private constructor(private bridge: DesktopAgent, readonly info: CodeSessionInfo, readonly project: CodeProject) {}
 
   /** The tools to offer the model right now. */
   get tools(): string[] {
-    return this.plan ? this.info.planTools : this.info.tools;
+    const tools = this.plan ? this.info.planTools : this.info.tools;
+    return this.webOn ? tools : tools.filter(name => !WEB_TOOLS.includes(name));
   }
 
   async setPlan(plan: boolean): Promise<void> {

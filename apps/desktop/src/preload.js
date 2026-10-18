@@ -48,6 +48,16 @@ contextBridge.exposeInMainWorld('quoDesktop', {
     abort: id => invoke('providers:abort', { id }),
     onEvent: callback => subscribe('providers:event', callback),
   },
+  // Web search and page reading. A search key can be saved or cleared but never read back.
+  web: {
+    state: () => invoke('web:state'),
+    configure: patch => invoke('web:configure', patch),
+    setKey: (backend, key) => invoke('web:set-key', { backend, key }),
+    clearKey: backend => invoke('web:clear-key', { backend }),
+    allow: (sessionId, urls) => invoke('web:allow', { sessionId, urls }),
+    search: (sessionId, query, options) => invoke('web:search', { sessionId, query, count: options?.count, compact: options?.compact }),
+    read: (sessionId, url, options) => invoke('web:read', { sessionId, url, compact: options?.compact }),
+  },
   ...(hasEngine && {
     engine: {
       info: () => invoke('engine:info'),

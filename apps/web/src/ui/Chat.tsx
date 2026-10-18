@@ -1,11 +1,12 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { titleFrom } from '../chat/store';
 import { newId, type Attachment, type Conversation, type Message } from '../chat/types';
-import { replyInCloud, replyOffline, replyOwn, replyWithAgent, type ReplyTarget } from '../chat/replies';
+import { replyInCloud, replyOffline, replyOwn, replyWithAgent, replyWithWeb, type ReplyTarget } from '../chat/replies';
 import { ApiError } from '../cloud/api';
 import type { Account } from '../cloud/account';
 import { stopCloud } from '../cloud/cloudEngine';
 import { localEngine } from '../engine/localEngine';
+import { reportNetworkFailure } from '../net/status';
 import { stopOwn } from '../providers/generate';
 import { codeSupport } from '../agent/support';
 import { NativeError } from '../native';
@@ -15,6 +16,7 @@ import { Composer, type ComposerHandle } from './chat/Composer';
 import { MessageList } from './chat/MessageList';
 import type { ChatAction, ChatStatus, Failure, Undoable } from './chat/types';
 import { useCodeMode } from './chat/useCodeMode';
+import { useWebMode } from './chat/useWebMode';
 import { toast } from './Toasts';
 
 export type { ChatAction } from './chat/types';
@@ -33,11 +35,13 @@ interface ChatProps {
    *  `created` is true only for the call that starts a new conversation. */
   onChange: (conversation: Conversation, persist: boolean, created?: boolean) => void;
   onAction: (action: ChatAction) => void;
+  /** A turn failed. Returns true if the chat was moved to another model (which is when the message runs again). */
+  onFailure?: (failure: Failure) => boolean;
 }
 
 /** The chat screen: the conversation, the message box, and the turn that connects them to a model. */
 export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
-  { choice, account, offlineReady, conversation, onChange, onAction },
+  { choice, account, offlineReady, conversation, onChange, onAction, onFailure },
   ref,
 ) {
   const [thinking, setThinking] = useState(false);
@@ -45,6 +49,7 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
   const [failure, setFailure] = useState<Failure | null>(null);
   const [undo, setUndo] = useState<Undoable | null>(null);
   const agentRun = useRef<AbortController | null>(null);
+  const runAgain = useRef(false);
   const scroller = useRef<HTMLDivElement>(null);
   const composer = useRef<ComposerHandle>(null);
   const stickToBottom = useRef(true);
@@ -53,6 +58,7 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
   const cloud = choice?.kind === 'cloud';
   const codeMode = useCodeMode({ support: codeSupport(choice), conversationId: conversation?.id, modelId: choice?.model.id });
   const { code } = codeMode;
+  const web = useWebMode(choice, Boolean(code), conversation?.id);
 
   useImperativeHandle(ref, () => ({ focus: () => composer.current?.focus() }), []);
 
@@ -107,30 +113,46 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
 
     beginGeneration(); // Quo Sync waits until the reply is finished
     try {
+      const searching = web.on && web.how === 'tools';
       if (code && (choice.kind === 'local' || choice.model.agent)) {
         setStatus('generating');
         const controller = new AbortController();
         agentRun.current = controller;
+        code.webOn = searching;
         try {
           const changes = await replyWithAgent(choice, code, controller.signal, target);
           if (changes > 0) setUndo({ messageId: assistant.id, count: changes });
         } finally {
           agentRun.current = null;
         }
+      } else if (searching && (choice.kind === 'own' || choice.kind === 'local') && sent.length === 0) {
+        // Web search with a model that calls tools. (A message with photos or documents goes the ordinary way.)
+        setStatus('generating');
+        const controller = new AbortController();
+        agentRun.current = controller;
+        try {
+          await replyWithWeb(choice, current.id, controller.signal, target);
+        } finally {
+          agentRun.current = null;
+        }
       } else if (choice.kind === 'cloud') {
         await replyInCloud(choice, thinking, target);
       } else if (choice.kind === 'own') {
-        await replyOwn(choice, target);
+        await replyOwn(choice, target, { web: web.on && web.how === 'native' });
       } else {
         await replyOffline(choice, thinking, target);
       }
     } catch (err) {
       if (!(err instanceof ApiError)) console.error(err);
-      setFailure(err instanceof ApiError
+      const failed: Failure = err instanceof ApiError
         ? { code: err.code, message: err.message }
         : err instanceof NativeError && err.code !== 'failed'
           ? { code: 'local_failed', message: err.message }
-          : { code: 'local_failed', message: 'The model couldn’t answer. Try a smaller model, or reload the page.' });
+          : { code: 'local_failed', message: 'The model couldn’t answer. Try a smaller model, or reload the page.' };
+      setFailure(failed);
+      if (failed.code === 'offline' || failed.code === 'provider_unreachable') reportNetworkFailure();
+      // The chat may have been moved to the offline model: the message runs again there, once.
+      runAgain.current = Boolean(onFailure?.(failed));
       current = { ...current, messages: current.messages.filter(m => m.id !== assistant.id || m.content || m.steps?.length) };
       onChange(current, true);
     } finally {
@@ -151,6 +173,14 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
       toast(error instanceof NativeError ? error.message : 'Couldn’t undo that.');
     }
   }
+
+  // Moved to another model after a failure: run the message again on it.
+  const modelId = choice?.model.id;
+  useEffect(() => {
+    if (!runAgain.current) return;
+    runAgain.current = false;
+    retry();
+  }, [modelId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /** Regenerates the last reply (or retries a failed turn) with the current model. */
   function retry() {
@@ -194,6 +224,7 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
         status={status}
         conversationId={conversation?.id}
         codeMode={codeMode}
+        web={web}
         thinking={thinking}
         onThinking={setThinking}
         freeLeft={cloud && choice.model.free && account ? account.free.remaining : null}

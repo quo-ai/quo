@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { PanelLeftOpen, SquarePen } from 'lucide-react';
+import { PanelLeftOpen, SquarePen, WifiOff } from 'lucide-react';
 import { allLocalModels, getLocalModel, LOCAL_MODELS, type LocalModel } from './catalog';
 import { refreshCustomModels, useCustomModels } from './customModels';
 import { nativeBridge } from './native';
@@ -10,6 +10,8 @@ import { isUnlocked } from './cloud/access';
 import { cachedCatalog, loadCatalog, type CloudCatalog, type CloudModel } from './cloud/catalog';
 import { deviceNotice, getDeviceProfile, type DeviceProfile } from './device';
 import { localEngine } from './engine/localEngine';
+import { useFallback } from './net/fallback';
+import { useOnline } from './net/status';
 import { isAppInstalled } from './install';
 import { choiceKey, rememberChoice, resolveChoice, storedChoiceKey } from './models';
 import { refreshProviders, useProviders } from './providers/accounts';
@@ -169,6 +171,8 @@ export function App() {
   const providers = useProviders();
   const installed = allLocalModels().filter(m => downloads[m.id]?.status === 'installed');
   const choice = resolveChoice(selectedKey, installed, catalog, ownModels, providers.accounts);
+  const online = useOnline();
+  const { onFailure } = useFallback({ choice, installed, select });
   const current = conversations.find(c => c.id === currentId) ?? null;
   const freeCloud = catalog?.models.find(m => m.id === catalog.defaultModel && m.free) ?? null;
 
@@ -369,6 +373,7 @@ export function App() {
               />
             )}
             <span className="spacer" />
+            {!online && <span className="net-pill glass" role="status"><WifiOff size={14} /> Offline</span>}
             {pendingOffline && (
               <OfflineModelCard
                 modelId={pendingOffline.id}
@@ -391,6 +396,7 @@ export function App() {
                 conversation={current}
                 onChange={onChange}
                 onAction={onChatAction}
+                onFailure={onFailure}
               />
             )}
         </main>

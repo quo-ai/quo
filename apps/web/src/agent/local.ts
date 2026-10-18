@@ -43,12 +43,12 @@ export const prepareLocalAgent = (model: LocalModel): Promise<void> => localEngi
 export async function askLocalAgentModel(
   model: LocalModel,
   messages: AgentMessage[],
-  options: { tools: string[]; project: string; platform: string; instructions?: { file: string; text: string } | null; signal: AbortSignal; onText: (text: string) => void },
+  options: { tools: string[]; project: string; platform: string; instructions?: { file: string; text: string } | null; /** Replaces the Code mode rules (a chat that only searches the web). */ system?: string; signal: AbortSignal; onText: (text: string) => void },
   transport: Transport = localTransport,
 ): Promise<StepReply> {
   const platform: Platform = options.platform === 'win32' || options.platform === 'darwin' ? options.platform : 'linux';
   const project = options.project.replace(/[^\p{L}\p{N} ._-]/gu, '').trim().slice(0, 60) || 'project';
-  const system = agentSystemPrompt(project, platform, options.tools, parseNotes(options.instructions), 'local');
+  const system = options.system ?? agentSystemPrompt(project, platform, options.tools, parseNotes(options.instructions), 'local');
   const ask = () => chatWithProvider(
     LOCAL_PROVIDER,
     { model: model.id, maxTokens: AGENT_MAX_TOKENS, signal: options.signal, tools: toolDefinitions(options.tools), extra: agentSampling(model), messages: [{ role: 'system', content: system }, ...messages] },

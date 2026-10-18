@@ -9,6 +9,13 @@ import type { AgentStep, ToolResult } from './types';
 type Args = Record<string, unknown>;
 const text = (value: unknown, fallback = '') => (typeof value === 'string' && value ? value : fallback);
 const clip = (value: string, max = 70) => (value.length > max ? `${value.slice(0, max - 1)}…` : value);
+const host = (url: string) => {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '');
+  } catch {
+    return clip(url, 40);
+  }
+};
 const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? '' : 's'}`;
 const place = (args: Args) => (args.repo ? `${text(args.repo)}/${text(args.path, '')}`.replace(/\/$/, '') : text(args.path, 'the project'));
 
@@ -22,6 +29,8 @@ export function describeRunning(tool: string, args: Args): string {
     case 'write_file': return `Waiting for your OK to write ${text(args.path)}…`;
     case 'run_command': return `Running ${clip(text(args.command), 50)}…`;
     case 'open_repo': return `Downloading ${text(args.repo)}…`;
+    case 'web_search': return `Searching the web for “${clip(text(args.query), 50)}”…`;
+    case 'fetch_url': return `Reading ${host(text(args.url))}…`;
     default: return `Working (${tool})…`;
   }
 }
@@ -40,6 +49,11 @@ export function describeDone(tool: string, args: Args, result: ToolResult): Pick
     case 'edit': return { status: 'done', title: `Edited ${text(display.path)}  +${display.added} −${display.removed}`, detail: diffOf(display) };
     case 'create': return { status: 'done', title: `Created ${text(display.path)}  +${display.added}`, detail: diffOf(display) };
     case 'repo': return { status: 'done', title: `Opened ${text(display.repo)}` };
+    case 'web_search': {
+      const results = Array.isArray(display.results) ? display.results as { title?: string; url?: string }[] : [];
+      return { status: 'done', title: `Searched the web for “${clip(text(display.query), 40)}”: ${plural(results.length, 'result')}`, detail: results.length ? { kind: 'output', body: results.map(r => `${text(r.title)}\n${text(r.url)}`).join('\n\n') } : undefined };
+    }
+    case 'fetch': return { status: 'done', title: `Read ${clip(text(display.title, host(text(display.url))), 70)}`, detail: text(display.url) ? { kind: 'output', body: text(display.url) } : undefined };
     case 'command': {
       const code = display.aborted ? 'stopped' : display.timedOut ? 'timed out' : display.exitCode === 0 ? 'OK' : `exit ${display.exitCode}`;
       return {
@@ -64,6 +78,8 @@ function verb(tool: string, args: Args): string {
     case 'write_file': return `Writing ${text(args.path)}`;
     case 'run_command': return `Running ${clip(text(args.command), 50)}`;
     case 'open_repo': return `Opening ${text(args.repo)}`;
+    case 'web_search': return 'Searching the web';
+    case 'fetch_url': return `Reading ${host(text(args.url))}`;
     default: return tool;
   }
 }

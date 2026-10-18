@@ -7,6 +7,7 @@ const { app, BrowserWindow, session, shell, systemPreferences } = require('elect
 const { APP_HOST, APP_URL, API_ORIGIN, registerScheme, handleAppProtocol, setEngineTarget } = require('./protocol');
 const { setupAgent } = require('./agent/ipc');
 const { setupProviders } = require('./providers/ipc');
+const { setupWeb } = require('./web/ipc');
 const { engineAvailable, setupEngine } = require('./engine/ipc');
 const { MIN_SIZE, loadWindowState, trackWindowState } = require('./windowState');
 const { buildMenu } = require('./menu');
@@ -155,8 +156,8 @@ function start() {
   }
   handleAppProtocol(session.defaultSession, webRoot);
   restrictPermissions(session.defaultSession);
-  setupAgent();
-  setupProviders();
+  const { keys } = setupProviders();
+  setupAgent({ web: setupWeb({ keys }) });
   hasEngine = engineAvailable();
   if (hasEngine) {
     const { engine } = setupEngine();

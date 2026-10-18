@@ -1,3 +1,4 @@
+import { WEB_TOOLS, webSystemPrompt } from '../../shared/agentTools';
 import { runAgent, countChanges, CONTEXT_CHARS } from '../agent/loop';
 import { agentContextChars, askLocalAgentModel, prepareLocalAgent } from '../agent/local';
 import { askOwnAgentModel } from '../agent/own';
@@ -12,6 +13,7 @@ import { listMemories, memoryPrompt } from '../memory/store';
 import { generateOwn } from '../providers/generate';
 import type { OwnModel } from '../providers/ownModels';
 import { CLOUD_CONTEXT, type ModelChoice } from '../models';
+import { allowUserUrls, runWebTool } from '../web/run';
 import { buildContext } from './context';
 import type { Message } from './types';
 
@@ -42,6 +44,7 @@ const contextChars = (model: OwnModel): number => Math.min(CONTEXT_CHARS, Math.r
 
 /** Code mode: the model works on the project with the desktop app's tools until it has nothing left to do. Returns how many files it changed. */
 export async function replyWithAgent(choice: CloudChoice | OwnChoice | LocalChoice, code: CodeSession, signal: AbortSignal, { prior, update, setStatus }: ReplyTarget): Promise<number> {
+  await allowUserUrls(code.info.sessionId, [...prior].reverse().find(m => m.role === 'user')?.content ?? '');
   if (choice.kind === 'local') {
     // An offline model is loaded again with more room than a chat needs, which takes a moment.
     setStatus('loading');
@@ -73,6 +76,36 @@ export async function replyWithAgent(choice: CloudChoice | OwnChoice | LocalChoi
   return countChanges(outcome.steps);
 }
 
+/**
+ * A chat that can search the web, without a project: the model is given search and page-reading tools that the desktop
+ * app runs, for the user's own key or an offline model. It may open only addresses the user wrote, a search returned,
+ * or a page it has read links to (web/sessions.js in the desktop app).
+ */
+export async function replyWithWeb(choice: OwnChoice | LocalChoice, sessionId: string, signal: AbortSignal, { prior, update, setStatus }: ReplyTarget): Promise<void> {
+  const compact = choice.kind === 'local';
+  await allowUserUrls(sessionId, [...prior].reverse().find(m => m.role === 'user')?.content ?? '');
+  if (choice.kind === 'local') {
+    setStatus('loading');
+    await localEngine.load(choice.model);
+  }
+  setStatus('generating');
+  let system = webSystemPrompt(compact ? 'local' : 'cloud', new Date().toISOString().slice(0, 10));
+  // What the user asked Quo to remember goes to offline models only, as in a plain offline chat.
+  if (choice.kind === 'local') system += memoryPrompt(await listMemories().catch(() => []), Math.min(1500, Math.floor(choice.model.contextSize * 0.35)));
+  const options = (onText: (text: string) => void) => ({ tools: WEB_TOOLS, project: 'web', platform: 'linux', system, signal, onText });
+  const outcome = await runAgent(prior.filter(m => m.content).map((m): AgentMessage => ({ role: m.role, content: m.content })), {
+    signal,
+    maxSteps: 8,
+    askModel: choice.kind === 'own'
+      ? (messages, onText) => askOwnAgentModel(choice.provider, choice.model, messages, options(onText))
+      : (messages, onText) => askLocalAgentModel(choice.model, messages, options(onText)),
+    contextChars: choice.kind === 'own' ? contextChars(choice.model) : agentContextChars(choice.model.contextSize),
+    runTool: (name, args) => runWebTool(sessionId, name, args, compact),
+    onUpdate: ({ steps, text }) => update({ content: text, steps }, false),
+  });
+  update({ content: outcome.text, steps: outcome.steps, stopped: outcome.stopped || undefined, ...(choice.kind === 'own' ? { usage: outcome.usage ?? undefined } : {}) }, true);
+}
+
 export async function replyInCloud(choice: CloudChoice, thinking: boolean, { prior, update, setStatus }: ReplyTarget): Promise<void> {
   setStatus('generating');
   const history = buildContext(CLOUD_PROMPT, prior, CLOUD_CONTEXT.contextSize, CLOUD_CONTEXT.maxTokens);
@@ -85,10 +118,10 @@ export async function replyInCloud(choice: CloudChoice, thinking: boolean, { pri
 }
 
 /** A model at a provider the user reached with their own key: straight from this computer to the provider, nothing through Quo. */
-export async function replyOwn(choice: OwnChoice, { prior, update, setStatus }: ReplyTarget): Promise<void> {
+export async function replyOwn(choice: OwnChoice, { prior, update, setStatus }: ReplyTarget, options: { web?: boolean } = {}): Promise<void> {
   setStatus('generating');
   const history = buildContext(CLOUD_PROMPT, prior, Math.min(choice.model.contextTokens ?? CLOUD_CONTEXT.contextSize, 64_000), CLOUD_CONTEXT.maxTokens);
-  const result = await generateOwn(choice.provider, choice.model, history, ({ content, reasoning }) => update({ content, reasoning }, false));
+  const result = await generateOwn(choice.provider, choice.model, history, ({ content, reasoning }) => update({ content, reasoning }, false), options);
   update({ content: result.content, reasoning: result.reasoning || undefined, stopped: result.stopped || undefined, usage: result.usage ?? undefined }, true);
 }
 

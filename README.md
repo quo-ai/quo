@@ -61,6 +61,7 @@ Quo runs the model on your device instead:
 | Optional cloud models, clearly marked | ✓ | |
 | Use your own API key (OpenRouter, Anthropic, OpenAI, …), or a server like Ollama | ✓ | |
 | Code mode: a coding agent for your project folder (desktop app) | ✓ | |
+| Web search: Brave, Tavily, Exa, SearXNG or DuckDuckGo | ✓ | |
 
 Phone features marked † are part of the optional one-time Premium upgrade.
 

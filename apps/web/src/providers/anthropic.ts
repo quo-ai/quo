@@ -82,8 +82,14 @@ export const anthropic: Adapter = {
       stream: true,
       ...(system ? { system: [{ type: 'text', text: system, cache_control: { type: 'ephemeral' } }] } : {}),
       messages: turns,
-      ...(request.tools?.length
-        ? { tools: request.tools.map(tool => ({ name: tool.function.name, description: tool.function.description, input_schema: tool.function.parameters })), tool_choice: { type: 'auto' } }
+      ...(request.tools?.length || request.webSearch
+        ? {
+            tools: [
+              ...(request.webSearch ? [{ type: 'web_search_20250305', name: 'web_search', max_uses: 5 }] : []),
+              ...(request.tools ?? []).map(tool => ({ name: tool.function.name, description: tool.function.description, input_schema: tool.function.parameters })),
+            ],
+            tool_choice: { type: 'auto' },
+          }
         : {}),
     };
   },

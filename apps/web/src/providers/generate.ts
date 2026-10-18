@@ -19,7 +19,8 @@ export function stopOwn(): void {
   current?.abort();
 }
 
-export async function generateOwn(provider: ProviderInfo, model: OwnModel, messages: ChatTurn[], onUpdate: (update: GenerationUpdate) => void): Promise<OwnResult> {
+/** `web`: let the provider search the web for this reply (OpenRouter's web plugin, Anthropic's search tool). */
+export async function generateOwn(provider: ProviderInfo, model: OwnModel, messages: ChatTurn[], onUpdate: (update: GenerationUpdate) => void, options: { web?: boolean } = {}): Promise<OwnResult> {
   current?.abort();
   const controller = new AbortController();
   current = controller;
@@ -27,7 +28,13 @@ export async function generateOwn(provider: ProviderInfo, model: OwnModel, messa
   try {
     const reply = await chatWithProvider(
       provider,
-      { model: model.apiModel, maxTokens: CHAT_MAX_TOKENS, signal: controller.signal, messages: messages.map(turn => ({ role: turn.role, content: textOf(turn.content) })) },
+      {
+        model: model.apiModel,
+        maxTokens: CHAT_MAX_TOKENS,
+        signal: controller.signal,
+        ...(options.web && provider.id === 'anthropic' ? { webSearch: true } : {}),
+        ...(options.web && provider.id === 'openrouter' ? { extra: { plugins: [{ id: 'web', max_results: 5 }] } } : {}),
+        messages: messages.map(turn => ({ role: turn.role, content: textOf(turn.content) })) },
       partial => {
         result.content = partial.content;
         result.reasoning = partial.reasoning;

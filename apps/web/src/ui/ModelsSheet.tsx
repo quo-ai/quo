@@ -11,13 +11,14 @@ import { CloudModelRow } from './CloudModelRow';
 import { CodeSettings } from './CodeSettings';
 import { ExternalModels } from './ExternalModels';
 import { KeysTab } from './keys/KeysTab';
+import { WebSettings } from './WebSettings';
 import { ModelList } from './ModelList';
 import { NativeStorage } from './NativeStorage';
 import { StorageSettings } from './StorageSettings';
 
-export type ModelsTab = 'device' | 'cloud' | 'keys' | 'code';
+export type ModelsTab = 'device' | 'cloud' | 'keys' | 'web' | 'code';
 
-const LABELS: Record<ModelsTab, string> = { device: 'On this device', cloud: 'Cloud', keys: 'Your keys', code: 'Code' };
+const LABELS: Record<ModelsTab, string> = { device: 'Offline', cloud: 'Cloud', keys: 'Your keys', web: 'Web', code: 'Code' };
 
 interface ModelsSheetProps {
   /** Which tab to open on. */
@@ -42,7 +43,7 @@ export function ModelsSheet({ initialTab = 'device', device, downloads, activeMo
   const sheet = useRef<HTMLDivElement>(null);
   const { free, frontier, everyday } = groupModels(catalog);
   const hasCloud = free.length + frontier.length + everyday.length > 0;
-  const tabs: ModelsTab[] = ['device', ...(hasCloud ? ['cloud' as const] : []), 'keys', ...(agentBridge() ? ['code' as const] : [])];
+  const tabs: ModelsTab[] = ['device', ...(hasCloud ? ['cloud' as const] : []), 'keys', 'web', ...(agentBridge() ? ['code' as const] : [])];
   const [chosen, setTab] = useState<ModelsTab>(initialTab);
   const tab = tabs.includes(chosen) ? chosen : 'device';
 
@@ -66,7 +67,7 @@ export function ModelsSheet({ initialTab = 'device', device, downloads, activeMo
           <div className="segmented" role="tablist">
             {tabs.map(id => <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)}>{LABELS[id]}</button>)}
           </div>
-          {tab === 'keys' ? <KeysTab selectedKey={selectedKey} onChoose={onChoose} /> : tab === 'code' ? <CodeSettings downloads={downloads} /> : tab === 'cloud' ? (
+          {tab === 'keys' ? <KeysTab selectedKey={selectedKey} onChoose={onChoose} /> : tab === 'web' ? <WebSettings /> : tab === 'code' ? <CodeSettings downloads={downloads} /> : tab === 'cloud' ? (
             <div className="cloud-list">
               {free.map(model => <CloudModelRow key={model.id} model={model} account={account} selected={selectedKey === `cloud:${model.id}`} onPick={() => onChoose(`cloud:${model.id}`)} />)}
               {frontier.length > 0 && <div className="popover-section"><Crown size={13} /> Frontier models <span className="section-note">Pro or credits</span></div>}

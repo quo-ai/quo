@@ -1,5 +1,5 @@
 import { forwardRef, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react';
-import { AlertTriangle, ArrowUp, Brain, Cloud, HardDrive, KeyRound, Loader2, Mic, Paperclip, Square } from 'lucide-react';
+import { AlertTriangle, ArrowUp, Brain, Cloud, Globe, HardDrive, KeyRound, Loader2, Mic, Paperclip, Square } from 'lucide-react';
 import { ACCEPT_DOCUMENTS, ACCEPT_IMAGES } from '../../attachments';
 import type { Attachment } from '../../chat/types';
 import { localEngine } from '../../engine/localEngine';
@@ -9,6 +9,7 @@ import { CodeChip } from '../CodeChip';
 import { useVoiceInput } from '../useVoiceInput';
 import type { ChatStatus } from './types';
 import type { CodeMode } from './useCodeMode';
+import type { WebMode } from './useWebMode';
 import { useAttachments } from './useAttachments';
 
 export interface ComposerHandle {
@@ -20,6 +21,7 @@ interface ComposerProps {
   status: ChatStatus;
   conversationId: string | undefined;
   codeMode: CodeMode;
+  web: WebMode;
   thinking: boolean;
   onThinking: (on: boolean) => void;
   /** Free cloud messages left today, when the model is the free one. */
@@ -30,7 +32,7 @@ interface ComposerProps {
 
 /** The message box and the row of controls under it. */
 export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Composer(
-  { choice, status, conversationId, codeMode, thinking, onThinking, freeLeft, onSend, onStop },
+  { choice, status, conversationId, codeMode, web, thinking, onThinking, freeLeft, onSend, onStop },
   ref,
 ) {
   const [input, setInput] = useState('');
@@ -160,7 +162,19 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
               onTogglePlan={() => void codeMode.togglePlan()}
             />
           )}
-          {choice && choice.kind !== 'own' && choice.model.supportsThinking && !code && (
+          {web.how && (
+            <button
+              type="button"
+              className="chip press"
+              aria-pressed={web.on}
+              disabled={!web.usable || busy}
+              onClick={web.toggle}
+              title={!web.online ? 'You’re offline, so web search is off' : web.on ? 'Web search is on. The model may search the web and read pages; what it searches for leaves this computer.' : 'Let the model search the web and read pages'}
+            >
+              <Globe size={14} /> Web
+            </button>
+          )}
+          {choice && choice.kind !== 'own' && choice.model.supportsThinking && !code && !(web.on && web.how === 'tools') && (
             <button type="button" className="chip press" aria-pressed={thinking} onClick={() => onThinking(!thinking)} title="Reason step by step before answering">
               <Brain size={14} /> Think
             </button>
@@ -186,7 +200,7 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
         </div>
       </form>
       <div className="composer-hint">
-        {code ? `${codeMode.plan ? 'Plan mode · nothing is changed or run' : 'Code mode · edits and commands need your OK'} · ${choice?.kind === 'local' ? 'everything stays on this computer' : `files Quo reads are sent to ${choice?.kind === 'own' ? choice.provider.name : 'the model’s provider'}`}` : choice?.kind === 'own' ? `Straight to ${choice.provider.name} with your key · not through Quo` : cloud ? 'Cloud replies via OpenRouter · Quo doesn’t store your messages' : 'Runs privately on this device'} · Enter to send · Shift+Enter for a new line
+        {web.on ? `${code ? 'Code mode' : choice?.kind === 'local' ? 'On this computer' : `Straight to ${choice?.kind === 'own' ? choice.provider.name : 'the provider'}`} · web search on · what it searches for leaves this computer` : code ? `${codeMode.plan ? 'Plan mode · nothing is changed or run' : 'Code mode · edits and commands need your OK'} · ${choice?.kind === 'local' ? 'everything stays on this computer' : `files Quo reads are sent to ${choice?.kind === 'own' ? choice.provider.name : 'the model’s provider'}`}` : choice?.kind === 'own' ? `Straight to ${choice.provider.name} with your key · not through Quo` : cloud ? 'Cloud replies via OpenRouter · Quo doesn’t store your messages' : 'Runs privately on this device'} · Enter to send · Shift+Enter for a new line
       </div>
     </div>
   );

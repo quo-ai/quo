@@ -37,6 +37,13 @@ export const PROVIDERS: readonly ProviderInfo[] = [
 
 export const builtInProvider = (id: string): ProviderInfo | undefined => PROVIDERS.find(provider => provider.id === id);
 
+/** This computer or a local network: the address works without the internet, and plain http to it is allowed. */
+export const isLocalHost = (hostname: string): boolean => {
+  const host = hostname.replace(/^\[|\]$/g, '').toLowerCase();
+  return host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.local') || host === '::1'
+    || /^127\./.test(host) || /^10\./.test(host) || /^192\.168\./.test(host) || /^172\.(1[6-9]|2\d|3[01])\./.test(host);
+};
+
 /** A custom server's address, checked: https, or plain http only for this computer and local networks. Returns the cleaned address or null. */
 export function cleanBaseUrl(input: string): string | null {
   let url: URL;
@@ -46,9 +53,7 @@ export function cleanBaseUrl(input: string): string | null {
     return null;
   }
   if (url.username || url.password || url.search || url.hash) return null;
-  const host = url.hostname.replace(/^\[|\]$/g, '').toLowerCase();
-  const local = host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.local') || host === '::1'
-    || /^127\./.test(host) || /^10\./.test(host) || /^192\.168\./.test(host) || /^172\.(1[6-9]|2\d|3[01])\./.test(host);
+  const local = isLocalHost(url.hostname);
   if (url.protocol === 'http:' ? !local : url.protocol !== 'https:') return null;
   return `${url.origin}${url.pathname.replace(/\/+$/, '')}`;
 }

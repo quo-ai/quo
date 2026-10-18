@@ -1,4 +1,4 @@
-import { AlertCircle, Ban, ChevronRight, FilePlus, FileText, Folder, Loader2, Pencil, Search, Square, Terminal, Download, Check } from 'lucide-react';
+import { AlertCircle, Ban, ChevronRight, FilePlus, FileText, Folder, Globe, Link2, Loader2, Pencil, Search, Square, Terminal, Download, Check } from 'lucide-react';
 import type { AgentStep } from '../agent/types';
 
 const ICONS: Record<string, typeof FileText> = {
@@ -10,6 +10,8 @@ const ICONS: Record<string, typeof FileText> = {
   write_file: FilePlus,
   run_command: Terminal,
   open_repo: Download,
+  web_search: Globe,
+  fetch_url: Link2,
 };
 
 function StepIcon({ step }: { step: AgentStep }) {

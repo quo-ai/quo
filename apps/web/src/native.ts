@@ -160,6 +160,7 @@ declare global {
       version: string;
       agent?: DesktopAgent;
       providers?: DesktopProviders;
+      web?: DesktopWeb;
       engine?: NativeBridge['engine'];
       models?: NativeBridge['models'];
     };
@@ -215,3 +216,41 @@ export interface DesktopProviders {
 
 /** The provider bridge, or null in the browser and in desktop builds from before it. */
 export const providersBridge = (): DesktopProviders | null => (typeof window === 'undefined' ? null : window.quoDesktop?.providers ?? null);
+
+/** Web search and page reading (apps/desktop/src/web). A search key can be saved or cleared but never read back. */
+export interface WebBackendState {
+  id: string;
+  name: string;
+  needsKey: boolean;
+  needsUrl: boolean;
+  keyUrl: string | null;
+  /** Ready to use: a key is saved, an address is set, or it needs neither. */
+  configured: boolean;
+  last4: string | null;
+}
+
+export interface WebState {
+  backend: string;
+  searxngUrl: string | null;
+  /** Keys are kept encrypted by the system (otherwise only until Quo quits). */
+  secure: boolean;
+  backends: WebBackendState[];
+}
+
+export interface WebToolResult {
+  text: string;
+  display?: Record<string, unknown>;
+}
+
+export interface DesktopWeb {
+  state: () => Promise<NativeResult<WebState>>;
+  configure: (patch: { backend?: string; searxngUrl?: string | null }) => Promise<NativeResult<WebState>>;
+  setKey: (backend: string, key: string) => Promise<NativeResult<WebState>>;
+  clearKey: (backend: string) => Promise<NativeResult<WebState>>;
+  allow: (sessionId: string, urls: string[]) => Promise<NativeResult<unknown>>;
+  search: (sessionId: string, query: string, options?: { count?: number; compact?: boolean }) => Promise<NativeResult<WebToolResult>>;
+  read: (sessionId: string, url: string, options?: { compact?: boolean }) => Promise<NativeResult<WebToolResult>>;
+}
+
+/** The web bridge, or null in the browser and in desktop builds from before it. */
+export const webBridge = (): DesktopWeb | null => (typeof window === 'undefined' ? null : window.quoDesktop?.web ?? null);

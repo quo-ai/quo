@@ -36,8 +36,16 @@
 .switch::after { content: ''; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(14, 14, 60, 0.3); transition: transform 0.25s var(--jelly); }
 .toggle-row[aria-checked="true"] .switch { background: var(--indigo); }
 .toggle-row[aria-checked="true"] .switch::after { transform: translateX(16px); }
-.code-caution { margin: 0 0 10px; padding: 14px 16px; border-radius: 18px; display: grid; gap: 12px; }
+.code-caution { pointer-events: auto; margin: 0 0 10px; padding: 14px 16px; border-radius: 18px; display: grid; gap: 12px; }
 .code-caution p { margin: 0; display: flex; gap: 10px; align-items: flex-start; font-size: 13.5px; line-height: 1.45; color: var(--text-2); }
 .code-caution p svg { flex: none; margin-top: 2px; color: var(--indigo); }
 .code-caution strong { color: var(--ink); }
 .code-caution-actions { display: flex; gap: 8px; justify-content: flex-end; }
+.svc-row { display: flex; align-items: center; gap: 6px; }
+.svc-row .menu-item { flex: 1; min-width: 0; }
+.svc-radio { flex: none; width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid var(--text-3); background: transparent; cursor: pointer; padding: 0; }
+.svc-radio.on { border-color: var(--indigo); background: radial-gradient(circle, var(--indigo) 0 42%, transparent 46%); }
+.svc-chev { flex: none; transition: transform 0.2s var(--ease); }
+.svc-chev.open { transform: rotate(90deg); }
+.svc-body { padding: 2px 8px 12px 34px; display: grid; gap: 10px; }
+.svc-body .note { margin: 0; }

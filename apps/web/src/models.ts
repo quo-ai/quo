@@ -37,7 +37,15 @@ const CHOICE_KEY = 'quo.choice';
 /** Earlier versions stored only the local model id. */
 const LEGACY_MODEL_KEY = 'quo.activeModel';
 
-export const rememberChoice = (key: string): void => localStorage.setItem(CHOICE_KEY, key);
+const LAST_LOCAL_KEY = 'quo.lastLocal';
+
+export function rememberChoice(key: string): void {
+  localStorage.setItem(CHOICE_KEY, key);
+  if (key.startsWith('local:')) localStorage.setItem(LAST_LOCAL_KEY, key);
+}
+
+/** The offline model last used, which is where Quo moves a chat when a cloud model can't be reached. */
+export const lastLocalKey = (): string | null => localStorage.getItem(LAST_LOCAL_KEY);
 
 export function storedChoiceKey(): string | null {
   const key = localStorage.getItem(CHOICE_KEY);

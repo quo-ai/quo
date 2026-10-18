@@ -46,3 +46,4 @@
 .model-pill[aria-expanded="true"] .chev { transform: rotate(180deg); }
 .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #2fb36a; box-shadow: 0 0 0 3px rgba(47, 179, 106, 0.16); }
 .status-dot.off { background: #b9b9c8; box-shadow: 0 0 0 3px rgba(14, 14, 40, 0.06); }
+.net-pill { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 999px; font-size: 13px; font-weight: 600; color: var(--text-2); }
