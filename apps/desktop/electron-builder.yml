@@ -9,6 +9,7 @@ directories:
 
 files:
   - src/**/*
+  - engine.lock.json
   - package.json
 
 # The built web app (`npm run build:web`), served from app://quo/.
@@ -41,7 +42,25 @@ publish:
 
 # Artifact names carry no version: the website links to
 # https://github.com/quo-ai/quo/releases/latest/download/<name>.
+#
+# The AI engine (llama.cpp's llama-server) is fetched and checksum-verified by
+# `npm run fetch:engine` (pinned in engine.lock.json) into engine/<target>/, and
+# shipped per platform below, outside the asar so it can run. macOS ships both
+# architectures and picks one at run time.
 mac:
+  extraResources:
+    - from: engine/mac-arm64
+      to: engine/mac-arm64
+    - from: engine/mac-x64
+      to: engine/mac-x64
+  # The universal build merges an x64 and an arm64 app. Each engine folder is
+  # deliberately one architecture and identical in both, so tell the merge
+  # not to treat that as a mistake.
+  x64ArchFiles: Contents/Resources/engine/**
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
+  extendInfo:
+    NSMicrophoneUsageDescription: Quo uses the microphone for voice input. Your voice is turned into text on this computer and never leaves it.
   target:
     - target: dmg
       arch: universal
@@ -57,6 +76,9 @@ dmg:
   artifactName: Quo-mac-universal.dmg
 
 win:
+  extraResources:
+    - from: engine/win-x64
+      to: engine/win-x64
   target:
     - target: nsis
       arch: x64
@@ -74,6 +96,9 @@ nsis:
   deleteAppDataOnUninstall: false
 
 linux:
+  extraResources:
+    - from: engine/linux-x64
+      to: engine/linux-x64
   target:
     - target: AppImage
       arch: x64

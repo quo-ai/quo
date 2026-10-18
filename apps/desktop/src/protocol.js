@@ -81,6 +81,7 @@ async function route(request, root) {
   const url = new URL(request.url);
   if (url.host !== APP_HOST) return notFound();
   if (url.pathname.startsWith('/api/')) return proxyApi(request, url);
+  if (url.pathname.startsWith('/engine/')) return proxyEngine(request, url);
   // No service worker in the desktop app: assets ship with it.
   if (url.pathname === '/registerSW.js') return respond(200, '', MIME_TYPES['.js']);
   if (url.pathname === '/sw.js') return notFound();
@@ -117,6 +118,63 @@ async function serveFile(request, url, root) {
   return respond(200, body, type, { 'cache-control': 'no-cache' });
 }
 
+// Where the running llama-server listens (set by main.js); null with no model loaded.
+let engineTarget = () => null;
+function setEngineTarget(provider) {
+  engineTarget = provider;
+}
+
+const ENGINE_IDLE_BODY = JSON.stringify({ error: 'engine_not_running', message: 'No model is loaded.' });
+
+/**
+ * Chat with the local model: the page POSTs to /engine/v1/chat/completions and
+ * this forwards it to llama-server on 127.0.0.1 with the key only the main
+ * process knows. Nothing else of the server is reachable from the page.
+ */
+async function proxyEngine(request, url) {
+  if (request.method !== 'POST' || url.pathname !== '/engine/v1/chat/completions') return notFound();
+  const target = engineTarget();
+  if (!target) return respond(503, ENGINE_IDLE_BODY, 'application/json; charset=utf-8', { 'cache-control': 'no-store' });
+
+  const body = await request.arrayBuffer();
+  const controller = new AbortController();
+  let upstream;
+  try {
+    // Node's fetch, not the session's: no proxy settings apply to loopback.
+    upstream = await fetch(`${target.origin}/v1/chat/completions`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${target.key}` },
+      body,
+      signal: controller.signal,
+    });
+  } catch {
+    return respond(503, ENGINE_IDLE_BODY, 'application/json; charset=utf-8', { 'cache-control': 'no-store' });
+  }
+  const headers = new Headers({ 'content-type': upstream.headers.get('content-type') ?? 'application/json', 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' });
+  for (const [name, value] of Object.entries(ISOLATION_HEADERS)) headers.set(name, value);
+  return new Response(passThrough(upstream, controller), { status: upstream.status, headers });
+}
+
+/**
+ * Re-wraps a response body so a cancelled read in the renderer (stopping a
+ * streamed reply) also aborts the upstream request. Chunks pass straight
+ * through, so server-sent events are not buffered.
+ */
+function passThrough(upstream, controller) {
+  if (!upstream.body) return null;
+  const reader = upstream.body.getReader();
+  return new ReadableStream({
+    async pull(stream) {
+      const { done, value } = await reader.read();
+      if (done) stream.close();
+      else stream.enqueue(value);
+    },
+    cancel(reason) {
+      controller.abort(reason);
+    },
+  });
+}
+
 async function proxyApi(request, url) {
   const headers = new Headers(request.headers);
   for (const name of [...headers.keys()]) {
@@ -149,24 +207,7 @@ async function proxyApi(request, url) {
   for (const name of DROP_RESPONSE_HEADERS) responseHeaders.delete(name);
   for (const [name, value] of Object.entries(ISOLATION_HEADERS)) responseHeaders.set(name, value);
 
-  // Re-wrap the body so a cancelled read in the renderer (e.g. stopping a
-  // streamed reply) also aborts the upstream request. Chunks pass straight
-  // through, so server-sent events are not buffered.
-  let responseBody = null;
-  if (upstream.body) {
-    const reader = upstream.body.getReader();
-    responseBody = new ReadableStream({
-      async pull(stream) {
-        const { done, value } = await reader.read();
-        if (done) stream.close();
-        else stream.enqueue(value);
-      },
-      cancel(reason) {
-        controller.abort(reason);
-      },
-    });
-  }
-  return new Response(responseBody, { status: upstream.status, statusText: upstream.statusText, headers: responseHeaders });
+  return new Response(passThrough(upstream, controller), { status: upstream.status, statusText: upstream.statusText, headers: responseHeaders });
 }
 
 const notFound = () => respond(404, 'Not found', MIME_TYPES['.txt']);
@@ -178,4 +219,4 @@ function respond(status, body, contentType, extraHeaders = {}) {
   });
 }
 
-module.exports = { APP_SCHEME, APP_HOST, APP_URL, API_ORIGIN, registerScheme, handleAppProtocol };
+module.exports = { APP_SCHEME, APP_HOST, APP_URL, API_ORIGIN, registerScheme, handleAppProtocol, setEngineTarget };

@@ -3,8 +3,9 @@
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { app, BrowserWindow, session, shell } = require('electron');
-const { APP_HOST, APP_URL, API_ORIGIN, registerScheme, handleAppProtocol } = require('./protocol');
+const { app, BrowserWindow, session, shell, systemPreferences } = require('electron');
+const { APP_HOST, APP_URL, API_ORIGIN, registerScheme, handleAppProtocol, setEngineTarget } = require('./protocol');
+const { engineAvailable, setupEngine } = require('./engine/ipc');
 const { MIN_SIZE, loadWindowState, trackWindowState } = require('./windowState');
 const { buildMenu } = require('./menu');
 const { initAutoUpdates } = require('./updater');
@@ -28,7 +29,9 @@ registerScheme();
 app.userAgentFallback = `${app.userAgentFallback} QuoDesktop/${app.getVersion()}`;
 // Separate profiles, so dev builds and the smoke test run next to an installed
 // Quo without sharing its data (or its single-instance lock).
-if (isSmoke) {
+if (process.env.QUO_PROFILE_DIR) {
+  app.setPath('userData', path.resolve(process.env.QUO_PROFILE_DIR));
+} else if (isSmoke) {
   const profile = path.join(os.tmpdir(), 'quo-smoke-profile');
   fs.rmSync(profile, { recursive: true, force: true });
   app.setPath('userData', profile);
@@ -37,6 +40,8 @@ if (isSmoke) {
 }
 
 let mainWindow = null;
+// Whether this build includes the native llama.cpp engine (see engine.lock.json).
+let hasEngine = false;
 
 function createWindow({ hidden = false } = {}) {
   const state = loadWindowState();
@@ -53,7 +58,7 @@ function createWindow({ hidden = false } = {}) {
       contextIsolation: true,
       sandbox: true,
       nodeIntegration: false,
-      additionalArguments: [`--quo-version=${app.getVersion()}`],
+      additionalArguments: [`--quo-version=${app.getVersion()}`, ...(hasEngine ? ['--quo-engine=1'] : [])],
     },
   });
   if (!hidden) {
@@ -118,11 +123,43 @@ function focusMainWindow() {
   mainWindow.focus();
 }
 
+// Only what the app uses: the microphone (voice input, audio only), writing to
+// the clipboard and fullscreen. Everything else is refused.
+const PERMISSIONS = new Set(['media', 'clipboard-sanitized-write', 'fullscreen']);
+const isAppOrigin = value => {
+  try {
+    const url = new URL(value);
+    return url.protocol === 'app:' && url.host === APP_HOST;
+  } catch {
+    return false;
+  }
+};
+
+function restrictPermissions(ses) {
+  ses.setPermissionCheckHandler((_contents, permission, origin) => PERMISSIONS.has(permission) && isAppOrigin(origin));
+  ses.setPermissionRequestHandler((contents, permission, callback, details) => {
+    const allowed = PERMISSIONS.has(permission) && isAppOrigin(details.requestingUrl ?? contents.getURL());
+    if (!allowed || permission !== 'media') return callback(allowed);
+    if (details.mediaTypes?.some(type => type !== 'audio')) return callback(false);
+    // macOS asks the user itself the first time; Windows and Linux just allow it.
+    if (process.platform !== 'darwin') return callback(true);
+    systemPreferences.askForMediaAccess('microphone').then(callback, () => callback(false));
+  });
+}
+
 function start() {
   if (!fs.existsSync(path.join(webRoot, 'index.html'))) {
     console.error(`[quo] Web app not found at ${webRoot}. Run "npm run build:web" first.`);
   }
   handleAppProtocol(session.defaultSession, webRoot);
+  restrictPermissions(session.defaultSession);
+  hasEngine = engineAvailable();
+  if (hasEngine) {
+    const { engine } = setupEngine();
+    setEngineTarget(() => engine.target());
+  } else {
+    console.warn('[quo] The native engine is missing; using the in-browser engine. Run "npm run fetch:engine".');
+  }
   if (isSmoke) return runSmoke(createWindow, webRoot);
 
   buildMenu();

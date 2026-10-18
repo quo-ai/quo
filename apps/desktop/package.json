@@ -20,7 +20,10 @@
     "dev": "electron .",
     "build:web": "npm --prefix ../web run build",
     "dist": "electron-builder --publish never",
-    "smoke": "electron . --smoke"
+    "smoke": "electron . --smoke",
+    "fetch:engine": "node scripts/fetch-engine.js",
+    "check:engine": "node scripts/check-engine.js",
+    "test": "node --test"
   },
   "dependencies": {
     "electron-updater": "^6.8.10"

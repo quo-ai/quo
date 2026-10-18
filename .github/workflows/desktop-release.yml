@@ -59,10 +59,13 @@ jobs:
         include:
           - os: macos-latest
             platform: --mac
+            engines: mac-arm64 mac-x64
           - os: windows-latest
             platform: --win
+            engines: win-x64
           - os: ubuntu-latest
             platform: --linux
+            engines: linux-x64
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7
@@ -84,6 +87,15 @@ jobs:
       - name: Install desktop dependencies
         working-directory: apps/desktop
         run: npm ci
+
+      # llama.cpp's llama-server, pinned in engine.lock.json and checked against
+      # its SHA-256; the app ships this exact build and never downloads code.
+      - name: Fetch the AI engine
+        working-directory: apps/desktop
+        shell: bash
+        run: |
+          npm run fetch:engine -- ${{ matrix.engines }}
+          npm run check:engine -- --version
 
       - name: Build with electron-builder
         working-directory: apps/desktop

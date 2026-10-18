@@ -1,10 +1,39 @@
 # Quo desktop
 
-Quo for macOS, Windows and Linux. It's [Quo Web](../web) (the same React app that runs GGUF models in the browser through wllama) packaged with Electron, so it installs like a normal app and runs models on the GPU.
+Quo for macOS, Windows and Linux. It's [Quo Web](../web) (the same React app) packaged with Electron, plus a **native AI engine**: models run in llama.cpp, in a separate process, on the graphics card (Metal, Vulkan) or the processor, instead of inside the browser.
 
-## Why Electron
+## Why Electron, and why a native engine
 
-Local inference needs **WebGPU + JSPI** (`WebAssembly.Suspending`) for the GPU path and **SharedArrayBuffer** (cross-origin isolation) for multithreaded CPU inference. Tauri uses the system webview (WKWebView, WebKitGTK, WebView2), and the first two don't ship WebGPU with JSPI, so models would run CPU-only there. Electron ships its own Chromium (Electron 44 = Chromium 152), which has both on every platform.
+The in-browser engine (wllama, llama.cpp compiled to WebAssembly) needs **WebGPU + JSPI** for the GPU path and **SharedArrayBuffer** for threads. Tauri uses the system webview, and two of the three don't ship WebGPU with JSPI, so Electron (which bundles Chromium 152) is the way to get the browser engine everywhere.
+
+But the browser engine has hard limits, and the desktop app doesn't have to live with them. Measured on one machine (Core i7-9700K, RTX 3070 Ti, Qwen3.5 0.8B Q4_K_M):
+
+| | In the browser (wllama, CPU) | Native llama.cpp, CPU | Native llama.cpp, GPU (Vulkan) |
+|---|---|---|---|
+| Writing a reply | 12.4 tokens/s | 11.8 tokens/s | 246–298 tokens/s |
+| Reading a 1,700-token document | 74.7 s | about 6 s | under 1 s |
+| Largest model | under 2 GiB per file | any | any |
+| Reads images | no | yes | yes |
+
+Chromium on Linux can't always reach the GPU either (see [WebGPU](#webgpu)), while a separate process can. So when the app includes the engine, it's used; if it's missing (an unsupported platform) the app falls back to the in-browser engine and everything still works.
+
+Voice input is the exception, and for a measured reason: Whisper through the native `whisper.cpp` npm builds ran at **0.2x real time** on this CPU (generic x86 builds with no AVX2), against **8x** for Whisper in the page via Transformers.js, and the same code serves Quo Web. So speech stays in the renderer.
+
+## The AI engine
+
+- **What it is.** llama.cpp's `llama-server`, the official release build, pinned in `engine.lock.json` (release and SHA-256 per platform). `npm run fetch:engine` downloads it, checks the hash, trims it to what the server needs and unpacks it to `engine/<target>/` (gitignored). The app ships that exact build and never downloads code at run time. Official builds include every CPU variant (AVX2, AVX-512, …) and pick the best at start-up, which the npm bindings do not (they ran 3x slower on the same CPU).
+- **Platforms.** macOS arm64 (Metal) and x64 (CPU), Windows x64 (Vulkan + CPU), Linux x64 (Vulkan + CPU). CUDA isn't bundled: it adds hundreds of MB, and Vulkan on NVIDIA is close. Other platforms use the in-browser engine.
+- **How it's run** (`src/engine/llama.js`). One `llama-server` process per loaded model, started when a model is chosen and killed to free its memory when another is. It listens on `127.0.0.1` on a random port with a random API key that never leaves the main process. A crash while loading or generating can't take the app down: the app shows a message and starts it again on the next message. A pid file lets the next launch end an orphan left by a hard kill (only if the process really is `llama-server`).
+- **Chat** goes through the protocol handler: the page `POST`s `/engine/v1/chat/completions` and `src/protocol.js` forwards it to the server with the key. Nothing else of the server is reachable from the page, and stopping a stream aborts the upstream request, so Stop frees the model at once.
+- **GPU and memory.** `--fit` (the default) sizes layers and context to the free memory, so a model bigger than the graphics card still runs, partly on the processor. The app reads each GPU's memory from `llama-server --list-devices` to recommend a model that fits.
+- **Models** (`src/engine/models.js`) are files in `<profile>/models/<id>/model.gguf` (+ `mmproj.gguf` for vision). Downloads are resumable (HTTP `Range` into a `.part` file), retried with capped back-off while offline, checked for free disk space, size and the GGUF header, and only from `huggingface.co` over HTTPS. Models you already have (a file you pick, or what LM Studio and Ollama downloaded) are used in place, never copied; forgetting one never deletes the file. A vision projector is paired with a model only when its folder holds exactly one of each.
+- **Trust.** Every IPC handler checks that the call comes from `app://quo`, returns errors as data (Electron drops custom error fields), and validates model ids, file names and URLs. The app denies every browser permission except the microphone (audio only), clipboard writes and fullscreen.
+
+### Updating llama.cpp
+
+1. Pick a release at https://github.com/ggml-org/llama.cpp/releases and put each platform's asset name and SHA-256 (shown on the release page) in `engine.lock.json`.
+2. `npm run fetch:engine -- --all`, then `npm run check:engine -- /path/to/model.gguf [/path/to/mmproj.gguf]`. It loads the model, streams replies, tests thinking, stopping and (with a projector) an image, and prints speeds.
+3. CI runs `check:engine --version` on all three platforms, which proves the binary and its libraries load there.
 
 ## How it works
 
@@ -13,11 +42,12 @@ Local inference needs **WebGPU + JSPI** (`WebAssembly.Suspending`) for the GPU p
 - **API proxy.** `/api/*` (any method, body and headers) is forwarded to the hosted backend, `https://quoai-app.vercel.app` by default. Set `QUO_API_ORIGIN` to change it (for example `QUO_API_ORIGIN=http://localhost:5173 npm run dev` against the Quo Web dev server). The proxy uses Electron's `net.fetch` with `credentials: 'include'`, so the session cookie lives in the app's persistent cookie jar and is never exposed to the page. It also drops the renderer's `Origin`/`Referer`/`Sec-Fetch-*` headers: forwarding `Origin: app://quo` would make Chromium treat the call as cross-site, which means no cookies and a 403 from the API's CSRF check. Responses stream through as they arrive (server-sent events aren't buffered), and stopping a stream in the page aborts the upstream request. If the backend can't be reached (offline, DNS failure, or no response headers within 30 s), the proxy returns `503 {"error":"offline","message":"You're offline. Offline models still work."}`. That's the same shape as the API's own errors, so the web app shows its offline state.
 - **Links.** Navigation away from `app://quo` and `window.open` open in the system browser (http, https and mailto only). `/checkout.html` also opens in the browser, on the API origin, because Paddle's checkout can't run in a cross-origin isolated page.
 - Packaged builds flip [Electron fuses](https://www.electronjs.org/docs/latest/tutorial/fuses) so the signed binary can't be reused as a Node runtime (`ELECTRON_RUN_AS_NODE`, `NODE_OPTIONS` and `--inspect` are ignored), and app code loads only from `app.asar`. Cookie encryption is off on purpose. With it on, unsigned macOS builds trigger Keychain prompts after every update, and turning it on later signs everyone out once.
-- Models are stored in OPFS under the `app://quo` origin in the app's profile (`~/Library/Application Support/Quo`, `%APPDATA%\Quo`, `~/.config/Quo`). **Never change the scheme or host**, or existing users lose their downloaded models. `npm run dev` uses a separate `Quo Dev` profile, so it can run next to an installed Quo.
+- Without the native engine, models are stored in OPFS under the `app://quo` origin in the app's profile (`~/Library/Application Support/Quo`, `%APPDATA%\Quo`, `~/.config/Quo`). **Never change the scheme or host**, or the chats, settings and any such models are lost. With the engine, models are plain files in `<profile>/models/`. `npm run dev` uses a separate `Quo Dev` profile, so it can run next to an installed Quo (`QUO_PROFILE_DIR` picks another).
 
 ### Contract with the web app
 
 - The preload script exposes `window.quoDesktop = { platform, version }`: `process.platform` (`darwin`, `win32`, `linux`) and the app version. `apps/web/src/platform.ts` relies on exactly this shape.
+- When the build includes the engine it adds `engine` (`info`, `status`, `start`, `stop`, `onEvent`) and `models` (`state`, `download`, `cancel`, `remove`, `reveal`, `onEvent`, `custom.{list,scan,add,pick,remove}`). Every call resolves to `{ ok }` or `{ error: { code, message } }`. `apps/web/src/native.ts` has the types; the web app uses the in-browser engine when these are absent.
 - The user agent ends with ` QuoDesktop/<version>`, and API requests send the same user agent.
 - Relative `/api/...` URLs keep working. Service workers aren't available (`navigator.serviceWorker` calls fail on `app://`).
 
@@ -27,9 +57,14 @@ Local inference needs **WebGPU + JSPI** (`WebAssembly.Suspending`) for the GPU p
 cd apps/web && npm ci && npm run build   # or, from desktop/: npm run build:web
 cd ../desktop && npm install
 npm run dev     # run the app against ../web/dist (set QUO_WEB_DIR to use another build)
-npm run smoke   # headless self-check (see below)
-npm run dist    # package for the current OS into dist/
+npm run fetch:engine   # download and verify the pinned llama.cpp build for this OS
+npm test               # engine and model-store tests (node:test; no Electron or model needed)
+npm run smoke          # headless self-check (see below)
+npm run check:engine -- model.gguf [mmproj.gguf]   # run a real model through the engine
+npm run dist           # package for the current OS into dist/
 ```
+
+`QUO_ENGINE_DIR` points the app at a different llama.cpp folder, and `QUO_PROFILE_DIR` at a different profile (handy for testing with a models folder you've prepared).
 
 The first `npm run dev` downloads the Electron binary. In development, DevTools are in the View menu. Packaged builds hide them.
 
@@ -87,4 +122,6 @@ Without `CSC_LINK`, the macOS app is ad-hoc signed (so it launches on Apple sili
 - **Unsigned builds trigger OS warnings.** On macOS, Gatekeeper blocks the first launch: right-click → Open, or System Settings → Privacy & Security → Open Anyway. On Windows, SmartScreen shows "Windows protected your PC": More info → Run anyway.
 - **macOS auto-update requires a signed build.** Squirrel.Mac refuses unsigned updates. Unsigned macOS users must download new versions by hand.
 - The AppImage needs FUSE 2 (`libfuse2`/`libfuse2t64` on Ubuntu 22.04+). The .deb doesn't. On systems without unprivileged user namespaces, the AppImage starts with Chromium's sandbox off. The .deb installs an AppArmor profile instead.
-- Linux GPU inference may fall back to CPU on some driver packages (see [WebGPU](#webgpu)).
+- Linux GPU inference in the *browser* engine may fall back to CPU on some driver packages (see [WebGPU](#webgpu)). The native engine isn't affected.
+- No CUDA build is bundled (Vulkan is used on NVIDIA). macOS on Intel runs on the processor. Windows on ARM and Linux on ARM use the in-browser engine.
+- Voice input downloads the Whisper model (about 80 MB) the first time the microphone is used, then works offline. Read aloud uses the voices built into the operating system; on Linux that needs `speech-dispatcher`, and the button hides itself when there are no voices.

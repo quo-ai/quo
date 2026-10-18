@@ -1,0 +1,22 @@
+{
+  "release": "b11719",
+  "source": "https://github.com/ggml-org/llama.cpp/releases",
+  "assets": {
+    "mac-arm64": {
+      "file": "llama-b11719-bin-macos-arm64.tar.gz",
+      "sha256": "076a2b0d15253078b90bd520a82dc2edc6c17657968878876ba3def3e80f54ba"
+    },
+    "mac-x64": {
+      "file": "llama-b11719-bin-macos-x64.tar.gz",
+      "sha256": "739708dca398960462725dd885010e10e6b9fed79e812a29f18d260af23f9929"
+    },
+    "win-x64": {
+      "file": "llama-b11719-bin-win-vulkan-x64.zip",
+      "sha256": "08dde7f4133443ac629431c35f0435e267ca73251fc002cb95e10625424e2963"
+    },
+    "linux-x64": {
+      "file": "llama-b11719-bin-ubuntu-vulkan-x64.tar.gz",
+      "sha256": "9a09cce245acf8823feb99fb7ba8ddd3e878e3827564888131e0185044aa4429"
+    }
+  }
+}

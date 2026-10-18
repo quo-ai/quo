@@ -39,3 +39,28 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+
+  # The desktop app's engine code, and proof that the pinned llama.cpp build
+  # downloads, verifies and starts on every platform we ship it for.
+  desktop:
+    name: desktop (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: apps/desktop
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/desktop/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npm run fetch:engine
+      - run: npm run check:engine -- --version

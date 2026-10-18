@@ -18,10 +18,15 @@ const probe = wasmPath => `(async () => {
     jspi: typeof WebAssembly.Suspending === 'function',
     adapter: false,
     adapterInfo: null,
-    desktop: window.quoDesktop ?? null,
+    desktop: window.quoDesktop ? { platform: window.quoDesktop.platform, version: window.quoDesktop.version, nativeEngine: Boolean(window.quoDesktop.engine) } : null,
     title: document.title,
     sab: typeof SharedArrayBuffer,
   };
+  try {
+    result.engine = window.quoDesktop?.engine ? await window.quoDesktop.engine.info() : null;
+  } catch (error) {
+    result.engineError = String(error);
+  }
   try {
     const adapter = navigator.gpu ? await withTimeout(navigator.gpu.requestAdapter({ powerPreference: 'high-performance' }), 15000) : null;
     result.adapter = Boolean(adapter);
@@ -81,7 +86,9 @@ async function runSmoke(createWindow, webRoot) {
       /Quo/.test(result.title) &&
       result.desktop?.platform === process.platform && result.desktop?.version === app.getVersion() &&
       (!wasm || result.wasmType === 'application/wasm') &&
-      typeof result.api?.status === 'number';
+      typeof result.api?.status === 'number' &&
+      // QUO_EXPECT_ENGINE=1: this build must include the native engine.
+      (process.env.QUO_EXPECT_ENGINE !== '1' || result.engine?.ok?.available === true);
     finish(result, ok);
   } catch (error) {
     finish({ error: String(error?.stack ?? error) }, false);
