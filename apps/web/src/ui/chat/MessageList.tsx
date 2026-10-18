@@ -53,6 +53,7 @@ function replyMeta(message: Message): string {
     const steps = message.steps?.length ? ` · ${message.steps.length} step${message.steps.length === 1 ? '' : 's'}` : '';
     return `${message.modelName ?? 'Cloud'}${steps} · ${cost}`;
   }
+  if (message.steps?.length) return `${message.modelName ?? 'Offline model'} · ${message.steps.length} step${message.steps.length === 1 ? '' : 's'} · on this computer`;
   return message.stats && message.stats.tokens > 1 ? `${message.stats.tokensPerSecond.toFixed(1)} tokens/s` : '';
 }
 
@@ -60,7 +61,8 @@ function intro(choice: ModelChoice | null, code: CodeSession | null): string {
   if (!choice) return 'Choose a model to start.';
   if (code) {
     const notes = code.info.instructions ? ` It follows the notes in ${code.info.instructions.file}.` : '';
-    return `Code mode is on in ${code.project.name}.${notes} Ask about the code, or ask for a change. ${code.plan ? 'Plan mode is on: nothing is changed or run.' : 'Nothing is changed or run without your OK.'}`;
+    const privacy = choice.kind === 'local' ? ` ${choice.model.name} runs here, so your code never leaves this computer.` : '';
+    return `Code mode is on in ${code.project.name}.${notes}${privacy} Ask about the code, or ask for a change. ${code.plan ? 'Plan mode is on: nothing is changed or run.' : 'Nothing is changed or run without your OK.'}`;
   }
   if (choice.kind === 'own') {
     const where = choice.provider.custom ? `on ${choice.provider.name}, a server of your own` : `on your ${choice.provider.name} account`;

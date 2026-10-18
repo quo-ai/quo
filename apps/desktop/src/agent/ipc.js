@@ -127,7 +127,7 @@ function setupAgent() {
 
   handle('agent:forget', ({ id }) => projects.remove(String(id)));
 
-  handle('agent:start', async ({ projectId, autoReadOnly }, event) => {
+  handle('agent:start', async ({ projectId, autoReadOnly, compact }, event) => {
     const project = (await projects.list()).find(entry => entry.id === String(projectId));
     if (!project) throw new AgentError('no_project', 'That project isn’t in the list any more. Choose the folder again.');
     const real = await fsp.realpath(project.path).catch(() => null);
@@ -137,7 +137,7 @@ function setupAgent() {
     if (sessions.size >= MAX_SESSIONS) throw new AgentError('busy', 'Too many Code sessions are open. Close one first.');
     const id = crypto.randomBytes(8).toString('hex');
     const window = BrowserWindow.fromWebContents(event.sender) ?? undefined;
-    const session = new AgentSession({ root: real, name: project.name, repos, autoReadOnly: autoReadOnly !== false, approve: request => ask(window, request) });
+    const session = new AgentSession({ root: real, name: project.name, repos, autoReadOnly: autoReadOnly !== false, compact: compact === true, approve: request => ask(window, request) });
     sessions.set(id, { session, owner: event.sender.id, project: project.id, controller: null });
     event.sender.once('destroyed', () => endSession(id));
     return { sessionId: id, name: project.name, platform: process.platform, tools: TOOL_NAMES, planTools: PLAN_TOOLS, instructions: await readInstructions(real) };

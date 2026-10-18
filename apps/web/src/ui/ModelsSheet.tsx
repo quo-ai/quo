@@ -66,7 +66,7 @@ export function ModelsSheet({ initialTab = 'device', device, downloads, activeMo
           <div className="segmented" role="tablist">
             {tabs.map(id => <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)}>{LABELS[id]}</button>)}
           </div>
-          {tab === 'keys' ? <KeysTab selectedKey={selectedKey} onChoose={onChoose} /> : tab === 'code' ? <CodeSettings /> : tab === 'cloud' ? (
+          {tab === 'keys' ? <KeysTab selectedKey={selectedKey} onChoose={onChoose} /> : tab === 'code' ? <CodeSettings downloads={downloads} /> : tab === 'cloud' ? (
             <div className="cloud-list">
               {free.map(model => <CloudModelRow key={model.id} model={model} account={account} selected={selectedKey === `cloud:${model.id}`} onPick={() => onChoose(`cloud:${model.id}`)} />)}
               {frontier.length > 0 && <div className="popover-section"><Crown size={13} /> Frontier models <span className="section-note">Pro or credits</span></div>}

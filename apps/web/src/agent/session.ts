@@ -41,7 +41,7 @@ export class CodeSession {
     return unwrap(await this.bridge.undo(this.info.sessionId, count));
   }
 
-  static async start(project: CodeProject, options: { autoReadOnly?: boolean } = {}): Promise<CodeSession> {
+  static async start(project: CodeProject, options: { autoReadOnly?: boolean; compact?: boolean } = {}): Promise<CodeSession> {
     const bridge = agentBridge();
     if (!bridge) throw new NativeError('unavailable', 'Code mode needs the Quo desktop app.');
     const info = unwrap(await bridge.start(project.id, options));

@@ -16,7 +16,10 @@ export const openai: Adapter = {
   path: '/chat/completions',
 
   body(request: ChatRequest, usage: boolean) {
+    // Extra settings can add to the request, never change what it is.
+    const { model: _m, messages: _msgs, stream: _s, tools: _t, tool_choice: _c, stream_options: _o, ...extra } = request.extra ?? {};
     return {
+      ...extra,
       model: request.model,
       messages: request.messages.map(toApi),
       stream: true,

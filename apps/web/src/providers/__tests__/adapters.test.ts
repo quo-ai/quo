@@ -36,6 +36,13 @@ describe('the OpenAI wire format', () => {
     expect(openai.body({ model: 'gpt-x', messages, maxTokens: 100, tools: [tool] }, true)).toMatchObject({ stream_options: { include_usage: true }, tools: [tool], tool_choice: 'auto' });
   });
 
+  it('adds an offline server’s own settings, but never lets them replace the request’s', () => {
+    const body = openai.body({ model: 'm', messages: [{ role: 'user', content: 'hi' }], maxTokens: 1, extra: { temperature: 0.2, top_k: 40, model: 'other', stream: false, messages: [], tools: ['x'] } }, false) as Record<string, unknown>;
+    expect(body).toMatchObject({ temperature: 0.2, top_k: 40, model: 'm', stream: true });
+    expect(body.messages).toHaveLength(1);
+    expect(body.tools).toBeUndefined();
+  });
+
   it('sends null, not an empty string, for an assistant turn that only called tools', () => {
     const messages: WireMessage[] = [{ role: 'assistant', content: '', tool_calls: [{ id: 'c1', type: 'function', function: { name: 'read_file', arguments: '{}' } }] }, { role: 'tool', tool_call_id: 'c1', content: 'ok' }];
     const body = openai.body({ model: 'm', messages, maxTokens: 1 }, false) as { messages: { content: unknown }[] };

@@ -1,14 +1,21 @@
 import { useEffect, useState } from 'react';
 import { Trash2 } from 'lucide-react';
+import { isLocalCodeAllowed, ratingNote, setLocalCodeAllowed, useLocalCodeChoices } from '../agent/capability';
 import { recentProjects } from '../agent/session';
+import { allLocalModels } from '../catalog';
 import { STEP_CHOICES, setCodeSettings, useCodeSettings } from '../codeSettings';
-import { agentBridge, unwrap, type CodeProject } from '../native';
+import { useCustomModels } from '../customModels';
+import { agentBridge, hasNativeEngine, unwrap, type CodeProject } from '../native';
+import type { DownloadState } from '../storage/downloads';
 import { toast } from './Toasts';
 import { Toggle } from './Toggle';
 
 /** How Code mode behaves, and the folders and downloads it remembers. Nothing here lets it do more without your OK. */
-export function CodeSettings() {
+export function CodeSettings({ downloads }: { downloads: Record<string, DownloadState> }) {
   const settings = useCodeSettings();
+  useLocalCodeChoices();
+  useCustomModels();
+  const offline = hasNativeEngine() ? allLocalModels().filter(model => downloads[model.id]?.status === 'installed') : [];
   const [projects, setProjects] = useState<CodeProject[] | null>(null);
 
   useEffect(() => {
@@ -42,6 +49,18 @@ export function CodeSettings() {
         <Toggle label="Follow the project’s notes" detail="AGENTS.md or CLAUDE.md in the project folder: how to build, test and write code there." on={settings.useNotes} onChange={useNotes => setCodeSettings({ useNotes })} />
         <Toggle label="Start in plan mode" detail="Quo only reads and suggests a plan until you switch Plan off." on={settings.startInPlan} onChange={startInPlan => setCodeSettings({ startInPlan })} />
       </div>
+      {hasNativeEngine() && (
+        <>
+          <div className="sheet-section-title">Offline models</div>
+          {offline.length === 0
+            ? <p className="note">Code mode also works with an offline model, entirely on this computer. Download one first; bigger models do this much better.</p>
+            : (
+              <div className="toggle-list">
+                {offline.map(model => <Toggle key={model.id} label={model.name} detail={ratingNote(model)} on={isLocalCodeAllowed(model)} onChange={on => setLocalCodeAllowed(model, on)} />)}
+              </div>
+            )}
+        </>
+      )}
       <div className="sheet-section-title">Most steps in one reply</div>
       <div className="segmented" role="radiogroup" aria-label="Most steps in one reply">
         {STEP_CHOICES.map(count => (

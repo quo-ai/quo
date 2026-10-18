@@ -89,6 +89,8 @@ Models reached with the user's own key: OpenRouter, Anthropic, OpenAI, Google, x
 
 Code mode with these models uses the same tools and system prompt as with Quo's cloud models (`shared/agentTools.ts`, which the server also uses) but the request is made by `src/agent/own.ts`; nothing is charged, and token counts are shown instead of credits. A model from a custom server starts with Code mode off (not every model can call tools); the user turns it on per model. Settings for Code mode (`codeSettings.ts`, Models & storage → Code) can only make it stricter or choose how it starts.
 
+Code mode on offline models (`src/agent/local.ts`, `capability.ts`, `support.ts`): the native engine is an OpenAI-style server, so it goes through the same adapter (`engine/localTransport.ts` sends to `/engine/v1`, which the desktop app forwards to llama-server). The model is loaded with a 32k window for Code mode (`localEngine.load(model, { contextSize })` reloads only when that differs), sampling is careful (low temperature, no repetition penalties, thinking off), the conversation is cut to fit (`agentContextChars`), and the desktop session is started *compact*. `capability.ts` rates models (`agent` in the catalog: `good`, `limited`, or none = weak; custom models are unknown) and keeps the user's on/off choices; `support.ts` is the one place that says whether Code mode is offered for the current model, and whether to ask first. The loop also stops a model that repeats the same call or keeps failing, for every model.
+
 Adding a provider that speaks one of the two formats is one line in `registry.ts` and one in the desktop app's `registry.js` (a test compares them); set `usage` to whether it accepts `stream_options`.
 
 ## Getting Quo onto the computer

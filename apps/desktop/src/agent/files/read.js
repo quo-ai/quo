@@ -2,7 +2,7 @@
 
 const fsp = require('node:fs/promises');
 const { AgentError, isSecretPath, looksBinary, redactSecrets, resolveInside } = require('../safety');
-const { LIMITS, clip, integer, limitOutput, sha, sizeLabel } = require('./limits');
+const { LIMITS, clip, integer, limitOf, limitOutput, sha, sizeLabel } = require('./limits');
 
 
 /** Reads part of a text file, with line numbers. */
@@ -18,14 +18,15 @@ async function readFile(ctx, { path: input, start_line: startLine, end_line: end
   const text = buffer.toString('utf8');
   const lines = text.split(/\r?\n/);
   if (lines.length > 1 && lines[lines.length - 1] === '') lines.pop();
+  const page = limitOf(ctx, 'readLines');
   const start = integer(startLine, 1, 1, Math.max(1, lines.length));
-  const end = Math.min(lines.length, integer(endLine, start + LIMITS.readLines - 1, start, start + LIMITS.readLines - 1));
+  const end = Math.min(lines.length, integer(endLine, start + page - 1, start, start + page - 1));
   const width = String(end).length;
   const body = lines.slice(start - 1, end).map((line, index) => `${String(start + index).padStart(width)}\t${clip(line)}`).join('\n');
   ctx.reads.set(absolute, sha(text));
   const more = end < lines.length ? `\n… [${lines.length - end} more lines. Read on with start_line=${end + 1}.]` : '';
   return {
-    text: limitOutput(redactSecrets(`${relative} (lines ${start}-${end} of ${lines.length})\n${body}${more}`)),
+    text: limitOutput(redactSecrets(`${relative} (lines ${start}-${end} of ${lines.length})\n${body}${more}`), ctx.outputChars),
     display: { kind: 'read', path: relative, from: start, to: end, total: lines.length },
   };
 }

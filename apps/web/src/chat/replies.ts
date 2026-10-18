@@ -1,4 +1,5 @@
 import { runAgent, countChanges, CONTEXT_CHARS } from '../agent/loop';
+import { agentContextChars, askLocalAgentModel, prepareLocalAgent } from '../agent/local';
 import { askOwnAgentModel } from '../agent/own';
 import { codeSettings } from '../codeSettings';
 import { askAgentModel } from '../agent/stream';
@@ -40,7 +41,12 @@ export interface ReplyTarget {
 const contextChars = (model: OwnModel): number => Math.min(CONTEXT_CHARS, Math.round((model.contextTokens ?? 128_000) * 3 * 0.7));
 
 /** Code mode: the model works on the project with the desktop app's tools until it has nothing left to do. Returns how many files it changed. */
-export async function replyWithAgent(choice: CloudChoice | OwnChoice, code: CodeSession, signal: AbortSignal, { prior, update, setStatus }: ReplyTarget): Promise<number> {
+export async function replyWithAgent(choice: CloudChoice | OwnChoice | LocalChoice, code: CodeSession, signal: AbortSignal, { prior, update, setStatus }: ReplyTarget): Promise<number> {
+  if (choice.kind === 'local') {
+    // An offline model is loaded again with more room than a chat needs, which takes a moment.
+    setStatus('loading');
+    await prepareLocalAgent(choice.model);
+  }
   setStatus('generating');
   const conversation: AgentMessage[] = prior.filter(m => m.content).map(m => ({ role: m.role, content: m.content }));
   const { useNotes, maxSteps } = codeSettings();
@@ -50,8 +56,10 @@ export async function replyWithAgent(choice: CloudChoice | OwnChoice, code: Code
     maxSteps,
     askModel: choice.kind === 'own'
       ? (messages, onText) => askOwnAgentModel(choice.provider, choice.model, messages, options(onText))
-      : (messages, onText) => askAgentModel(choice.model.id, messages, options(onText)),
-    ...(choice.kind === 'own' ? { contextChars: contextChars(choice.model) } : {}),
+      : choice.kind === 'local'
+        ? (messages, onText) => askLocalAgentModel(choice.model, messages, options(onText))
+        : (messages, onText) => askAgentModel(choice.model.id, messages, options(onText)),
+    ...(choice.kind === 'own' ? { contextChars: contextChars(choice.model) } : choice.kind === 'local' ? { contextChars: agentContextChars() } : {}),
     runTool: (name, args) => code.run(name, args),
     onUpdate: ({ steps, text }) => update({ content: text, steps }, false),
   });
@@ -60,7 +68,7 @@ export async function replyWithAgent(choice: CloudChoice | OwnChoice, code: Code
     content: outcome.text,
     steps: outcome.steps,
     stopped: outcome.stopped || undefined,
-    ...(choice.kind === 'cloud' ? { charged: outcome.charged } : { usage: outcome.usage ?? undefined }),
+    ...(choice.kind === 'cloud' ? { charged: outcome.charged } : choice.kind === 'own' ? { usage: outcome.usage ?? undefined } : {}),
   }, true);
   return countChanges(outcome.steps);
 }

@@ -24,9 +24,12 @@ const integer = (value, fallback, min, max) => (Number.isFinite(Number(value)) &
 const clip = (line, max = LIMITS.lineChars) => (line.length > max ? `${line.slice(0, max)}… [line cut]` : line);
 const sizeLabel = bytes => (bytes >= 1048576 ? `${(bytes / 1048576).toFixed(1)} MB` : bytes >= 1024 ? `${Math.round(bytes / 1024)} KB` : `${bytes} B`);
 
-function limitOutput(text) {
-  if (text.length <= LIMITS.outputChars) return text;
-  return `${text.slice(0, LIMITS.outputChars)}\n… [output cut at ${LIMITS.outputChars.toLocaleString('en-US')} characters. Ask for a smaller range or a narrower search.]`;
+/** What a session may be asked for. A session working with a small context window (an offline model) passes smaller ones in `ctx`. */
+const limitOf = (ctx, name) => ctx?.[name] ?? LIMITS[name];
+
+function limitOutput(text, max = LIMITS.outputChars) {
+  if (text.length <= max) return text;
+  return `${text.slice(0, max)}\n… [output cut at ${max.toLocaleString('en-US')} characters. Ask for a smaller range or a narrower search.]`;
 }
 
-module.exports = { LIMITS, sha, integer, clip, sizeLabel, limitOutput };
+module.exports = { LIMITS, sha, integer, clip, sizeLabel, limitOutput, limitOf };

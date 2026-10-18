@@ -7,7 +7,8 @@ import type { Account } from '../cloud/account';
 import { stopCloud } from '../cloud/cloudEngine';
 import { localEngine } from '../engine/localEngine';
 import { stopOwn } from '../providers/generate';
-import { agentBridge, NativeError } from '../native';
+import { codeSupport } from '../agent/support';
+import { NativeError } from '../native';
 import type { ModelChoice } from '../models';
 import { beginGeneration, endGeneration } from '../sync';
 import { Composer, type ComposerHandle } from './chat/Composer';
@@ -50,7 +51,7 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
   const messages = conversation?.messages ?? [];
   const busy = status !== 'idle';
   const cloud = choice?.kind === 'cloud';
-  const codeMode = useCodeMode({ available: Boolean(agentBridge()) && (choice?.kind === 'cloud' || choice?.kind === 'own') && choice.model.agent, conversationId: conversation?.id, modelId: choice?.model.id });
+  const codeMode = useCodeMode({ support: codeSupport(choice), conversationId: conversation?.id, modelId: choice?.model.id });
   const { code } = codeMode;
 
   useImperativeHandle(ref, () => ({ focus: () => composer.current?.focus() }), []);
@@ -106,7 +107,7 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
 
     beginGeneration(); // Quo Sync waits until the reply is finished
     try {
-      if ((choice.kind === 'cloud' || choice.kind === 'own') && code && choice.model.agent) {
+      if (code && (choice.kind === 'local' || choice.model.agent)) {
         setStatus('generating');
         const controller = new AbortController();
         agentRun.current = controller;

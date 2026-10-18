@@ -26,6 +26,9 @@ const PLAN_TOOLS = ['list_directory', 'read_file', 'find_files', 'search_text', 
 const CHANGING_TOOLS = new Set(['edit_file', 'write_file', 'run_command']);
 const MAX_CALLS = 500;
 const COMMAND_CHARS = 4000;
+// What a small context window can afford for one tool result (about 4,000 tokens at most).
+const COMPACT_LIMITS = { readLines: 150, outputChars: 10_000, listEntries: 120, findResults: 80, searchResults: 40 };
+const COMPACT_COMMAND = { headChars: 2500, tailChars: 5000 };
 const PREVIEW_LINES = 30;
 
 const clip = (text, max) => (text.length > max ? `${text.slice(0, max)}…` : text);
@@ -35,12 +38,13 @@ const preview = diff => {
 };
 
 class AgentSession {
-  constructor({ root, name, approve, repos, env = process.env, autoReadOnly = true }) {
+  constructor({ root, name, approve, repos, env = process.env, autoReadOnly = true, compact = false }) {
     this.rootReal = fs.realpathSync.native(root);
     this.name = name;
     this.approve = approve;
     this.repos = repos;
     this.env = env;
+    this.compact = compact; // a small context window (an offline model): shorter file pages and command output
     this.autoReadOnly = autoReadOnly; // run read-only commands without asking (a setting; off means every command asks)
     this.reads = new Map();
     this.opened = new Map(); // `owner/name` -> { rootReal, reads }
@@ -62,7 +66,7 @@ class AgentSession {
   }
 
   get ctx() {
-    return { rootReal: this.rootReal, reads: this.reads };
+    return { rootReal: this.rootReal, reads: this.reads, ...(this.compact ? COMPACT_LIMITS : {}) };
   }
 
   /** The folder a read-only tool works in: the project, or a reference repository opened earlier. */
@@ -136,7 +140,7 @@ class AgentSession {
     }
     if (answer === 'deny' || answer === 'cancel') return fail('denied', 'The user didn’t allow that command. Don’t try it again; ask what they’d like instead.', { kind: 'command', command, denied: true });
     if (answer === 'session') this.allowedCommands.add(command);
-    const result = await runCommand({ command, cwd: this.rootReal, env: scrubbedEnv(this.env), timeoutMs, signal });
+    const result = await runCommand({ command, cwd: this.rootReal, env: scrubbedEnv(this.env), timeoutMs, signal, ...(this.compact ? COMPACT_COMMAND : {}) });
     const status = result.aborted ? 'was stopped' : result.timedOut ? `timed out after ${timeoutMs / 1000}s` : `exited with code ${result.exitCode ?? result.signal}`;
     const output = readOnly ? hideSecretDiffs(result.output) : result.output;
     const text = redactSecrets(`$ ${command}\n${output.trimEnd() || '(no output)'}\n[${status}]`);

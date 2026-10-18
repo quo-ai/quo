@@ -257,3 +257,41 @@ describe('describing steps', () => {
     expect(done('read_file', { path: '.env' }, { ok: false, text: '.env looks like a secrets file, so Quo doesn’t read it.' })).toMatchObject({ status: 'failed', title: 'Reading .env didn’t work: .env looks like a secrets file, so Quo doesn’t read it.' });
   });
 });
+
+describe('a model that is going round in circles', () => {
+  const read = (id: string, path = 'a.ts') => reply({ toolCalls: [call(id, 'read_file', { path })] });
+
+  it('is not let run the same call a third time, and is told so', async () => {
+    const { deps, ran, asked } = script([read('c1'), read('c2'), read('c3'), read('c4'), reply({ content: 'Giving up.' })]);
+    await runAgent(user, deps);
+    expect(ran.filter(r => r.name === 'read_file')).toHaveLength(2);
+    const told = asked.at(-1)!.filter(m => m.role === 'tool').map(m => m.content);
+    expect(told.slice(2).every(text => /already made this exact call twice/.test(text))).toBe(true);
+  });
+
+  it('can repeat a call after doing something else in between', async () => {
+    const { deps, ran } = script([read('c1'), read('c2', 'b.ts'), read('c3'), read('c4', 'b.ts'), read('c5'), reply({ content: 'Done.' })]);
+    await runAgent(user, deps);
+    expect(ran).toHaveLength(5);
+  });
+
+  it('stops after a run of failures, and says so', async () => {
+    const failing: ToolResult = { ok: false, text: 'No such file', display: { kind: 'error' } };
+    const { deps, ran } = script(Array.from({ length: 12 }, (_, i) => read(`c${i}`, `f${i}.ts`)), { read_file: failing });
+    const outcome = await runAgent(user, deps);
+    expect(ran).toHaveLength(5);
+    expect(outcome.limited).toBe(true);
+    expect(outcome.text).toMatch(/kept running into errors/);
+  });
+
+  it('doesn’t count what the person declined, or failures with a success between', async () => {
+    const declined: ToolResult = { ok: false, text: 'denied', display: { kind: 'edit', denied: true } };
+    const { deps, ran } = script(Array.from({ length: 7 }, (_, i) => reply({ toolCalls: [call(`c${i}`, 'edit_file', { path: `f${i}` })] })).concat(reply({ content: 'Fine.' })), { edit_file: declined });
+    const outcome = await runAgent(user, deps);
+    expect(ran).toHaveLength(7);
+    expect(outcome.limited).toBe(false);
+    let n = 0;
+    const flaky = script([...Array.from({ length: 10 }, (_, i) => read(`d${i}`, `g${i}.ts`)), reply({ content: 'Done.' })], { read_file: () => (++n % 3 === 0 ? { ok: true, text: 'fine' } : { ok: false, text: 'nope', display: { kind: 'error' } }) });
+    expect((await runAgent(user, flaky.deps)).limited).toBe(false);
+  });
+});

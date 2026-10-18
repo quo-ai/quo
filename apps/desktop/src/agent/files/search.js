@@ -4,7 +4,7 @@ const fsp = require('node:fs/promises');
 const vm = require('node:vm');
 const { AgentError, looksBinary, redactSecrets, resolveInside } = require('../safety');
 const { globToRegExp, walkFiles } = require('./glob');
-const { LIMITS, clip, integer, limitOutput } = require('./limits');
+const { LIMITS, clip, integer, limitOf, limitOutput } = require('./limits');
 
 
 /**
@@ -17,7 +17,7 @@ async function searchText(ctx, args = {}) {
   if (!pattern) throw new AgentError('bad_args', 'search_text needs a pattern.');
   if (String(pattern).length > LIMITS.patternChars) throw new AgentError('bad_args', 'That pattern is too long.');
   const { absolute } = resolveInside(ctx.rootReal, input);
-  const limit = integer(maxResults, 50, 1, LIMITS.searchResults);
+  const limit = integer(maxResults, Math.min(50, limitOf(ctx, 'searchResults')), 1, limitOf(ctx, 'searchResults'));
   const globber = glob ? globToRegExp(glob) : null;
   const flags = caseSensitive ? '' : 'i';
   let source = String(pattern);
@@ -88,7 +88,7 @@ async function searchText(ctx, args = {}) {
   const text = results.length
     ? `${results.join('\n')}${stopped ? `\n… [stopped: ${stopped}. Narrow the search with path or glob.]` : ''}`
     : `No matches for ${pattern}.${stopped ? ` (Stopped: ${stopped}.)` : ''}`;
-  return { text: limitOutput(redactSecrets(text)), display: { kind: 'search', pattern, matches: results.length, files } };
+  return { text: limitOutput(redactSecrets(text), ctx.outputChars), display: { kind: 'search', pattern, matches: results.length, files } };
 }
 
 module.exports = { searchText };

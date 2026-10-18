@@ -1,9 +1,8 @@
 import { forwardRef, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react';
-import { ArrowUp, Brain, Cloud, HardDrive, KeyRound, Loader2, Mic, Paperclip, Square } from 'lucide-react';
+import { AlertTriangle, ArrowUp, Brain, Cloud, HardDrive, KeyRound, Loader2, Mic, Paperclip, Square } from 'lucide-react';
 import { ACCEPT_DOCUMENTS, ACCEPT_IMAGES } from '../../attachments';
 import type { Attachment } from '../../chat/types';
 import { localEngine } from '../../engine/localEngine';
-import { agentBridge } from '../../native';
 import type { ModelChoice } from '../../models';
 import { AttachmentChips } from '../Attachments';
 import { CodeChip } from '../CodeChip';
@@ -44,8 +43,8 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
   // Files stay on this device: attachments only go to offline models.
   const files = useAttachments({ enabled: Boolean(choice) && !remote, vision, resetKey: conversationId });
   const { code } = codeMode;
-  // Code mode: the desktop app, and a cloud model (Quo's, or one reached with the user's own key) that can do it.
-  const codeAvailable = Boolean(agentBridge()) && (choice?.kind === 'cloud' || choice?.kind === 'own') && choice.model.agent;
+  // Code mode: the desktop app, with a model that can do it (see agent/support.ts).
+  const codeAvailable = codeMode.available;
 
   const voice = useVoiceInput(text => {
     setInput(current => (current.trim() ? `${current.trimEnd()} ${text}` : text));
@@ -93,6 +92,15 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
 
   return (
     <div className="composer-wrap">
+      {codeMode.caution && codeMode.gate && (
+        <div className="code-caution glass thick" role="alert">
+          <p><AlertTriangle size={16} /> <span><strong>{codeMode.gate.name}</strong> for Code mode: {codeMode.gate.note} You still approve every change and command.</span></p>
+          <div className="code-caution-actions">
+            <button type="button" className="btn btn-soft press small" onClick={codeMode.dismissCaution}>Not now</button>
+            <button type="button" className="btn btn-primary press small" onClick={() => void codeMode.confirmCaution()}>Turn on anyway</button>
+          </div>
+        </div>
+      )}
       <form className={`composer glass${files.dragging ? ' dragging' : ''}`} onSubmit={event => { event.preventDefault(); send(); }} {...files.dropTarget}>
         <AttachmentChips items={files.attachments} onRemove={files.remove} />
         <textarea
@@ -178,7 +186,7 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
         </div>
       </form>
       <div className="composer-hint">
-        {code ? `${codeMode.plan ? 'Plan mode · nothing is changed or run' : 'Code mode · edits and commands need your OK'} · files Quo reads are sent to ${choice?.kind === 'own' ? choice.provider.name : 'the model’s provider'}` : choice?.kind === 'own' ? `Straight to ${choice.provider.name} with your key · not through Quo` : cloud ? 'Cloud replies via OpenRouter · Quo doesn’t store your messages' : 'Runs privately on this device'} · Enter to send · Shift+Enter for a new line
+        {code ? `${codeMode.plan ? 'Plan mode · nothing is changed or run' : 'Code mode · edits and commands need your OK'} · ${choice?.kind === 'local' ? 'everything stays on this computer' : `files Quo reads are sent to ${choice?.kind === 'own' ? choice.provider.name : 'the model’s provider'}`}` : choice?.kind === 'own' ? `Straight to ${choice.provider.name} with your key · not through Quo` : cloud ? 'Cloud replies via OpenRouter · Quo doesn’t store your messages' : 'Runs privately on this device'} · Enter to send · Shift+Enter for a new line
       </div>
     </div>
   );

@@ -125,7 +125,7 @@ class LlamaEngine extends EventEmitter {
 
   status() {
     return this.current
-      ? { running: true, modelId: this.current.modelId, backend: this.current.backend, device: this.current.device, vision: this.current.vision }
+      ? { running: true, modelId: this.current.modelId, contextSize: this.current.contextSize, backend: this.current.backend, device: this.current.device, vision: this.current.vision }
       : { running: false };
   }
 
@@ -138,7 +138,7 @@ class LlamaEngine extends EventEmitter {
   start({ modelId, modelPath, mmprojPath, contextSize }) {
     return this._exclusive(async () => {
       if (!this.available) throw new EngineError('engine_missing', 'The AI engine isn’t included in this build.');
-      if (this.current?.modelId === modelId && this.child) return this.status();
+      if (this.current?.modelId === modelId && this.current.contextSize === contextSize && this.child) return this.status();
       await this._stop();
 
       const port = await freePort();
@@ -223,6 +223,7 @@ class LlamaEngine extends EventEmitter {
       const gpu = info.gpuLayers > 0;
       this.current = {
         modelId,
+        contextSize,
         port,
         key,
         backend: gpu ? BACKEND_NAMES[[...info.backends][0]] ?? [...info.backends][0] ?? 'gpu' : 'cpu',

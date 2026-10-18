@@ -2,7 +2,7 @@
 
 const { AgentError, resolveInside } = require('../safety');
 const { globToRegExp, walkFiles } = require('./glob');
-const { LIMITS } = require('./limits');
+const { LIMITS, limitOf } = require('./limits');
 
 
 /** Finds files by name pattern. */
@@ -21,7 +21,7 @@ async function findFiles(ctx, { pattern, path: input = '.' } = {}) {
     }
     if (matcher.test(file.relative)) {
       found.push(file.relative);
-      if (found.length >= LIMITS.findResults) {
+      if (found.length >= limitOf(ctx, 'findResults')) {
         cut = true;
         break;
       }

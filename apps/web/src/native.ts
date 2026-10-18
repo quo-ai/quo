@@ -53,6 +53,8 @@ export interface NativeStatus {
   backend?: string;
   device?: string | null;
   vision?: boolean;
+  /** The context window the engine was started with. */
+  contextSize?: number;
 }
 
 export interface ModelFileRequest {
@@ -142,7 +144,7 @@ export interface DesktopAgent {
   projects: () => Promise<NativeResult<CodeProject[]>>;
   pick: () => Promise<NativeResult<CodeProject | null>>;
   forget: (id: string) => Promise<NativeResult<unknown>>;
-  start: (projectId: string, options?: { autoReadOnly?: boolean }) => Promise<NativeResult<CodeSessionInfo>>;
+  start: (projectId: string, options?: { autoReadOnly?: boolean; compact?: boolean }) => Promise<NativeResult<CodeSessionInfo>>;
   tool: (sessionId: string, name: string, args: Record<string, unknown>) => Promise<NativeResult<{ ok: boolean; text: string; display?: Record<string, unknown> }>>;
   mode: (sessionId: string, mode: 'work' | 'plan') => Promise<NativeResult<unknown>>;
   undo: (sessionId: string, count: number) => Promise<NativeResult<UndoResult>>;

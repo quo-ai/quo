@@ -167,3 +167,39 @@ describe('a session', () => {
     assert.equal((await s.callTool('list_directory', {})).display.code, 'limit');
   });
 });
+
+describe('a session for a small context window', () => {
+  const lines = count => Array.from({ length: count }, (_, i) => `line ${i + 1}`).join('\n');
+  const session = (root, compact) => new AgentSession({ root, name: 'demo', compact, approve: async () => 'once' });
+
+  it('reads shorter pages, and says how to read on', async () => {
+    const root = temp();
+    write(root, 'big.txt', lines(1000));
+    const full = await session(root, false).callTool('read_file', { path: 'big.txt' });
+    const small = await session(root, true).callTool('read_file', { path: 'big.txt' });
+    assert.match(full.text, /lines 1-400 of 1000/);
+    assert.match(small.text, /lines 1-150 of 1000/);
+    assert.match(small.text, /Read on with start_line=151/);
+  });
+
+  it('cuts what a search or a long line of output may return, and lists fewer entries', async () => {
+    const root = temp();
+    for (let i = 0; i < 200; i++) write(root, `src/file${i}.txt`, `needle ${'x'.repeat(300)}\n`);
+    const small = session(root, true);
+    assert.ok((await small.callTool('find_files', { pattern: '**/*.txt' })).text.split('\n').length <= 82);
+    const search = await small.callTool('search_text', { pattern: 'needle', max_results: 100 });
+    assert.ok(search.text.length <= 10_100, `search output was ${search.text.length} characters`);
+    assert.ok((await small.callTool('list_directory', { path: 'src' })).text.split('\n').length <= 123);
+    assert.ok((await session(root, false).callTool('list_directory', { path: 'src' })).text.split('\n').length > 123);
+  });
+
+  it('keeps less of a long command’s output', async () => {
+    const root = temp();
+    const command = node('process.stdout.write(\\"y\\".repeat(30000))');
+    const big = await session(root, false).callTool('run_command', { command });
+    const small = await session(root, true).callTool('run_command', { command });
+    assert.ok(small.text.length < big.text.length, `${small.text.length} should be less than ${big.text.length}`);
+    assert.ok(small.text.length < 9000);
+    assert.match(small.text, /characters cut/);
+  });
+});

@@ -58,7 +58,8 @@ export interface EngineInfo {
 /** What the app needs from an inference engine. */
 export interface InferenceEngine {
   readonly modelId: string | null;
-  load(model: LocalModel): Promise<void>;
+  /** `contextSize` asks for a larger window than the model's default (Code mode needs room for files and tool results). */
+  load(model: LocalModel, options?: { contextSize?: number }): Promise<void>;
   unload(): Promise<void>;
   info(): EngineInfo | null;
   stop(): Promise<void>;

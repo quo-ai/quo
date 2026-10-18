@@ -24,6 +24,8 @@ export interface ChatRequest {
   tools?: WireTool[];
   maxTokens: number;
   signal?: AbortSignal;
+  /** More fields for an OpenAI-style server, such as sampling settings for a model on this computer. They never replace the ones above. */
+  extra?: Record<string, unknown>;
 }
 
 export interface ChatReply {

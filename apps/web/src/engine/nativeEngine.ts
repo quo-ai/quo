@@ -39,17 +39,20 @@ export class NativeEngine implements InferenceEngine {
     return this.status?.running ? this.status.modelId ?? null : null;
   }
 
-  async load(model: LocalModel): Promise<void> {
-    if (this.modelId === model.id) return;
+  async load(model: LocalModel, options: { contextSize?: number } = {}): Promise<void> {
+    const contextSize = options.contextSize ?? model.contextSize;
+    // Loaded already, with the room that was asked for.
+    const ready = () => this.modelId === model.id && this.status?.contextSize === contextSize;
+    if (ready()) return;
     if (this.loading) await this.loading.catch(() => {});
-    if (this.modelId === model.id) return;
+    if (ready()) return;
 
     const bridge = nativeBridge();
     if (!bridge) throw new NativeError('no_engine', 'The AI engine isn’t available.');
     this.loading = (async () => {
       await this.stop();
       this.status = null;
-      this.status = unwrap(await bridge.engine.start({ modelId: model.id, contextSize: model.contextSize }));
+      this.status = unwrap(await bridge.engine.start({ modelId: model.id, contextSize }));
     })();
     try {
       await this.loading;

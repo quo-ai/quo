@@ -11,6 +11,10 @@ import type { AgentMessage, AgentStep, StepReply, ToolCall, ToolResult } from '.
 export const MAX_STEPS = 40;
 /** Past this many characters of conversation, the oldest tool output is dropped from what's sent. */
 export const CONTEXT_CHARS = 450_000;
+// A model that keeps making the same call, or keeps failing, isn't getting anywhere. Small models especially can loop.
+const REPEATS_ALLOWED = 2;
+const FAILURES_ALLOWED = 5;
+const REPEATED = 'You have already made this exact call twice with the same result. Do not repeat it. Use what you have, try something different, or tell the user what is blocking you.';
 const ALWAYS_KEEP = 1; // the newest tool result is what the model is about to read; it is never dropped
 const LEFT_OUT = '[Earlier output left out to save space. Read the file or run the command again if you need it.]';
 
@@ -76,6 +80,9 @@ export async function runAgent(history: AgentMessage[], deps: AgentDeps): Promis
   const steps: AgentStep[] = [];
   const outcome: AgentOutcome = { steps, text: '', charged: 0, balance: null, usage: null, stopped: false, limited: false };
   const show = (text = '') => deps.onUpdate({ steps: steps.map(step => ({ ...step })), text });
+  let previous = '';
+  let repeats = 0;
+  let failures = 0;
 
   for (let round = 0; ; round++) {
     if (deps.signal.aborted) return { ...outcome, stopped: true };
@@ -107,14 +114,21 @@ export async function runAgent(history: AgentMessage[], deps: AgentDeps): Promis
       const step: AgentStep = { id: call.id, tool: call.name, status: 'running', title: describeRunning(call.name, args ?? {}), ...(index === 0 && reply.content.trim() ? { text: reply.content.trim() } : {}) };
       steps.push(step);
       show();
+      const sameAsBefore = args !== null && `${call.name} ${JSON.stringify(args)}` === previous;
+      repeats = sameAsBefore ? repeats + 1 : 0;
+      if (args !== null) previous = `${call.name} ${JSON.stringify(args)}`;
       const result: ToolResult = args === null
         ? { ok: false, text: 'The arguments weren’t valid JSON. Send them again as a JSON object.' }
-        : deps.signal.aborted ? { ok: false, text: 'Stopped by the user.', display: { kind: 'error' } } : await deps.runTool(call.name, args);
+        : deps.signal.aborted ? { ok: false, text: 'Stopped by the user.', display: { kind: 'error' } }
+          : repeats >= REPEATS_ALLOWED ? { ok: false, text: REPEATED, display: { kind: 'error' } } : await deps.runTool(call.name, args);
+      // A change or command the person declined is their choice, not the model failing.
+      failures = result.ok || result.display?.denied ? 0 : failures + 1;
       Object.assign(step, describeDone(call.name, args ?? {}, result));
       if (deps.signal.aborted) step.status = 'stopped';
       messages.push({ role: 'tool', tool_call_id: call.id, content: result.text });
       show();
       if (deps.signal.aborted) return { ...outcome, stopped: true };
     }
+    if (failures >= FAILURES_ALLOWED) return { ...outcome, limited: true, text: 'I kept running into errors, so I stopped. Tell me how you’d like to go on, or try a more capable model.' };
   }
 }

@@ -3,7 +3,7 @@
 const fsp = require('node:fs/promises');
 const path = require('node:path');
 const { AgentError, IGNORED_DIRS, resolveInside } = require('../safety');
-const { LIMITS, integer, sizeLabel } = require('./limits');
+const { integer, limitOf, sizeLabel } = require('./limits');
 
 
 /** Lists a folder, optionally a few levels down. */
@@ -19,7 +19,7 @@ async function listDirectory(ctx, { path: input = '.', depth } = {}) {
   async function walk(directory, prefix, level) {
     const entries = (await fsp.readdir(directory, { withFileTypes: true })).sort((a, b) => Number(b.isDirectory()) - Number(a.isDirectory()) || a.name.localeCompare(b.name));
     for (const entry of entries) {
-      if (count >= LIMITS.listEntries) {
+      if (count >= limitOf(ctx, 'listEntries')) {
         cut = true;
         return;
       }
@@ -41,7 +41,7 @@ async function listDirectory(ctx, { path: input = '.', depth } = {}) {
   const head = `${relative === '.' ? 'Project folder' : relative}${relative.endsWith('/') ? '' : '/'}`;
   const body = lines.length ? lines.join('\n') : '(empty)';
   return {
-    text: `${head}\n${body}${cut ? `\n… [more than ${LIMITS.listEntries} entries; list a subfolder]` : ''}`,
+    text: `${head}\n${body}${cut ? `\n… [more than ${limitOf(ctx, 'listEntries')} entries; list a subfolder]` : ''}`,
     display: { kind: 'list', path: relative, entries: count },
   };
 }

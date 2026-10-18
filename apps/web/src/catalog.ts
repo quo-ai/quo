@@ -49,6 +49,11 @@ export interface LocalModel {
   native?: boolean;
   /** A model the user added from their own computer (desktop app). */
   custom?: boolean;
+  /**
+   * How well it is expected to work as a coding agent (Code mode on this computer): 'good' is recommended and turned on
+   * by default; 'limited' handles small jobs. Models without it are too small, and Code mode is opt-in for them.
+   */
+  agent?: 'good' | 'limited';
 }
 
 const HF = 'https://huggingface.co';
@@ -133,18 +138,19 @@ function nativeModel(
   return { id, name, description, files, ...NATIVE_LIMITS, sampling: QWEN, supportsThinking: false, minMemoryGB, native: true, vision: Boolean(vision), ...extra };
 }
 
-const qwen = (id: string, size: string, description: string, file: number, vision: number, minMemoryGB: number) =>
+const qwen = (id: string, size: string, description: string, file: number, vision: number, minMemoryGB: number, agent?: LocalModel['agent']) =>
   nativeModel(id, `Qwen3.5 ${size}`, description, `unsloth/Qwen3.5-${size}-GGUF`, { name: `Qwen3.5-${size}-Q4_K_M.gguf`, bytes: file }, { bytes: vision }, minMemoryGB, {
     thinkingSampling: QWEN_THINKING,
     supportsThinking: true,
+    ...(agent ? { agent } : {}),
   });
 
 export const DESKTOP_MODELS: LocalModel[] = [
   qwen('qwen35-0.8b', '0.8B', 'Fast and light. A quick first download that runs on almost any computer, and reads images.', 532517120, 204987232, 4),
   qwen('qwen35-2b', '2B', 'Balanced. Noticeably smarter, still quick on most computers, and reads images.', 1280835840, 668227264, 6),
-  qwen('qwen35-4b', '4B', 'Strong all-rounder with careful reasoning. Reads images. Best on a computer with a graphics card.', 2740937888, 672423616, 8),
-  qwen('qwen35-9b', '9B', 'A big step up in quality and reasoning. Reads images. Wants a graphics card with 8 GB or more, or 16 GB of memory.', 5680522464, 918166080, 12),
-  qwen('qwen35-27b', '27B', 'The most capable model here. Reads images. For computers with 32 GB or more of memory, or a high-end graphics card.', 16740812704, 927607040, 32),
+  qwen('qwen35-4b', '4B', 'Strong all-rounder with careful reasoning. Reads images. Best on a computer with a graphics card.', 2740937888, 672423616, 8, 'limited'),
+  qwen('qwen35-9b', '9B', 'A big step up in quality and reasoning. Reads images. Wants a graphics card with 8 GB or more, or 16 GB of memory.', 5680522464, 918166080, 12, 'good'),
+  qwen('qwen35-27b', '27B', 'The most capable model here. Reads images. For computers with 32 GB or more of memory, or a high-end graphics card.', 16740812704, 927607040, 32, 'good'),
   nativeModel('gemma4-e2b', 'Gemma 4 E2B', 'Google’s small multilingual model. Reads images and speaks 140+ languages.', 'unsloth/gemma-4-E2B-it-GGUF',
     { name: 'gemma-4-E2B-it-Q4_K_M.gguf', bytes: 3106738272 }, { bytes: 985654080 }, 8, { sampling: GEMMA }),
   nativeModel('llama32-3b', 'Llama 3.2 3B', 'Dependable all-rounder for writing and summarising.', 'unsloth/Llama-3.2-3B-Instruct-GGUF',

@@ -25,7 +25,7 @@ function killTree(child) {
   }
 }
 
-function runCommand({ command, cwd, env, timeoutMs = 120_000, signal }) {
+function runCommand({ command, cwd, env, timeoutMs = 120_000, signal, headChars = HEAD_CHARS, tailChars = TAIL_CHARS }) {
   return new Promise(resolve => {
     // On Windows, cmd.exe looks in the project folder before anywhere else; this stops a `git.bat` there from replacing git.
     const safeEnv = process.platform === 'win32' ? { ...env, NoDefaultCurrentDirectoryInExePath: '1' } : env;
@@ -39,12 +39,12 @@ function runCommand({ command, cwd, env, timeoutMs = 120_000, signal }) {
     const take = chunk => {
       const text = chunk.toString('utf8');
       total += text.length;
-      if (head.length < HEAD_CHARS) {
-        const room = HEAD_CHARS - head.length;
+      if (head.length < headChars) {
+        const room = headChars - head.length;
         head += text.slice(0, room);
         tail += text.slice(room);
       } else tail += text;
-      if (tail.length > TAIL_CHARS * 2) tail = tail.slice(-TAIL_CHARS);
+      if (tail.length > tailChars * 2) tail = tail.slice(-tailChars);
     };
     child.stdout.on('data', take);
     child.stderr.on('data', take);
@@ -63,10 +63,10 @@ function runCommand({ command, cwd, env, timeoutMs = 120_000, signal }) {
     const finish = (exitCode, exitSignal) => {
       clearTimeout(timer);
       signal?.removeEventListener('abort', onAbort);
-      const kept = head.length + Math.min(tail.length, TAIL_CHARS);
-      const output = total <= HEAD_CHARS + TAIL_CHARS
+      const kept = head.length + Math.min(tail.length, tailChars);
+      const output = total <= headChars + tailChars
         ? head + tail
-        : `${head}\n… [${(total - kept).toLocaleString('en-US')} characters cut] …\n${tail.slice(-TAIL_CHARS)}`;
+        : `${head}\n… [${(total - kept).toLocaleString('en-US')} characters cut] …\n${tail.slice(-tailChars)}`;
       resolve({ exitCode, signal: exitSignal, timedOut, aborted, output });
     };
     child.on('error', error => {
