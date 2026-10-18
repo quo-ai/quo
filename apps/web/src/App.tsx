@@ -11,7 +11,9 @@ import { cachedCatalog, loadCatalog, type CloudCatalog, type CloudModel } from '
 import { deviceNotice, getDeviceProfile, type DeviceProfile } from './device';
 import { localEngine } from './engine/localEngine';
 import { isAppInstalled } from './install';
-import { choiceKey, type ModelChoice } from './models';
+import { choiceKey, rememberChoice, resolveChoice, storedChoiceKey } from './models';
+import { refreshProviders, useProviders } from './providers/accounts';
+import { getOwnModel, useOwnModels } from './providers/ownModels';
 import { cancelDownload, initDownloads, startDownload, subscribeDownloads, type DownloadState } from './storage/downloads';
 import { isPersisted } from './storage/persistence';
 import { initSync, onSyncedChats } from './sync';
@@ -21,7 +23,7 @@ import { DeviceBanner, isNoticeDismissed } from './ui/DeviceBanner';
 import { GetAppSheet } from './ui/GetAppSheet';
 import { InstallNudge, nudgeAllowed } from './ui/InstallNudge';
 import { ModelPicker } from './ui/ModelPicker';
-import { ModelsSheet } from './ui/ModelsSheet';
+import { ModelsSheet, type ModelsTab } from './ui/ModelsSheet';
 import { OfflineModelCard } from './ui/OfflineModelCard';
 import { MOD_KEY, Sidebar } from './ui/Sidebar';
 import { MemorySheet } from './ui/MemorySheet';
@@ -31,9 +33,6 @@ import { SyncSheet } from './ui/SyncSheet';
 import { toast, Toasts } from './ui/Toasts';
 import { Welcome } from './ui/Welcome';
 
-const CHOICE_KEY = 'quo.choice';
-/** Earlier versions stored only the local model id. */
-const LEGACY_MODEL_KEY = 'quo.activeModel';
 /** Set when the user chats in the cloud only until their offline model is ready. */
 const CLOUD_UNTIL_OFFLINE_KEY = 'quo.cloudUntilOffline';
 const SIDEBAR_KEY = 'quo.sidebarCollapsed';
@@ -62,26 +61,6 @@ function storeWanted(key: string | null): void {
   }
 }
 
-function storedChoiceKey(): string | null {
-  const key = localStorage.getItem(CHOICE_KEY);
-  if (key) return key;
-  const legacy = localStorage.getItem(LEGACY_MODEL_KEY);
-  return legacy ? `local:${legacy}` : null;
-}
-
-/**
- * The model chats run on. Offline first: a cloud model is only ever used when
- * the user picked it; otherwise the chosen (or first) installed offline model.
- */
-function resolveChoice(key: string | null, installed: LocalModel[], catalog: CloudCatalog | null): ModelChoice | null {
-  if (key?.startsWith('cloud:')) {
-    const model = catalog?.models.find(m => `cloud:${m.id}` === key);
-    if (model) return { kind: 'cloud', model };
-  }
-  const local = installed.find(m => `local:${m.id}` === key) ?? installed[0];
-  return local ? { kind: 'local', model: local } : null;
-}
-
 export function App() {
   const [downloads, setDownloads] = useState<Record<string, DownloadState>>({});
   const [selectedKey, setSelectedKey] = useState<string | null>(storedChoiceKey);
@@ -92,6 +71,7 @@ export function App() {
   const [persisted, setPersisted] = useState<boolean | null>(null);
   const [device, setDevice] = useState<DeviceProfile | null>(null);
   const [modelsOpen, setModelsOpen] = useState(false);
+  const [modelsTab, setModelsTab] = useState<ModelsTab>('device');
   const [accountOpen, setAccountOpen] = useState(false);
   const [getAppOpen, setGetAppOpen] = useState(false);
   const [syncOpen, setSyncOpen] = useState(false);
@@ -105,6 +85,10 @@ export function App() {
   const previousStatus = useRef<Record<string, string>>({});
 
   const closeModels = useCallback(() => setModelsOpen(false), []);
+  const openModels = useCallback((tab: ModelsTab = 'device') => {
+    setModelsTab(tab);
+    setModelsOpen(true);
+  }, []);
   const closeAccount = useCallback(() => {
     setAccountOpen(false);
     setWanted(null);
@@ -115,7 +99,7 @@ export function App() {
   const closeMemories = useCallback(() => setMemoriesOpen(false), []);
 
   const select = useCallback((key: string) => {
-    localStorage.setItem(CHOICE_KEY, key);
+    rememberChoice(key);
     setSelectedKey(key);
   }, []);
 
@@ -145,6 +129,7 @@ export function App() {
     void getDeviceProfile().then(setDevice);
     void loadCatalog().then(setCatalog);
     void refreshAccount();
+    void refreshProviders().catch(() => {});
     void initSync();
     // Chats that arrived from another device.
     const unsubscribeSynced = onSyncedChats(() => void listConversations().then(setConversations).catch(() => {}));
@@ -180,8 +165,10 @@ export function App() {
   }, []);
 
   useCustomModels();
+  const ownModels = useOwnModels();
+  const providers = useProviders();
   const installed = allLocalModels().filter(m => downloads[m.id]?.status === 'installed');
-  const choice = resolveChoice(selectedKey, installed, catalog);
+  const choice = resolveChoice(selectedKey, installed, catalog, ownModels, providers.accounts);
   const current = conversations.find(c => c.id === currentId) ?? null;
   const freeCloud = catalog?.models.find(m => m.id === catalog.defaultModel && m.free) ?? null;
 
@@ -228,7 +215,12 @@ export function App() {
       }
     }
     if (key.startsWith('local:') && !installed.some(m => `local:${m.id}` === key)) {
-      setModelsOpen(true);
+      openModels();
+      return;
+    }
+    if (key.startsWith('own:') && !resolveChoice(key, installed, catalog, ownModels, providers.accounts)) {
+      // A model whose key was removed: go to where it can be added back.
+      openModels('keys');
       return;
     }
     // Picking any model by hand ends "cloud until offline is ready".
@@ -236,7 +228,9 @@ export function App() {
     select(key);
     const name = key.startsWith('cloud:')
       ? catalog?.models.find(m => `cloud:${m.id}` === key)?.name
-      : getLocalModel(key.slice('local:'.length))?.name;
+      : key.startsWith('own:')
+        ? getOwnModel(key.slice('own:'.length))?.name
+        : getLocalModel(key.slice('local:'.length))?.name;
     if (name) toast(`Switched to ${name}`);
   }
 
@@ -278,6 +272,7 @@ export function App() {
   function onChatAction(action: ChatAction) {
     if (action === 'use-offline' && installed[0]) choose(`local:${installed[0].id}`);
     else if (action === 'use-free' && freeCloud) choose(`cloud:${freeCloud.id}`);
+    else if (action === 'keys') openModels('keys');
     else setAccountOpen(true);
   }
 
@@ -315,7 +310,7 @@ export function App() {
   const showNotice = Boolean(notice) && !noticeHidden && !isNoticeDismissed(notice!);
 
   // The offline download keeps going while the user chats in the cloud.
-  const pendingOffline = choice?.kind === 'cloud'
+  const pendingOffline = choice && choice.kind !== 'local'
     ? LOCAL_MODELS.find(m => ACTIVE.includes(downloads[m.id]?.status ?? '')) ?? LOCAL_MODELS.find(m => downloads[m.id]?.status === 'partial')
     : undefined;
 
@@ -339,7 +334,7 @@ export function App() {
           onOpen={openConversation}
           onDelete={removeConversation}
           onCollapse={() => setSidebar(true)}
-          onOpenModels={() => setModelsOpen(true)}
+          onOpenModels={() => openModels()}
           onOpenSync={() => setSyncOpen(true)}
           onOpenMemories={() => setMemoriesOpen(true)}
           onOpenPro={() => setProOpen(true)}
@@ -366,7 +361,10 @@ export function App() {
                 account={account}
                 downloads={downloads}
                 onChoose={choose}
-                onManage={() => setModelsOpen(true)}
+                onManage={() => openModels()}
+                onOpenKeys={() => openModels('keys')}
+                own={ownModels}
+                providers={providers.accounts}
                 onOpenAccount={() => setAccountOpen(true)}
               />
             )}
@@ -383,7 +381,7 @@ export function App() {
           {showNotice && <DeviceBanner notice={notice!} onDismiss={() => setNoticeHidden(true)} onGetApp={() => setGetAppOpen(true)} />}
 
           {showWelcome
-            ? <Welcome device={device} downloads={downloads} onBrowseModels={() => setModelsOpen(true)} cloudModel={freeCloud} onUseCloud={chatInCloudWhileWaiting} />
+            ? <Welcome device={device} downloads={downloads} onBrowseModels={() => openModels()} onOpenKeys={() => openModels('keys')} cloudModel={freeCloud} onUseCloud={chatInCloudWhileWaiting} />
             : (
               <Chat
                 ref={chatRef}
@@ -404,7 +402,8 @@ export function App() {
           catalog={catalog}
           account={account}
           selectedKey={choice ? choiceKey(choice) : null}
-          onChooseCloud={key => { setModelsOpen(false); choose(key); }}
+          initialTab={modelsTab}
+          onChoose={key => { setModelsOpen(false); choose(key); }}
           onOpenPro={() => { setModelsOpen(false); setProOpen(true); }}
           device={device}
           downloads={downloads}

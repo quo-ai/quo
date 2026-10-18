@@ -35,12 +35,13 @@ const preview = diff => {
 };
 
 class AgentSession {
-  constructor({ root, name, approve, repos, env = process.env }) {
+  constructor({ root, name, approve, repos, env = process.env, autoReadOnly = true }) {
     this.rootReal = fs.realpathSync.native(root);
     this.name = name;
     this.approve = approve;
     this.repos = repos;
     this.env = env;
+    this.autoReadOnly = autoReadOnly; // run read-only commands without asking (a setting; off means every command asks)
     this.reads = new Map();
     this.opened = new Map(); // `owner/name` -> { rootReal, reads }
     this.allowEdits = false;
@@ -123,7 +124,7 @@ class AgentSession {
     if (!command) throw new AgentError('bad_args', 'run_command needs a command.');
     if (command.length > COMMAND_CHARS) throw new AgentError('bad_args', 'That command is too long.');
     const timeoutMs = Math.min(600, Math.max(1, Number(args.timeout_seconds) || 120)) * 1000;
-    const readOnly = isReadOnlyCommand(command);
+    const readOnly = this.autoReadOnly && isReadOnlyCommand(command);
     let answer = readOnly || this.allowedCommands.has(command) ? 'once' : 'ask';
     if (answer === 'ask') {
       answer = await this.approve({

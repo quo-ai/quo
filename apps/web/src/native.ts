@@ -142,7 +142,7 @@ export interface DesktopAgent {
   projects: () => Promise<NativeResult<CodeProject[]>>;
   pick: () => Promise<NativeResult<CodeProject | null>>;
   forget: (id: string) => Promise<NativeResult<unknown>>;
-  start: (projectId: string) => Promise<NativeResult<CodeSessionInfo>>;
+  start: (projectId: string, options?: { autoReadOnly?: boolean }) => Promise<NativeResult<CodeSessionInfo>>;
   tool: (sessionId: string, name: string, args: Record<string, unknown>) => Promise<NativeResult<{ ok: boolean; text: string; display?: Record<string, unknown> }>>;
   mode: (sessionId: string, mode: 'work' | 'plan') => Promise<NativeResult<unknown>>;
   undo: (sessionId: string, count: number) => Promise<NativeResult<UndoResult>>;
@@ -157,6 +157,7 @@ declare global {
       platform: string;
       version: string;
       agent?: DesktopAgent;
+      providers?: DesktopProviders;
       engine?: NativeBridge['engine'];
       models?: NativeBridge['models'];
     };
@@ -174,3 +175,41 @@ export const hasNativeEngine = (): boolean => nativeBridge() !== null;
 
 /** Code mode's bridge, or null in the browser and in desktop builds from before it. */
 export const agentBridge = (): DesktopAgent | null => (typeof window === 'undefined' ? null : window.quoDesktop?.agent ?? null);
+
+/**
+ * Providers (apps/desktop/src/providers): the user's own API keys. The page can store or remove a key but
+ * never read one back; requests to a provider go through the main process, which adds the key itself.
+ */
+export interface ProviderState {
+  id: string;
+  configured: boolean;
+  /** The last four characters of the key, to tell keys apart. */
+  last4: string | null;
+}
+
+export interface CustomProviderEntry {
+  id: string;
+  name: string;
+  baseUrl: string;
+  protocol: 'openai' | 'anthropic';
+}
+
+export type ProviderEvent =
+  | { id: string; type: 'head'; status: number }
+  | { id: string; type: 'chunk'; data: Uint8Array }
+  | { id: string; type: 'end' }
+  | { id: string; type: 'error'; message: string };
+
+export interface DesktopProviders {
+  list: () => Promise<NativeResult<{ keys: ProviderState[]; custom: CustomProviderEntry[]; secure: boolean }>>;
+  setKey: (id: string, key: string) => Promise<NativeResult<unknown>>;
+  clearKey: (id: string) => Promise<NativeResult<unknown>>;
+  saveCustom: (entry: { id?: string; name: string; baseUrl: string; protocol: 'openai' | 'anthropic'; key?: string }) => Promise<NativeResult<CustomProviderEntry>>;
+  removeCustom: (id: string) => Promise<NativeResult<unknown>>;
+  request: (request: { id: string; providerId: string; method: 'GET' | 'POST'; path: string; body?: unknown }) => Promise<NativeResult<unknown>>;
+  abort: (id: string) => Promise<NativeResult<unknown>>;
+  onEvent: (callback: (event: ProviderEvent) => void) => () => void;
+}
+
+/** The provider bridge, or null in the browser and in desktop builds from before it. */
+export const providersBridge = (): DesktopProviders | null => (typeof window === 'undefined' ? null : window.quoDesktop?.providers ?? null);

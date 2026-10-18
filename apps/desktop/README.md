@@ -46,14 +46,14 @@ Voice input is the exception, and for a measured reason: Whisper through the nat
 
 ### Contract with the web app
 
-- The preload script exposes `window.quoDesktop = { platform, version, agent }`: `process.platform` (`darwin`, `win32`, `linux`), the app version, and Code mode's bridge (`projects`, `pick`, `forget`, `start`, `tool`, `mode`, `undo`, `abort`, `end`, `clearRepos`; see `apps/web/src/native.ts`). `apps/web/src/platform.ts` relies on exactly this shape.
+- The preload script exposes `window.quoDesktop = { platform, version, agent }`: `process.platform` (`darwin`, `win32`, `linux`), the app version, and Code mode's bridge (`projects`, `pick`, `forget`, `start`, `tool`, `mode`, `undo`, `abort`, `end`, `clearRepos`) and the providers bridge for the user's own API keys (`list`, `setKey`, `clearKey`, `saveCustom`, `removeCustom`, `request`, `abort`, `onEvent`); see `apps/web/src/native.ts`. `apps/web/src/platform.ts` relies on exactly this shape.
 - When the build includes the engine it adds `engine` (`info`, `status`, `start`, `stop`, `onEvent`) and `models` (`state`, `download`, `cancel`, `remove`, `reveal`, `onEvent`, `custom.{list,scan,add,pick,remove}`). Every call resolves to `{ ok }` or `{ error: { code, message } }`. `apps/web/src/native.ts` has the types; the web app uses the in-browser engine when these are absent.
 - The user agent ends with ` QuoDesktop/<version>`, and API requests send the same user agent.
 - Relative `/api/...` URLs keep working. Service workers aren't available (`navigator.serviceWorker` calls fail on `app://`).
 
 ## Code mode
 
-A coding agent in the chat: with a capable cloud model (the frontier ones, and a few cheap ones; the server's catalog says which, `agent: true` in `apps/web/server/cloudModels.ts`), the model can explore a project folder, make changes and run commands, and read public open-source repositories for reference. It only exists in this app, because it needs real files. Code is in `src/agent/` (one module per concern: `safety.js`, `files/` with a module per file tool, `commands.js`, `history.js`, `instructions.js`, `exec.js`, `repos.js`, `session.js`, `ipc.js`); the model-facing side (tool list, system prompt, tool-call streaming) is `apps/web/server/agentTools.ts` and the `agent` mode of `/api/chat`; the loop is `apps/web/src/agent/loop.ts`.
+A coding agent in the chat: with a capable cloud model (the frontier ones, and a few cheap ones; the server's catalog says which, `agent: true` in `apps/web/server/cloudModels.ts`), the model can explore a project folder, make changes and run commands, and read public open-source repositories for reference. It only exists in this app, because it needs real files. Code is in `src/agent/` (one module per concern: `safety.js`, `files/` with a module per file tool, `commands.js`, `history.js`, `instructions.js`, `exec.js`, `repos.js`, `session.js`, `ipc.js`); the model-facing side (tool list, system prompt, tool-call streaming) is `apps/web/shared/agentTools.ts` and the `agent` mode of `/api/chat`; the loop is `apps/web/src/agent/loop.ts`.
 
 **What the model can do**
 
@@ -83,6 +83,21 @@ A coding agent in the chat: with a capable cloud model (the frontier ones, and a
 
 Costs: each model step is billed like a message, and a session re-sends its context every step, so long sessions cost real credits. A turn stops after 40 steps, old tool output is dropped from the request past ~450k characters, and the server refuses requests over ~1.2M characters. Thinking mode is off in Code mode.
 
+## Your own API keys
+
+With a key from OpenRouter, Anthropic, OpenAI, Google, xAI, DeepSeek, Mistral or Groq, or the address of a server of their own (Ollama, LM Studio, a company gateway), a person can chat with those models, and use Code mode with them, with no Quo account. Requests go from this computer to the provider; Quo's servers aren't involved. The screens are Models & storage → Your keys (`apps/web/src/ui/keys/`); the wire formats (OpenAI-style and Anthropic-style) and the model list are `apps/web/src/providers/`; this side is `src/providers/`. In a browser the same screens work with keys kept in that browser instead.
+
+**How the keys are kept safe** (each of these has tests in `test/providers/`):
+
+- **The page can save or clear a key, and see its last four characters. It can never read one back.** Requests carry the key without the page seeing it: the page names a provider and a call, and the main process adds the key (`requests.js`).
+- **Keys are encrypted at rest** with the operating system's secure storage (`safeStorage`: Keychain, DPAPI, the desktop's secret service), in a file only the owner can read. Where the system has none (Linux without a keyring; Electron then falls back to `basic_text`), keys are kept in memory until Quo quits, the app says so, and nothing is written in the clear.
+- **The page can't choose where a key goes.** The built-in providers' addresses are in `registry.js` (a web test keeps them equal to the web app's list). A server the user adds has its address stored here, must be https (or http only for this computer and local networks), and changing its address or format deletes its key, so a tricked page can't redirect a saved key to somewhere else.
+- **Only the chat call and the model list are allowed**, by exact path and method per wire format; the page can't send headers; keys must be plain printable characters (no spaces or line breaks).
+- **Redirects are refused**, because they would carry the key to another host. The error says so.
+- **Limits:** 16 MB request, 64 MB answer, 6 requests at once, 3 minutes of silence; errors never contain the key.
+
+**What it does not protect against:** anything the user sends to a provider is subject to that provider's terms; and a page that has been tricked can still *use* a saved key for chat requests to its provider (it can't take it).
+
 ## Development
 
 ```sh
@@ -90,7 +105,7 @@ cd apps/web && npm ci && npm run build   # or, from desktop/: npm run build:web
 cd ../desktop && npm install
 npm run dev     # run the app against ../web/dist (set QUO_WEB_DIR to use another build)
 npm run fetch:engine   # download and verify the pinned llama.cpp build for this OS
-npm test               # engine and model-store tests (node:test; no Electron or model needed)
+npm test               # engine, model-store, Code mode and provider tests (node:test; no Electron or model needed)
 npm run smoke          # headless self-check (see below)
 npm run check:engine -- model.gguf [mmproj.gguf]   # run a real model through the engine
 npm run dist           # package for the current OS into dist/

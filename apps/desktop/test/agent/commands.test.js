@@ -78,6 +78,15 @@ describe('a session and read-only commands', { skip: process.platform === 'win32
     assert.equal(approvals.length, 0);
   });
 
+  it('asks for every command when the setting is off', async () => {
+    const approvals = [];
+    const made = new AgentSession({ root: temp(), name: 'demo', autoReadOnly: false, approve: async request => (approvals.push(request), 'once') });
+    const result = await made.callTool('run_command', { command: 'node --version' });
+    assert.equal(result.ok, true);
+    assert.equal(result.display.auto, undefined);
+    assert.equal(approvals.length, 1);
+  });
+
   it('still asks for any other command, and for a read-only one that could be a trick', async () => {
     const root = temp();
     write(root, 'a.txt', 'x');

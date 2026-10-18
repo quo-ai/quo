@@ -1,5 +1,5 @@
 /** What the chat screen can ask the app to do next, from a failed turn's buttons. */
-export type ChatAction = 'use-offline' | 'use-free' | 'get-pro' | 'top-up' | 'sign-in';
+export type ChatAction = 'use-offline' | 'use-free' | 'get-pro' | 'top-up' | 'sign-in' | 'keys';
 
 export interface Failure {
   code: string;

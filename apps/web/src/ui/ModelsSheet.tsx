@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Crown, X } from 'lucide-react';
-import { hasNativeEngine } from '../native';
+import { agentBridge, hasNativeEngine } from '../native';
 import type { LocalModel } from '../catalog';
 import type { DeviceProfile } from '../device';
 import type { Account } from '../cloud/account';
@@ -8,12 +8,20 @@ import type { CloudCatalog } from '../cloud/catalog';
 import { groupModels } from '../cloud/groups';
 import type { DownloadState } from '../storage/downloads';
 import { CloudModelRow } from './CloudModelRow';
+import { CodeSettings } from './CodeSettings';
 import { ExternalModels } from './ExternalModels';
+import { KeysTab } from './keys/KeysTab';
 import { ModelList } from './ModelList';
 import { NativeStorage } from './NativeStorage';
 import { StorageSettings } from './StorageSettings';
 
+export type ModelsTab = 'device' | 'cloud' | 'keys' | 'code';
+
+const LABELS: Record<ModelsTab, string> = { device: 'On this device', cloud: 'Cloud', keys: 'Your keys', code: 'Code' };
+
 interface ModelsSheetProps {
+  /** Which tab to open on. */
+  initialTab?: ModelsTab;
   device: DeviceProfile | null;
   downloads: Record<string, DownloadState>;
   activeModelId: string | null;
@@ -23,17 +31,20 @@ interface ModelsSheetProps {
   /** The cloud models, shown on their own tab (locked ones included). */
   catalog: CloudCatalog | null;
   account: Account | null;
-  /** `cloud:<id>` or `local:<id>` for what chats run on now. */
+  /** `cloud:<id>`, `local:<id>` or `own:<id>` for what chats run on now. */
   selectedKey: string | null;
-  onChooseCloud: (key: string) => void;
+  /** Switches chats to a cloud model, or to one used with the user's own key. */
+  onChoose: (key: string) => void;
   onOpenPro: () => void;
 }
 
-export function ModelsSheet({ device, downloads, activeModelId, persisted, onUse, onClose, catalog, account, selectedKey, onChooseCloud, onOpenPro }: ModelsSheetProps) {
+export function ModelsSheet({ initialTab = 'device', device, downloads, activeModelId, persisted, onUse, onClose, catalog, account, selectedKey, onChoose, onOpenPro }: ModelsSheetProps) {
   const sheet = useRef<HTMLDivElement>(null);
-  const [tab, setTab] = useState<'device' | 'cloud'>('device');
   const { free, frontier, everyday } = groupModels(catalog);
   const hasCloud = free.length + frontier.length + everyday.length > 0;
+  const tabs: ModelsTab[] = ['device', ...(hasCloud ? ['cloud' as const] : []), 'keys', ...(agentBridge() ? ['code' as const] : [])];
+  const [chosen, setTab] = useState<ModelsTab>(initialTab);
+  const tab = tabs.includes(chosen) ? chosen : 'device';
 
   useEffect(() => {
     sheet.current?.focus();
@@ -52,19 +63,16 @@ export function ModelsSheet({ device, downloads, activeModelId, persisted, onUse
           <button className="icon-btn round press" onClick={onClose} aria-label="Close"><X size={19} /></button>
         </div>
         <div className="sheet-body">
-          {hasCloud && (
-            <div className="segmented" role="tablist">
-              <button role="tab" aria-selected={tab === 'device'} onClick={() => setTab('device')}>On this device</button>
-              <button role="tab" aria-selected={tab === 'cloud'} onClick={() => setTab('cloud')}>Cloud</button>
-            </div>
-          )}
-          {tab === 'cloud' && hasCloud ? (
+          <div className="segmented" role="tablist">
+            {tabs.map(id => <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)}>{LABELS[id]}</button>)}
+          </div>
+          {tab === 'keys' ? <KeysTab selectedKey={selectedKey} onChoose={onChoose} /> : tab === 'code' ? <CodeSettings /> : tab === 'cloud' ? (
             <div className="cloud-list">
-              {free.map(model => <CloudModelRow key={model.id} model={model} account={account} selected={selectedKey === `cloud:${model.id}`} onPick={() => onChooseCloud(`cloud:${model.id}`)} />)}
+              {free.map(model => <CloudModelRow key={model.id} model={model} account={account} selected={selectedKey === `cloud:${model.id}`} onPick={() => onChoose(`cloud:${model.id}`)} />)}
               {frontier.length > 0 && <div className="popover-section"><Crown size={13} /> Frontier models <span className="section-note">Pro or credits</span></div>}
-              {frontier.map(model => <CloudModelRow key={model.id} model={model} account={account} selected={selectedKey === `cloud:${model.id}`} onPick={() => onChooseCloud(`cloud:${model.id}`)} />)}
+              {frontier.map(model => <CloudModelRow key={model.id} model={model} account={account} selected={selectedKey === `cloud:${model.id}`} onPick={() => onChoose(`cloud:${model.id}`)} />)}
               {everyday.length > 0 && <div className="popover-section">Fast &amp; affordable <span className="section-note">credits</span></div>}
-              {everyday.map(model => <CloudModelRow key={model.id} model={model} account={account} selected={selectedKey === `cloud:${model.id}`} onPick={() => onChooseCloud(`cloud:${model.id}`)} />)}
+              {everyday.map(model => <CloudModelRow key={model.id} model={model} account={account} selected={selectedKey === `cloud:${model.id}`} onPick={() => onChoose(`cloud:${model.id}`)} />)}
               {account?.plan !== 'pro' && <p className="note cloud-note">Cloud messages are sent to the model’s provider. <button className="btn-link" onClick={onOpenPro}>What’s in Quo Pro?</button></p>}
             </div>
           ) : (

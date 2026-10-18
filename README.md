@@ -59,6 +59,8 @@ Quo runs the model on your device instead:
 | Understand photos | | ✓ |
 | Voice input and read aloud | | ✓ † |
 | Optional cloud models, clearly marked | ✓ | |
+| Use your own API key (OpenRouter, Anthropic, OpenAI, …), or a server like Ollama | ✓ | |
+| Code mode: a coding agent for your project folder (desktop app) | ✓ | |
 
 Phone features marked † are part of the optional one-time Premium upgrade.
 

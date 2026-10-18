@@ -1,8 +1,10 @@
 /**
  * What Code mode tells the model: the tools it can call and the rules it works
- * by. These live on the server, not in the app, so the safety rules in the system
- * prompt can't be dropped or rewritten by the client. The desktop app implements
- * the tools (apps/desktop/src/agent) and says which of them it has.
+ * by. Shared by the server (Quo's own cloud models: the server adds these itself,
+ * so the app can't drop the safety rules) and by the app (models the user reaches
+ * with their own API key, where the request never goes through Quo's server). The
+ * desktop app implements the tools (apps/desktop/src/agent) and says which of them
+ * it has.
  */
 
 export interface AgentTool {

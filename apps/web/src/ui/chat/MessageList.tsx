@@ -39,8 +39,15 @@ interface MessageListProps {
   onAction: (action: ChatAction) => void;
 }
 
+const formatTokens = (n: number): string => (n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M` : n >= 10_000 ? `${Math.round(n / 1000)}k` : n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n));
+
 function replyMeta(message: Message): string {
   if (message.stopped) return 'Stopped';
+  if (message.own) {
+    const steps = message.steps?.length ? ` · ${message.steps.length} step${message.steps.length === 1 ? '' : 's'}` : '';
+    const tokens = message.usage ? ` · ${formatTokens(message.usage.input + message.usage.output)} tokens` : '';
+    return `${message.modelName ?? 'Model'}${steps} · your ${message.own} key${tokens}`;
+  }
   if (message.cloud) {
     const cost = message.charged ? `${message.charged} credit${message.charged === 1 ? '' : 's'}` : 'Free';
     const steps = message.steps?.length ? ` · ${message.steps.length} step${message.steps.length === 1 ? '' : 's'}` : '';
@@ -55,8 +62,12 @@ function intro(choice: ModelChoice | null, code: CodeSession | null): string {
     const notes = code.info.instructions ? ` It follows the notes in ${code.info.instructions.file}.` : '';
     return `Code mode is on in ${code.project.name}.${notes} Ask about the code, or ask for a change. ${code.plan ? 'Plan mode is on: nothing is changed or run.' : 'Nothing is changed or run without your OK.'}`;
   }
+  if (choice.kind === 'own') {
+    const where = choice.provider.custom ? `on ${choice.provider.name}, a server of your own` : `on your ${choice.provider.name} account`;
+    return `${choice.model.name} runs ${where}. Your messages go straight from this computer to ${choice.provider.name}, not through Quo.`;
+  }
   if (choice.kind === 'cloud') return `${choice.model.name} answers in the cloud${choice.model.free ? ', free every day' : ''}. For complete privacy, switch to an offline model anytime.`;
-  return `${choice.model.name} runs on this device. Nothing you type leaves it.${choice.model.vision ? ' Attach photos and documents with the paperclip.' : ''}`;
+  return `${choice.model.name} runs on this device. Nothing you type leaves it.${choice.kind === 'local' && choice.model.vision ? ' Attach photos and documents with the paperclip.' : ''}`;
 }
 
 /** The conversation: a greeting with starters when it's empty, then every message, then a failed turn's next steps. */

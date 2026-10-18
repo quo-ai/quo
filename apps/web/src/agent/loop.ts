@@ -11,7 +11,7 @@ import type { AgentMessage, AgentStep, StepReply, ToolCall, ToolResult } from '.
 export const MAX_STEPS = 40;
 /** Past this many characters of conversation, the oldest tool output is dropped from what's sent. */
 export const CONTEXT_CHARS = 450_000;
-const KEEP_RECENT_RESULTS = 6;
+const ALWAYS_KEEP = 1; // the newest tool result is what the model is about to read; it is never dropped
 const LEFT_OUT = '[Earlier output left out to save space. Read the file or run the command again if you need it.]';
 
 export interface AgentDeps {
@@ -23,6 +23,8 @@ export interface AgentDeps {
   onUpdate: (state: { steps: AgentStep[]; text: string }) => void;
   signal: AbortSignal;
   maxSteps?: number;
+  /** How much conversation to send before old tool output is dropped, for a model with a smaller window. */
+  contextChars?: number;
 }
 
 export interface AgentOutcome {
@@ -31,18 +33,20 @@ export interface AgentOutcome {
   text: string;
   charged: number;
   balance: number | null;
+  /** Tokens used over the whole turn, when the provider says (the user's own key). */
+  usage: { input: number; output: number } | null;
   stopped: boolean;
   /** Hit the step limit before the model was done. */
   limited: boolean;
 }
 
-/** Drops the oldest tool output (keeping the calls) once the conversation is long, so it keeps fitting. */
+/** Drops the oldest tool output first (keeping the calls) once the conversation is long, so it keeps fitting. Newer output survives as long as it fits. */
 export function trimToolOutput(messages: AgentMessage[], limit = CONTEXT_CHARS): AgentMessage[] {
   const size = (m: AgentMessage) => m.content.length + (m.role === 'assistant' ? (m.tool_calls ?? []).reduce((sum, call) => sum + call.function.arguments.length, 0) : 0);
   let total = messages.reduce((sum, m) => sum + size(m), 0);
   if (total <= limit) return messages;
   const results = messages.map((m, index) => (m.role === 'tool' ? index : -1)).filter(index => index >= 0);
-  const droppable = new Set(results.slice(0, Math.max(0, results.length - KEEP_RECENT_RESULTS)));
+  const droppable = new Set(results.slice(0, Math.max(0, results.length - ALWAYS_KEEP)));
   return messages.map((m, index) => {
     if (total <= limit || !droppable.has(index) || m.role !== 'tool' || m.content === LEFT_OUT) return m;
     total -= m.content.length - LEFT_OUT.length;
@@ -70,7 +74,7 @@ export async function runAgent(history: AgentMessage[], deps: AgentDeps): Promis
   const maxSteps = deps.maxSteps ?? MAX_STEPS;
   const messages = [...history];
   const steps: AgentStep[] = [];
-  const outcome: AgentOutcome = { steps, text: '', charged: 0, balance: null, stopped: false, limited: false };
+  const outcome: AgentOutcome = { steps, text: '', charged: 0, balance: null, usage: null, stopped: false, limited: false };
   const show = (text = '') => deps.onUpdate({ steps: steps.map(step => ({ ...step })), text });
 
   for (let round = 0; ; round++) {
@@ -79,13 +83,14 @@ export async function runAgent(history: AgentMessage[], deps: AgentDeps): Promis
 
     let reply: StepReply;
     try {
-      reply = await deps.askModel([...trimToolOutput(messages)], text => show(text));
+      reply = await deps.askModel([...trimToolOutput(messages, deps.contextChars)], text => show(text));
     } catch (error) {
       if (deps.signal.aborted) return { ...outcome, stopped: true };
       throw error;
     }
     outcome.charged = Math.round((outcome.charged + reply.charged) * 100) / 100;
     outcome.balance = reply.balance ?? outcome.balance;
+    if (reply.usage) outcome.usage = { input: (outcome.usage?.input ?? 0) + reply.usage.input, output: (outcome.usage?.output ?? 0) + reply.usage.output };
     if (deps.signal.aborted) return { ...outcome, stopped: true, text: reply.content };
 
     if (reply.toolCalls.length === 0) {

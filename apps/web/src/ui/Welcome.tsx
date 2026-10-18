@@ -12,10 +12,12 @@ import { QuoMark } from './QuoMark';
  * stays on the device and works offline from then on. While it downloads,
  * the free cloud model is offered as an explicit, clearly labelled opt-in.
  */
-export function Welcome({ device, downloads, onBrowseModels, cloudModel, onUseCloud }: {
+export function Welcome({ device, downloads, onBrowseModels, onOpenKeys, cloudModel, onUseCloud }: {
   device: DeviceProfile | null;
   downloads: Record<string, DownloadState>;
   onBrowseModels: () => void;
+  /** Opens Models & storage on the user's own API keys. */
+  onOpenKeys: () => void;
   /** The free cloud model, when Quo's API is reachable. */
   cloudModel: CloudModel | null;
   onUseCloud: () => void;
@@ -66,7 +68,7 @@ export function Welcome({ device, downloads, onBrowseModels, cloudModel, onUseCl
               {status === 'partial' ? `Resume ${target.name} · ${pct}%` : `Download ${target.name}`}
             </button>
             <p className="note">
-              {formatBytes(total)} · free, no account · <button className="btn-link" onClick={onBrowseModels}>other models</button>
+              {formatBytes(total)} · free, no account · <button className="btn-link" onClick={onBrowseModels}>other models</button> · <button className="btn-link" onClick={onOpenKeys}>your own API key</button>
             </p>
             {status === 'error' && <p className="error">{downloadErrorText(state?.error)}</p>}
           </>

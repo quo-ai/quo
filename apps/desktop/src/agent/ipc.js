@@ -4,6 +4,7 @@ const crypto = require('node:crypto');
 const fsp = require('node:fs/promises');
 const path = require('node:path');
 const { app, BrowserWindow, dialog, ipcMain } = require('electron');
+const { trusted } = require('../trust');
 const { AgentError, checkProjectRoot } = require('./safety');
 const { RepoCache } = require('./repos');
 const { readInstructions } = require('./instructions');
@@ -23,15 +24,6 @@ const { AgentSession, PLAN_TOOLS, TOOL_NAMES } = require('./session');
 const MAX_SESSIONS = 4;
 const MAX_PROJECTS = 20;
 const DIALOG_DETAIL_CHARS = 3000;
-
-function trusted(event) {
-  try {
-    const url = new URL(event.senderFrame.url);
-    return url.protocol === 'app:' && url.host === 'quo';
-  } catch {
-    return false;
-  }
-}
 
 class Projects {
   constructor(file) {
@@ -135,7 +127,7 @@ function setupAgent() {
 
   handle('agent:forget', ({ id }) => projects.remove(String(id)));
 
-  handle('agent:start', async ({ projectId }, event) => {
+  handle('agent:start', async ({ projectId, autoReadOnly }, event) => {
     const project = (await projects.list()).find(entry => entry.id === String(projectId));
     if (!project) throw new AgentError('no_project', 'That project isn’t in the list any more. Choose the folder again.');
     const real = await fsp.realpath(project.path).catch(() => null);
@@ -145,7 +137,7 @@ function setupAgent() {
     if (sessions.size >= MAX_SESSIONS) throw new AgentError('busy', 'Too many Code sessions are open. Close one first.');
     const id = crypto.randomBytes(8).toString('hex');
     const window = BrowserWindow.fromWebContents(event.sender) ?? undefined;
-    const session = new AgentSession({ root: real, name: project.name, repos, approve: request => ask(window, request) });
+    const session = new AgentSession({ root: real, name: project.name, repos, autoReadOnly: autoReadOnly !== false, approve: request => ask(window, request) });
     sessions.set(id, { session, owner: event.sender.id, project: project.id, controller: null });
     event.sender.once('destroyed', () => endSession(id));
     return { sessionId: id, name: project.name, platform: process.platform, tools: TOOL_NAMES, planTools: PLAN_TOOLS, instructions: await readInstructions(real) };

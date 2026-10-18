@@ -6,7 +6,7 @@ import { config, features, SETUP_MESSAGES } from './env.js';
 import { freeRemaining, refundFreeMessage, takeFreeMessage } from './freeTier.js';
 import { HttpError, readJson } from './http.js';
 import { freeSubject, identify } from './identity.js';
-import { agentSystemPrompt, AGENT_TOOL_NAMES, parseNotes, READ_ONLY_TOOLS, toolDefinitions, type Platform } from './agentTools.js';
+import { agentSystemPrompt, AGENT_TOOL_NAMES, parseNotes, READ_ONLY_TOOLS, toolDefinitions, type Platform } from '../shared/agentTools.js';
 import { streamChat, UpstreamError, type ChatMessage, type ToolCall } from './openrouter.js';
 
 /**

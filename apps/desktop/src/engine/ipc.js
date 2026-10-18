@@ -5,6 +5,7 @@ const fsp = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
 const { app, BrowserWindow, dialog, ipcMain, shell } = require('electron');
+const { trusted } = require('../trust');
 const lock = require('../../engine.lock.json');
 const { LlamaEngine, EngineError, engineTarget } = require('./llama');
 const { ModelStore, ModelError } = require('./models');
@@ -27,15 +28,6 @@ function engineDirectory() {
 function engineAvailable() {
   const directory = engineDirectory();
   return Boolean(directory) && new LlamaEngine({ directory }).available;
-}
-
-function trusted(event) {
-  try {
-    const url = new URL(event.senderFrame.url);
-    return url.protocol === 'app:' && url.host === 'quo';
-  } catch {
-    return false;
-  }
 }
 
 const broadcast = (channel, payload) => BrowserWindow.getAllWindows().forEach(window => window.webContents.send(channel, payload));

@@ -1,4 +1,6 @@
-import { runAgent, countChanges } from '../agent/loop';
+import { runAgent, countChanges, CONTEXT_CHARS } from '../agent/loop';
+import { askOwnAgentModel } from '../agent/own';
+import { codeSettings } from '../codeSettings';
 import { askAgentModel } from '../agent/stream';
 import type { CodeSession } from '../agent/session';
 import type { AgentMessage } from '../agent/types';
@@ -6,6 +8,8 @@ import { applyUsage } from '../cloud/account';
 import { generateCloud } from '../cloud/cloudEngine';
 import { localEngine } from '../engine/localEngine';
 import { listMemories, memoryPrompt } from '../memory/store';
+import { generateOwn } from '../providers/generate';
+import type { OwnModel } from '../providers/ownModels';
 import { CLOUD_CONTEXT, type ModelChoice } from '../models';
 import { buildContext } from './context';
 import type { Message } from './types';
@@ -22,6 +26,7 @@ const CLOUD_PROMPT = 'You are Quo, a helpful AI assistant. Be clear and concise.
 
 export type CloudChoice = Extract<ModelChoice, { kind: 'cloud' }>;
 export type LocalChoice = Extract<ModelChoice, { kind: 'local' }>;
+export type OwnChoice = Extract<ModelChoice, { kind: 'own' }>;
 export type ReplyStatus = 'loading' | 'generating';
 
 export interface ReplyTarget {
@@ -31,18 +36,32 @@ export interface ReplyTarget {
   setStatus: (status: ReplyStatus) => void;
 }
 
+/** How much of a conversation to send a model whose window is `model.contextTokens`: about 70% of it, in characters. */
+const contextChars = (model: OwnModel): number => Math.min(CONTEXT_CHARS, Math.round((model.contextTokens ?? 128_000) * 3 * 0.7));
+
 /** Code mode: the model works on the project with the desktop app's tools until it has nothing left to do. Returns how many files it changed. */
-export async function replyWithAgent(choice: CloudChoice, code: CodeSession, signal: AbortSignal, { prior, update, setStatus }: ReplyTarget): Promise<number> {
+export async function replyWithAgent(choice: CloudChoice | OwnChoice, code: CodeSession, signal: AbortSignal, { prior, update, setStatus }: ReplyTarget): Promise<number> {
   setStatus('generating');
   const conversation: AgentMessage[] = prior.filter(m => m.content).map(m => ({ role: m.role, content: m.content }));
+  const { useNotes, maxSteps } = codeSettings();
+  const options = (onText: (text: string) => void) => ({ tools: code.tools, project: code.project.name, platform: code.info.platform, instructions: useNotes ? code.info.instructions : null, signal, onText });
   const outcome = await runAgent(conversation, {
     signal,
-    askModel: (messages, onText) => askAgentModel(choice.model.id, messages, { tools: code.tools, project: code.project.name, platform: code.info.platform, instructions: code.info.instructions, signal, onText }),
+    maxSteps,
+    askModel: choice.kind === 'own'
+      ? (messages, onText) => askOwnAgentModel(choice.provider, choice.model, messages, options(onText))
+      : (messages, onText) => askAgentModel(choice.model.id, messages, options(onText)),
+    ...(choice.kind === 'own' ? { contextChars: contextChars(choice.model) } : {}),
     runTool: (name, args) => code.run(name, args),
     onUpdate: ({ steps, text }) => update({ content: text, steps }, false),
   });
-  applyUsage({ balance: outcome.balance, freeRemaining: null });
-  update({ content: outcome.text, steps: outcome.steps, charged: outcome.charged, stopped: outcome.stopped || undefined }, true);
+  if (choice.kind === 'cloud') applyUsage({ balance: outcome.balance, freeRemaining: null });
+  update({
+    content: outcome.text,
+    steps: outcome.steps,
+    stopped: outcome.stopped || undefined,
+    ...(choice.kind === 'cloud' ? { charged: outcome.charged } : { usage: outcome.usage ?? undefined }),
+  }, true);
   return countChanges(outcome.steps);
 }
 
@@ -55,6 +74,14 @@ export async function replyInCloud(choice: CloudChoice, thinking: boolean, { pri
   });
   applyUsage(result);
   update({ content: result.content, reasoning: result.reasoning || undefined, stopped: result.stopped || undefined, charged: result.charged }, true);
+}
+
+/** A model at a provider the user reached with their own key: straight from this computer to the provider, nothing through Quo. */
+export async function replyOwn(choice: OwnChoice, { prior, update, setStatus }: ReplyTarget): Promise<void> {
+  setStatus('generating');
+  const history = buildContext(CLOUD_PROMPT, prior, Math.min(choice.model.contextTokens ?? CLOUD_CONTEXT.contextSize, 64_000), CLOUD_CONTEXT.maxTokens);
+  const result = await generateOwn(choice.provider, choice.model, history, ({ content, reasoning }) => update({ content, reasoning }, false));
+  update({ content: result.content, reasoning: result.reasoning || undefined, stopped: result.stopped || undefined, usage: result.usage ?? undefined }, true);
 }
 
 export async function replyOffline(choice: LocalChoice, thinking: boolean, { prior, update, setStatus }: ReplyTarget): Promise<void> {

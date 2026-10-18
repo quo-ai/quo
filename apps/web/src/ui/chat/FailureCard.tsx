@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { AlertCircle, HardDrive, RotateCcw } from 'lucide-react';
+import { AlertCircle, HardDrive, KeyRound, RotateCcw } from 'lucide-react';
 import type { ChatAction, Failure } from './types';
 
 /** A failed turn with the next sensible step, never a dead end. */
@@ -27,6 +27,13 @@ export function FailureCard({ failure, offlineReady, signedIn, onAction, onRetry
       break;
     case 'sign_in_required':
       actions = <><button className="btn btn-primary press" onClick={() => onAction('sign-in')}>Sign in</button><button className="btn btn-soft press" onClick={() => onAction('use-free')}>Use the free model</button></>;
+      break;
+    case 'provider_auth':
+    case 'provider_no_key':
+    case 'provider_credit':
+    case 'provider_model':
+      // The user's own key or account: the fix is in Your keys, not in Quo.
+      actions = <><button className="btn btn-primary press" onClick={() => onAction('keys')}><KeyRound size={15} /> Open your keys</button>{offline}</>;
       break;
     case 'offline':
       title = offlineReady ? 'You’re offline. Your offline model can keep going.' : 'You’re offline. The offline model will be ready once it finishes downloading.';

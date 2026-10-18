@@ -1,11 +1,12 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { titleFrom } from '../chat/store';
 import { newId, type Attachment, type Conversation, type Message } from '../chat/types';
-import { replyInCloud, replyOffline, replyWithAgent, type ReplyTarget } from '../chat/replies';
+import { replyInCloud, replyOffline, replyOwn, replyWithAgent, type ReplyTarget } from '../chat/replies';
 import { ApiError } from '../cloud/api';
 import type { Account } from '../cloud/account';
 import { stopCloud } from '../cloud/cloudEngine';
 import { localEngine } from '../engine/localEngine';
+import { stopOwn } from '../providers/generate';
 import { agentBridge, NativeError } from '../native';
 import type { ModelChoice } from '../models';
 import { beginGeneration, endGeneration } from '../sync';
@@ -49,7 +50,7 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
   const messages = conversation?.messages ?? [];
   const busy = status !== 'idle';
   const cloud = choice?.kind === 'cloud';
-  const codeMode = useCodeMode({ available: Boolean(agentBridge()) && choice?.kind === 'cloud' && choice.model.agent, conversationId: conversation?.id, modelId: choice?.model.id });
+  const codeMode = useCodeMode({ available: Boolean(agentBridge()) && (choice?.kind === 'cloud' || choice?.kind === 'own') && choice.model.agent, conversationId: conversation?.id, modelId: choice?.model.id });
   const { code } = codeMode;
 
   useImperativeHandle(ref, () => ({ focus: () => composer.current?.focus() }), []);
@@ -69,6 +70,7 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
 
   const stop = () => {
     stopCloud();
+    stopOwn();
     agentRun.current?.abort();
     code?.stop();
     void localEngine.stop();
@@ -91,7 +93,7 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
     stickToBottom.current = true;
     const now = Date.now();
     const user: Message = { id: newId(), role: 'user', content: userText, ...(sent.length ? { attachments: sent } : {}) };
-    const assistant: Message = { id: newId(), role: 'assistant', content: '', modelId: choice.model.id, modelName: choice.model.name, cloud };
+    const assistant: Message = { id: newId(), role: 'assistant', content: '', modelId: choice.model.id, modelName: choice.model.name, cloud, ...(choice.kind === 'own' ? { own: choice.provider.name } : {}) };
     let current: Conversation = base
       ? { ...base, updatedAt: now, messages: [...base.messages, user, assistant] }
       : { id: newId(), title: titleFrom(userText || sent[0]?.name || 'New chat'), createdAt: now, updatedAt: now, messages: [user, assistant] };
@@ -104,7 +106,7 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
 
     beginGeneration(); // Quo Sync waits until the reply is finished
     try {
-      if (choice.kind === 'cloud' && code && choice.model.agent) {
+      if ((choice.kind === 'cloud' || choice.kind === 'own') && code && choice.model.agent) {
         setStatus('generating');
         const controller = new AbortController();
         agentRun.current = controller;
@@ -116,6 +118,8 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
         }
       } else if (choice.kind === 'cloud') {
         await replyInCloud(choice, thinking, target);
+      } else if (choice.kind === 'own') {
+        await replyOwn(choice, target);
       } else {
         await replyOffline(choice, thinking, target);
       }

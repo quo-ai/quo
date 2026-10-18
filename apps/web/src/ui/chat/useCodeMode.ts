@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { CodeSession, lastProjectId, pickProject, recentProjects } from '../../agent/session';
+import { codeSettings } from '../../codeSettings';
 import { NativeError, type CodeProject } from '../../native';
 import { toast } from '../Toasts';
 
@@ -37,8 +38,10 @@ export function useCodeMode({ available, conversationId, modelId }: { available:
 
   async function start(project: CodeProject) {
     code?.end();
-    const session = await CodeSession.start(project);
-    setPlan(false);
+    const settings = codeSettings();
+    const session = await CodeSession.start(project, { autoReadOnly: settings.autoReadOnly });
+    if (settings.startInPlan) await session.setPlan(true);
+    setPlan(session.plan);
     setCode(session);
   }
 

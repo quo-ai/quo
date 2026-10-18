@@ -151,6 +151,37 @@ describe('the agent loop', () => {
   });
 });
 
+describe('models reached with the user’s own key', () => {
+  it('adds up the tokens used over the whole turn, and charges nothing', async () => {
+    const { deps } = script([
+      reply({ toolCalls: [call('c1', 'list_directory', {})], charged: 0, balance: null, usage: { input: 100, output: 10 } }),
+      reply({ content: 'Done.', charged: 0, balance: null, usage: { input: 150, output: 20 } }),
+    ]);
+    const outcome = await runAgent(user, deps);
+    expect(outcome.usage).toEqual({ input: 250, output: 30 });
+    expect(outcome.charged).toBe(0);
+    expect(outcome.balance).toBeNull();
+  });
+
+  it('has no token count when the provider gave none', async () => {
+    const { deps } = script([reply({ content: 'Hi.' })]);
+    expect((await runAgent(user, deps)).usage).toBeNull();
+  });
+
+  it('sends less of a long conversation to a model with a smaller window', async () => {
+    const big = 'x'.repeat(20_000);
+    const { deps, asked } = script([
+      ...Array.from({ length: 8 }, (_, i) => reply({ toolCalls: [call(`c${i}`, 'read_file', { path: `f${i}` })] })),
+      reply({ content: 'Done.' }),
+    ], { read_file: { ok: true, text: big, display: { kind: 'read', from: 1, to: 1, total: 1 } } });
+    await runAgent(user, { ...deps, contextChars: 60_000 });
+    const sent = asked.at(-1)!.filter(m => m.role === 'tool').map(m => m.content);
+    expect(sent.length).toBe(8);
+    expect(sent.filter(content => content.startsWith('[Earlier output left out')).length).toBeGreaterThan(0);
+    expect(sent.reduce((sum, content) => sum + content.length, 0)).toBeLessThan(60_000 + 20_000);
+  });
+});
+
 describe('keeping a long session within bounds', () => {
   const tool = (id: string, size: number): AgentMessage => ({ role: 'tool', tool_call_id: id, content: 'x'.repeat(size) });
   const assistant = (id: string): AgentMessage => ({ role: 'assistant', content: '', tool_calls: [{ id, type: 'function', function: { name: 'read_file', arguments: '{}' } }] });

@@ -1,5 +1,5 @@
 import { forwardRef, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react';
-import { ArrowUp, Brain, Cloud, HardDrive, Loader2, Mic, Paperclip, Square } from 'lucide-react';
+import { ArrowUp, Brain, Cloud, HardDrive, KeyRound, Loader2, Mic, Paperclip, Square } from 'lucide-react';
 import { ACCEPT_DOCUMENTS, ACCEPT_IMAGES } from '../../attachments';
 import type { Attachment } from '../../chat/types';
 import { localEngine } from '../../engine/localEngine';
@@ -39,12 +39,13 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const busy = status !== 'idle';
   const cloud = choice?.kind === 'cloud';
+  const remote = choice !== null && choice.kind !== 'local';
   const vision = choice?.kind === 'local' && Boolean(choice.model.vision);
   // Files stay on this device: attachments only go to offline models.
-  const files = useAttachments({ enabled: Boolean(choice) && !cloud, vision, resetKey: conversationId });
+  const files = useAttachments({ enabled: Boolean(choice) && !remote, vision, resetKey: conversationId });
   const { code } = codeMode;
-  // Code mode: the desktop app, and a cloud model that can do it.
-  const codeAvailable = Boolean(agentBridge()) && choice?.kind === 'cloud' && choice.model.agent;
+  // Code mode: the desktop app, and a cloud model (Quo's, or one reached with the user's own key) that can do it.
+  const codeAvailable = Boolean(agentBridge()) && (choice?.kind === 'cloud' || choice?.kind === 'own') && choice.model.agent;
 
   const voice = useVoiceInput(text => {
     setInput(current => (current.trim() ? `${current.trimEnd()} ${text}` : text));
@@ -118,10 +119,10 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
           <button
             type="button"
             className="icon-btn round press attach-btn"
-            disabled={!choice || cloud || busy}
+            disabled={!choice || remote || busy}
             onClick={() => fileInput.current?.click()}
             aria-label="Attach files"
-            title={cloud ? 'Files stay on your device, so they only work with offline models' : vision ? 'Attach photos, PDFs and text files' : 'Attach PDFs and text files'}
+            title={remote ? 'Files stay on your device, so they only work with offline models' : vision ? 'Attach photos, PDFs and text files' : 'Attach PDFs and text files'}
           >
             <Paperclip size={18} />
           </button>
@@ -151,7 +152,7 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
               onTogglePlan={() => void codeMode.togglePlan()}
             />
           )}
-          {choice?.model.supportsThinking && !code && (
+          {choice && choice.kind !== 'own' && choice.model.supportsThinking && !code && (
             <button type="button" className="chip press" aria-pressed={thinking} onClick={() => onThinking(!thinking)} title="Reason step by step before answering">
               <Brain size={14} /> Think
             </button>
@@ -161,6 +162,7 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
               : voice.state === 'transcribing' ? (voice.download !== null ? `Getting the speech model… ${Math.round(voice.download * 100)}%` : 'Turning speech into text…')
               : status === 'loading' ? 'Loading model…'
               : cloud ? <><Cloud size={13} /> Cloud{freeLeft !== null ? ` · ${freeLeft} free today` : ''}</>
+                : choice?.kind === 'own' ? <><KeyRound size={13} /> Your {choice.provider.name} key</>
                 : choice ? <><HardDrive size={13} /> <span title={info?.device ?? undefined}>{info?.gpu ? 'On your GPU' : 'On this device'}</span> · private</> : ''}
           </span>
           <span className="spacer" />
@@ -176,7 +178,7 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
         </div>
       </form>
       <div className="composer-hint">
-        {code ? `${codeMode.plan ? 'Plan mode · nothing is changed or run' : 'Code mode · edits and commands need your OK'} · files Quo reads are sent to the model’s provider` : cloud ? 'Cloud replies via OpenRouter · Quo doesn’t store your messages' : 'Runs privately on this device'} · Enter to send · Shift+Enter for a new line
+        {code ? `${codeMode.plan ? 'Plan mode · nothing is changed or run' : 'Code mode · edits and commands need your OK'} · files Quo reads are sent to ${choice?.kind === 'own' ? choice.provider.name : 'the model’s provider'}` : choice?.kind === 'own' ? `Straight to ${choice.provider.name} with your key · not through Quo` : cloud ? 'Cloud replies via OpenRouter · Quo doesn’t store your messages' : 'Runs privately on this device'} · Enter to send · Shift+Enter for a new line
       </div>
     </div>
   );

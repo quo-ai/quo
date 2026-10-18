@@ -16,7 +16,7 @@ function subscribe(channel, callback) {
 }
 
 // Contract with the web app (apps/web/src/platform.ts): `platform`, `version` and
-// `agent` (Code mode) always exist; `engine` and `models` exist only when this
+// `agent` (Code mode) and `providers` (the user's own API keys) always exist; `engine` and `models` exist only when this
 // build includes the native llama.cpp engine, and the web app falls back to its
 // in-browser engine without them. Every call resolves to { ok } or { error: { code, message } }.
 contextBridge.exposeInMainWorld('quoDesktop', {
@@ -28,13 +28,25 @@ contextBridge.exposeInMainWorld('quoDesktop', {
     projects: () => invoke('agent:projects'),
     pick: () => invoke('agent:pick'),
     forget: id => invoke('agent:forget', { id }),
-    start: projectId => invoke('agent:start', { projectId }),
+    start: (projectId, options) => invoke('agent:start', { projectId, autoReadOnly: options?.autoReadOnly }),
     tool: (sessionId, name, args) => invoke('agent:tool', { sessionId, name, args }),
     mode: (sessionId, mode) => invoke('agent:mode', { sessionId, mode }),
     undo: (sessionId, count) => invoke('agent:undo', { sessionId, count }),
     abort: sessionId => invoke('agent:abort', { sessionId }),
     end: sessionId => invoke('agent:end', { sessionId }),
     clearRepos: () => invoke('agent:clear-repos'),
+  },
+  // Providers: the user's own API keys. A key can be saved or cleared from the page but never read back, and
+  // requests to a provider go through the main process, which adds the key itself.
+  providers: {
+    list: () => invoke('providers:list'),
+    setKey: (id, key) => invoke('providers:set-key', { id, key }),
+    clearKey: id => invoke('providers:clear-key', { id }),
+    saveCustom: entry => invoke('providers:save-custom', entry),
+    removeCustom: id => invoke('providers:remove-custom', { id }),
+    request: request => invoke('providers:request', request),
+    abort: id => invoke('providers:abort', { id }),
+    onEvent: callback => subscribe('providers:event', callback),
   },
   ...(hasEngine && {
     engine: {
