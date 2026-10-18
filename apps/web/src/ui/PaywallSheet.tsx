@@ -1,8 +1,9 @@
 import { useEffect, useRef } from 'react';
-import { Check, Lock, X } from 'lucide-react';
+import { Lock, X } from 'lucide-react';
 import type { Account } from '../cloud/account';
 import { lockOf } from '../cloud/access';
 import type { CloudModel } from '../cloud/catalog';
+import { PRO_MONTHLY_CREDITS } from '../cloud/groups';
 import { PRICES, TRIAL } from '../cloud/prices';
 import { describeCost } from './format';
 
@@ -20,7 +21,6 @@ interface PaywallSheetProps {
 export function PaywallSheet({ model, account, currentName, onClose, onContinue }: PaywallSheetProps) {
   const sheet = useRef<HTMLDivElement>(null);
   const lock = lockOf(model, account);
-  const credits = Math.floor(account?.credits ?? 0);
 
   useEffect(() => {
     sheet.current?.focus();
@@ -33,7 +33,7 @@ export function PaywallSheet({ model, account, currentName, onClose, onContinue 
 
   return (
     <div className="scrim" onPointerDown={event => { if (event.target === event.currentTarget) onClose(); }}>
-      <div className="sheet glass thick paywall" role="dialog" aria-modal="true" aria-labelledby="paywall-title" tabIndex={-1} ref={sheet}>
+      <div className="sheet glass thick narrow" role="dialog" aria-modal="true" aria-labelledby="paywall-title" tabIndex={-1} ref={sheet}>
         <div className="sheet-head">
           <h2 id="paywall-title">Unlock {model.name}</h2>
           <button className="icon-btn round press" onClick={onClose} aria-label="Close"><X size={19} /></button>
@@ -43,28 +43,21 @@ export function PaywallSheet({ model, account, currentName, onClose, onContinue 
             <span className="paywall-lock"><Lock size={20} /></span>
             <div>
               <strong>{model.name}</strong>
-              <span>{model.provider} · {model.tier === 'frontier' ? 'Frontier model' : 'Fast & affordable'}</span>
+              <span>{model.provider}</span>
             </div>
           </div>
           <p className="paywall-about">{model.description}</p>
           <p className="note">
             A typical message costs {describeCost(model.creditsPerMessage)}.
-            {lock === 'credits' && ` You have ${credits.toLocaleString()}.`}
+            {lock === 'credits'
+              ? ` You have ${Math.floor(account?.credits ?? 0).toLocaleString()}.`
+              : ` Quo Pro includes ${PRO_MONTHLY_CREDITS.toLocaleString()} credits a month (${PRICES.proMonthly}).`}
+            {lock === 'sign_in' && ` New accounts get ${TRIAL.credits} free credits.`}
           </p>
-
-          <ul className="perks">
-            {lock === 'sign_in' && <li><Check size={15} /> New accounts start with {TRIAL.credits} trial credits, good for {TRIAL.days} days</li>}
-            <li><Check size={15} /> Claude, GPT, Gemini, Grok and the best open models, in one place</li>
-            <li><Check size={15} /> Quo Pro: 1,000 credits every month, from {PRICES.proMonthly}</li>
-            <li><Check size={15} /> Or buy credits once, from {PRICES.smallestPack}. They last 12 months</li>
-            <li><Check size={15} /> Offline models stay free and unlimited</li>
-          </ul>
-
           {account && !account.features.accounts && (
-            <p className="sandbox-note">Accounts and purchases aren’t switched on yet, so paid models can’t be unlocked just now. They will be soon.</p>
+            <p className="sandbox-note">Accounts and purchases aren’t switched on yet. This unlocks when they are.</p>
           )}
           {!account && <p className="sandbox-note">Can’t reach Quo right now. Check your connection and try again.</p>}
-
           <div className="plan-actions">
             <button className="btn btn-primary press" onClick={onContinue}>{lock === 'sign_in' ? 'Sign in to unlock' : 'Get credits or Pro'}</button>
             <button className="btn btn-ghost press" onClick={onClose}>{currentName ? `Keep using ${currentName}` : 'Not now'}</button>

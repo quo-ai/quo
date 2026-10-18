@@ -124,11 +124,6 @@ function SignIn() {
       {error && <p className="error">{error}</p>}
       <button className="btn btn-primary btn-block btn-lg press" disabled={busy || !email}>{busy ? 'Sending…' : 'Email me a code'}</button>
       <p className="note">No password needed. Offline models never need an account.</p>
-      <div className="auth-pro">
-        <div className="auth-pro-head"><Crown size={15} /> With Quo Pro</div>
-        <ProPerks />
-        <p className="note">{PRICES.proMonthly} or {PRICES.proYearly}, or credit packs from {PRICES.smallestPack}.</p>
-      </div>
     </form>
   );
 }

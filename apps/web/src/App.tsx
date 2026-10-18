@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Crown, PanelLeftOpen, SquarePen } from 'lucide-react';
+import { PanelLeftOpen, SquarePen } from 'lucide-react';
 import { allLocalModels, getLocalModel, LOCAL_MODELS, type LocalModel } from './catalog';
 import { refreshCustomModels, useCustomModels } from './customModels';
 import { nativeBridge } from './native';
@@ -7,7 +7,6 @@ import { deleteConversation, listConversations, saveConversation } from './chat/
 import type { Conversation } from './chat/types';
 import { getAccount, refreshAccount, subscribeAccount, type Account } from './cloud/account';
 import { isUnlocked } from './cloud/access';
-import { frontierModels } from './cloud/pro';
 import { cachedCatalog, loadCatalog, type CloudCatalog, type CloudModel } from './cloud/catalog';
 import { deviceNotice, getDeviceProfile, type DeviceProfile } from './device';
 import { localEngine } from './engine/localEngine';
@@ -312,8 +311,6 @@ export function App() {
   }
 
   const showWelcome = !choice && !current;
-  // Anyone not on Pro, once the server has answered, is shown what Pro adds.
-  const showProPromo = Boolean(account) && account!.plan !== 'pro' && frontierModels(catalog).length > 0;
   const notice = device ? deviceNotice(device) : null;
   const showNotice = Boolean(notice) && !noticeHidden && !isNoticeDismissed(notice!);
 
@@ -371,13 +368,7 @@ export function App() {
                 onChoose={choose}
                 onManage={() => setModelsOpen(true)}
                 onOpenAccount={() => setAccountOpen(true)}
-                onOpenPro={() => setProOpen(true)}
               />
-            )}
-            {!showWelcome && showProPromo && (
-              <button className="pro-chip glass press" onClick={() => setProOpen(true)} aria-label="Frontier models with Quo Pro">
-                <Crown size={15} /> <span className="pro-label">Frontier models</span> <span className="pro-tag">Pro</span>
-              </button>
             )}
             <span className="spacer" />
             {pendingOffline && (
@@ -392,7 +383,7 @@ export function App() {
           {showNotice && <DeviceBanner notice={notice!} onDismiss={() => setNoticeHidden(true)} onGetApp={() => setGetAppOpen(true)} />}
 
           {showWelcome
-            ? <Welcome device={device} downloads={downloads} onBrowseModels={() => setModelsOpen(true)} cloudModel={freeCloud} onUseCloud={chatInCloudWhileWaiting} catalog={catalog} account={account} onOpenPro={() => setProOpen(true)} />
+            ? <Welcome device={device} downloads={downloads} onBrowseModels={() => setModelsOpen(true)} cloudModel={freeCloud} onUseCloud={chatInCloudWhileWaiting} />
             : (
               <Chat
                 ref={chatRef}
@@ -410,6 +401,11 @@ export function App() {
 
       {modelsOpen && (
         <ModelsSheet
+          catalog={catalog}
+          account={account}
+          selectedKey={choice ? choiceKey(choice) : null}
+          onChooseCloud={key => { setModelsOpen(false); choose(key); }}
+          onOpenPro={() => { setModelsOpen(false); setProOpen(true); }}
           device={device}
           downloads={downloads}
           activeModelId={choice?.kind === 'local' ? choice.model.id : null}

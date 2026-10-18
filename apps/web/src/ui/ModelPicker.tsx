@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
-import { Check, ChevronDown, ChevronRight, Cloud, CreditCard, Crown, Download, HardDrive, Lock, Settings2, Zap } from 'lucide-react';
+import { Check, ChevronDown, Cloud, CreditCard, Crown, Download, HardDrive, Settings2, Zap } from 'lucide-react';
 import { allLocalModels, modelSizeBytes } from '../catalog';
 import { useCustomModels } from '../customModels';
 import type { Account } from '../cloud/account';
-import { lockOf } from '../cloud/access';
-import { isNewModel, type CloudCatalog, type CloudModel } from '../cloud/catalog';
-import { frontierModels } from '../cloud/pro';
+import type { CloudCatalog, CloudModel } from '../cloud/catalog';
+import { groupModels } from '../cloud/groups';
 import type { ModelChoice } from '../models';
 import type { DownloadState } from '../storage/downloads';
-import { describeCost, formatBytes, percent } from './format';
+import { CloudModelRow } from './CloudModelRow';
+import { formatBytes, percent } from './format';
 
 interface ModelPickerProps {
   choice: ModelChoice | null;
@@ -19,7 +19,6 @@ interface ModelPickerProps {
   onChoose: (key: string) => void;
   onManage: () => void;
   onOpenAccount: () => void;
-  onOpenPro: () => void;
 }
 
 /**
@@ -27,7 +26,7 @@ interface ModelPickerProps {
  * Every cloud model is listed, the most capable ones included. The ones this
  * person can't use yet are locked, and choosing one opens the paywall (App.choose).
  */
-export function ModelPicker({ choice, catalog, account, downloads, onChoose, onManage, onOpenAccount, onOpenPro }: ModelPickerProps) {
+export function ModelPicker({ choice, catalog, account, downloads, onChoose, onManage, onOpenAccount }: ModelPickerProps) {
   const [open, setOpen] = useState(false);
   const anchor = useRef<HTMLDivElement>(null);
 
@@ -56,39 +55,11 @@ export function ModelPicker({ choice, catalog, account, downloads, onChoose, onM
   const models = allLocalModels();
   const installed = models.filter(m => downloads[m.id]?.status === 'installed');
   const notInstalled = models.filter(m => downloads[m.id]?.status !== 'installed' && !m.custom);
-  const free = catalog?.models.filter(model => model.free) ?? [];
-  const frontier = catalog?.models.filter(model => !model.free && model.tier === 'frontier') ?? [];
-  const everyday = catalog?.models.filter(model => !model.free && model.tier !== 'frontier') ?? [];
+  const { free, frontier, everyday } = groupModels(catalog);
   const credits = account?.user ? Math.floor(account.credits ?? 0) : 0;
-  // Anyone not on Pro is told, right at the top, what the frontier models are and how to get them.
-  const showPromo = Boolean(account) && account!.plan !== 'pro' && frontier.length > 0;
-
-  const cloudRow = (model: CloudModel) => {
-    const key = `cloud:${model.id}`;
-    const lock = lockOf(model, account);
-    const cost = `${describeCost(model.creditsPerMessage, '≈')} per message`;
-    const sub = model.free ? `Free · ${account ? `${account.free.remaining} left today` : 'every day'}` : cost;
-    return (
-      <button
-        key={key}
-        className={`menu-item press${lock ? ' locked' : ''}`}
-        role={lock ? 'menuitem' : 'menuitemradio'}
-        aria-checked={lock ? undefined : selected === key}
-        aria-label={lock ? `${model.name}, locked. ${model.provider}. ${cost}` : undefined}
-        onClick={() => pick(key)}
-      >
-        <span className="grow">
-          <span className="title">
-            {model.name}
-            {model.free && <span className="badge green">Free</span>}
-            {isNewModel(model) && <span className="badge new">New</span>}
-          </span>
-          <span className="sub">{model.provider} · {sub}</span>
-        </span>
-        {lock ? <Lock className="lock" size={16} /> : selected === key && <Check className="check" size={18} />}
-      </button>
-    );
-  };
+  const cloudRow = (model: CloudModel) => (
+    <CloudModelRow key={model.id} model={model} account={account} selected={selected === `cloud:${model.id}`} onPick={() => pick(`cloud:${model.id}`)} menu />
+  );
 
   return (
     <div className="picker-anchor" ref={anchor}>
@@ -100,16 +71,6 @@ export function ModelPicker({ choice, catalog, account, downloads, onChoose, onM
 
       {open && (
         <div className="popover glass thick wide" role="menu">
-          {showPromo && (
-            <button className="pro-promo press" role="menuitem" onClick={() => { onOpenPro(); setOpen(false); }}>
-              <span className="pro-promo-icon"><Crown size={18} /></span>
-              <span className="grow">
-                <strong>{frontier.length} frontier models with Quo Pro</strong>
-                <span>{frontierModels(catalog).slice(0, 3).map(model => model.name).join(', ')} and more</span>
-              </span>
-              <ChevronRight size={17} />
-            </button>
-          )}
           <div className="popover-scroll">
             <div className="popover-section"><HardDrive size={13} /> On this device · private · offline</div>
             {installed.map(model => {

@@ -1,8 +1,6 @@
-import { Cloud, Crown, Download, Lock, Pause, WifiOff, Zap } from 'lucide-react';
+import { Cloud, Download, Lock, Pause, WifiOff, Zap } from 'lucide-react';
 import { getLocalModel, modelSizeBytes } from '../catalog';
-import type { Account } from '../cloud/account';
-import type { CloudCatalog, CloudModel } from '../cloud/catalog';
-import { frontierModels } from '../cloud/pro';
+import type { CloudModel } from '../cloud/catalog';
 import { recommendedModelId, type DeviceProfile } from '../device';
 import { isDesktopApp } from '../platform';
 import { cancelDownload, startDownload, type DownloadState } from '../storage/downloads';
@@ -14,20 +12,14 @@ import { QuoMark } from './QuoMark';
  * stays on the device and works offline from then on. While it downloads,
  * the free cloud model is offered as an explicit, clearly labelled opt-in.
  */
-export function Welcome({ device, downloads, onBrowseModels, cloudModel, onUseCloud, catalog, account, onOpenPro }: {
+export function Welcome({ device, downloads, onBrowseModels, cloudModel, onUseCloud }: {
   device: DeviceProfile | null;
   downloads: Record<string, DownloadState>;
   onBrowseModels: () => void;
   /** The free cloud model, when Quo's API is reachable. */
   cloudModel: CloudModel | null;
   onUseCloud: () => void;
-  /** For the Quo Pro teaser: the cloud models, and whether this person is on Pro already. */
-  catalog: CloudCatalog | null;
-  account: Account | null;
-  onOpenPro: () => void;
 }) {
-  const frontier = frontierModels(catalog);
-  const showPro = Boolean(account) && account!.plan !== 'pro' && frontier.length > 0;
   const model = getLocalModel(device ? recommendedModelId(device) : 'qwen35-0.8b')!;
   // A download already running for any model takes precedence.
   const running = Object.entries(downloads).find(([, s]) => ['downloading', 'waiting', 'verifying', 'moving'].includes(s.status));
@@ -85,18 +77,6 @@ export function Welcome({ device, downloads, onBrowseModels, cloudModel, onUseCl
           <li><WifiOff size={14} /> Works offline</li>
           <li><Zap size={14} /> {device?.gpu ? 'Uses your graphics card' : 'Runs on your processor'}</li>
         </ul>
-
-        {showPro && (
-          <div className="welcome-pro">
-            <div className="welcome-pro-head"><Crown size={15} /> Want even smarter answers?</div>
-            <p>Quo Pro adds the frontier models in the cloud, always your choice and always labelled. Your offline models stay free.</p>
-            <div className="chips">
-              {frontier.slice(0, 4).map(model => <span key={model.id} className="chip"><Lock size={11} /> {model.name}</span>)}
-              {frontier.length > 4 && <span className="chip more">+{frontier.length - 4} more</span>}
-            </div>
-            <button className="btn-link" onClick={onOpenPro}>See what’s in Quo Pro</button>
-          </div>
-        )}
       </div>
     </section>
   );
