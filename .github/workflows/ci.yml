@@ -22,6 +22,11 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm test
+      # What Jest can't see: does Metro resolve every import, and does Hermes accept the result?
+      - run: npx expo export --platform android --output-dir "$RUNNER_TEMP/export"
+        env:
+          CI: '1'
+          EXPO_NO_TELEMETRY: '1'
 
   web:
     runs-on: ubuntu-latest

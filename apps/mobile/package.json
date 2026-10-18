@@ -28,6 +28,7 @@
     "@react-native-firebase/crashlytics": "^24.1.1",
     "@react-native-firebase/remote-config": "^24.1.1",
     "@react-native-masked-view/masked-view": "0.3.2",
+    "buffer": "^6.0.3",
     "expo": "~57.0.26",
     "expo-audio": "~57.0.5",
     "expo-blur": "~57.0.3",

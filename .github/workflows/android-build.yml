@@ -1,0 +1,59 @@
+name: Android build
+
+# Compiles the phone app for real (native code, JavaScript bundle, Hermes) on
+# GitHub's machines, so it doesn't need a full Android toolchain on anyone's
+# laptop. Run it by hand: Actions → Android build → Run workflow. It takes
+# 30-60 minutes. The APK is for testing only: signed with the repo's debug key
+# and a placeholder Firebase config (no analytics or crash reports), so it can't
+# be uploaded to Google Play, and it can't be installed over the Play version
+# (different signature: uninstall that first, which deletes its chats).
+on:
+  workflow_dispatch:
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    defaults:
+      run:
+        working-directory: apps/mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/mobile/package-lock.json
+      - run: npm ci
+      # The real file is private and gitignored; the Google services plugin only needs one that matches the package name.
+      - name: Placeholder google-services.json
+        run: |
+          cat > android/app/google-services.json <<'JSON'
+          {
+            "project_info": { "project_number": "000000000000", "project_id": "quo-ci", "storage_bucket": "quo-ci.appspot.com" },
+            "client": [{
+              "client_info": { "mobilesdk_app_id": "1:000000000000:android:0000000000000000", "android_client_info": { "package_name": "com.quo.app" } },
+              "api_key": [{ "current_key": "AIzaSyCiPlaceholderKeyNotUsedAnywhere00000" }],
+              "services": { "appinvite_service": { "other_platform_oauth_client": [] } }
+            }],
+            "configuration_version": "1"
+          }
+          JSON
+      - name: Build the release APK
+        working-directory: apps/mobile/android
+        env:
+          MYAPP_UPLOAD_STORE_FILE: debug.keystore
+          MYAPP_UPLOAD_STORE_PASSWORD: android
+          MYAPP_UPLOAD_KEY_ALIAS: androiddebugkey
+          MYAPP_UPLOAD_KEY_PASSWORD: android
+          EXPO_NO_TELEMETRY: '1'
+        run: ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a --console=plain --no-daemon
+      - uses: actions/upload-artifact@v4
+        with:
+          name: quo-android-test-apk
+          path: apps/mobile/android/app/build/outputs/apk/release/*.apk
+          retention-days: 7
