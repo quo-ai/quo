@@ -3,6 +3,7 @@ import { ArrowDown } from 'lucide-react';
 import { titleFrom } from '../chat/store';
 import { newId, type Attachment, type Conversation, type Message } from '../chat/types';
 import { AGENT_CONTEXT } from '../agent/local';
+import { usesFolderLoop } from '../agent/route';
 import { chatProject, rememberChatProject } from '../agent/session';
 import { codeSettings } from '../codeSettings';
 import { modelMessages, summarize } from '../chat/summary';
@@ -133,7 +134,7 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
       const searching = web.on && web.how === 'tools';
       // Plain chats on the desktop go through the same loop when a folder could be wanted, so the model decides. Anything the loop
       // doesn't do (attachments, thinking, Quo's own web search) keeps its own route; the folder button is always there.
-      const folderless = !code && codeMode.available && codeSettings().autoStart && !searching && sent.length === 0 && !thinking && !(web.on && web.how === 'native') && (choice.kind !== 'local' || !codeMode.gate || codeMode.gate.allowed);
+      const folderless = !code && usesFolderLoop({ choice, available: codeMode.available, autoStart: codeSettings().autoStart, gated: Boolean(choice.kind === 'local' && codeMode.gate && !codeMode.gate.allowed), plainFeatures: searching || sent.length > 0 || thinking || (web.on && web.how === 'native') });
       if (code && (choice.kind === 'local' || choice.model.agent || (choice.kind === 'cloud' && choice.model.agentLight))) {
         setStatus('generating');
         const controller = new AbortController();
