@@ -122,6 +122,8 @@ export function environmentNote(env: Environment): string {
       : '- Files: the web app cannot reach the person’s files. The Quo desktop app can work in a project folder; if they want that, point them to it.',
     );
   }
-  if (!env.brief && cannot.length) lines.push(`- You cannot ${cannot.join(', ')} here. If asked for something you cannot do, say so plainly instead of pretending, and say what the person could do instead.`);
+  // Said for every model, small ones included: the limits above are about tools and live lookups, never about what the model knows.
+  lines.push('- You can always answer from your own knowledge: history and facts (including about any date or event), explanations, writing, maths and advice. Not having a tool never means you cannot answer; give what you know, and say when something may be out of date.');
+  if (!env.brief && cannot.length) lines.push(`- You cannot ${cannot.join(', ')} here. That is about actions and live lookups only. If asked to do one of them, say so plainly instead of pretending, and say what the person could do instead.`);
   return lines.join('\n');
 }

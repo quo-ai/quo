@@ -128,3 +128,23 @@ describe('a model that can ask for a folder itself', () => {
     expect(note).not.toContain('ask about their project');
   });
 });
+
+describe('limits are about tools, never about knowledge', () => {
+  const KNOWLEDGE = /answer from your own knowledge: history and facts \(including about any date or event\)/;
+
+  it('tells every model, small ones too, that it can still answer from what it knows', () => {
+    for (const env of [base, { ...base, brief: true }, { ...base, can: [], project: undefined }, { ...base, route: 'device' as const, can: ['attachments' as const], project: undefined }]) {
+      const note = environmentNote(env);
+      expect(note).toMatch(KNOWLEDGE);
+      expect(note).toMatch(/Not having a tool never means you cannot answer/);
+    }
+  });
+
+  it('says the "cannot" list is about actions and live lookups', () => {
+    expect(environmentNote(base)).toMatch(/You cannot .* here\. That is about actions and live lookups only\./);
+  });
+
+  it('puts the date in front of the model so a question about today has an answer', () => {
+    expect(environmentNote(base)).toContain('Monday 19 October 2026');
+  });
+});
