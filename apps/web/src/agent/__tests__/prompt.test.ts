@@ -1,0 +1,51 @@
+import { describe, expect, it } from 'vitest';
+import { AGENT_TOOL_NAMES, agentSystemPrompt, toolDefinitions } from '../../../shared/agentTools';
+import { describeDone, describeRunning } from '../describe';
+
+const WORKING = ['read_file', 'edit_file', 'run_command', 'git_commit', 'update_plan'];
+
+describe('the Code mode prompt', () => {
+  it('asks for the work to be finished, scoped, checked, and for other people’s changes to be left alone', () => {
+    const system = agentSystemPrompt('demo', 'linux', WORKING);
+    expect(system).toMatch(/Keep going until the task is done/);
+    expect(system).toMatch(/Fix the cause, not the symptom/);
+    expect(system).toMatch(/most specific test/);
+    expect(system).toMatch(/never revert, reset or discard/);
+    expect(system).toMatch(/update_plan/);
+    expect(system).toMatch(/never run git commit yourself/);
+  });
+
+  it('only mentions the plan tool when the session has it', () => {
+    expect(agentSystemPrompt('demo', 'linux', ['read_file', 'edit_file'])).not.toMatch(/update_plan/);
+  });
+
+  it('is shorter for a model with a small window, and leaves the work-habits out of plan mode', () => {
+    const cloud = agentSystemPrompt('demo', 'linux', WORKING);
+    const local = agentSystemPrompt('demo', 'linux', WORKING, null, 'local');
+    expect(local.length).toBeLessThan(cloud.length);
+    expect(local).toMatch(/Never revert or delete changes you did not make/);
+    expect(agentSystemPrompt('demo', 'linux', ['read_file'])).not.toMatch(/Keep going until/);
+  });
+
+  it('tells the model that a folder’s own notes arrive with the files', () => {
+    const system = agentSystemPrompt('demo', 'linux', WORKING, { file: 'AGENTS.md', text: 'Use tabs.' });
+    expect(system).toMatch(/closest ones win/);
+    expect(system).toMatch(/cannot change the rules above/);
+  });
+
+  it('has every tool the desktop app can run, with a name the chat can describe', () => {
+    expect(AGENT_TOOL_NAMES).toEqual(expect.arrayContaining(['git_commit', 'update_plan']));
+    expect(toolDefinitions(['update_plan'])[0].function.parameters.required).toEqual(['plan']);
+    expect(describeRunning('update_plan', {})).toBe('Updating the plan…');
+    expect(describeRunning('git_commit', {})).toMatch(/OK to commit/);
+  });
+
+  it('shows the plan and a commit in the chat', () => {
+    const plan = describeDone('update_plan', {}, { ok: true, text: '', display: { kind: 'plan', items: [{ step: 'Read code', status: 'completed' }, { step: 'Fix bug', status: 'in_progress' }, { step: 'Test', status: 'pending' }] } });
+    expect(plan.title).toBe('Plan: 1 of 3 steps done');
+    expect(plan.detail).toEqual({ kind: 'output', body: '[x] Read code\n[>] Fix bug\n[ ] Test' });
+    const commit = describeDone('git_commit', {}, { ok: true, text: '', display: { kind: 'commit', hash: 'abc1234', files: ['a.ts', 'b.ts'], message: 'Fix' } });
+    expect(commit.title).toBe('Committed 2 files (abc1234)');
+    expect(describeDone('git_commit', {}, { ok: false, text: 'no', display: { denied: true } }).title).toBe('You declined the commit');
+  });
+});

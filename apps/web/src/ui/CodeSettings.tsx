@@ -46,6 +46,7 @@ export function CodeSettings({ downloads }: { downloads: Record<string, Download
       <p className="note keys-intro">Code mode lets a model read your project, change files and run commands. You approve changes and commands in a window the page can’t click. These settings can only make it stricter, or choose how it starts.</p>
       <div className="toggle-list">
         <Toggle label="Run read-only commands without asking" detail="git status, git diff, git log and version checks. Off: every command asks." on={settings.autoReadOnly} onChange={autoReadOnly => setCodeSettings({ autoReadOnly })} />
+        <Toggle label="Credit Quo in commits" detail="When Quo commits for you, a Co-Authored-By line names Quo as co-author, with its picture on GitHub. You stay the author, you approve every commit and see the line first, and nothing is pushed. Off: no line is added." on={settings.creditQuo} onChange={creditQuo => setCodeSettings({ creditQuo })} />
         <Toggle label="Follow the project’s notes" detail="AGENTS.md or CLAUDE.md in the project folder: how to build, test and write code there." on={settings.useNotes} onChange={useNotes => setCodeSettings({ useNotes })} />
         <Toggle label="Start in plan mode" detail="Quo only reads and suggests a plan until you switch Plan off." on={settings.startInPlan} onChange={startInPlan => setCodeSettings({ startInPlan })} />
       </div>

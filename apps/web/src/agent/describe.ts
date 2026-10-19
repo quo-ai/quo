@@ -28,6 +28,8 @@ export function describeRunning(tool: string, args: Args): string {
     case 'edit_file': return `Waiting for your OK to edit ${text(args.path)}…`;
     case 'write_file': return `Waiting for your OK to write ${text(args.path)}…`;
     case 'run_command': return `Running ${clip(text(args.command), 50)}…`;
+    case 'update_plan': return 'Updating the plan…';
+    case 'git_commit': return 'Waiting for your OK to commit…';
     case 'open_repo': return `Downloading ${text(args.repo)}…`;
     case 'web_search': return `Searching the web for “${clip(text(args.query), 50)}”…`;
     case 'fetch_url': return `Reading ${host(text(args.url))}…`;
@@ -38,7 +40,7 @@ export function describeRunning(tool: string, args: Args): string {
 export function describeDone(tool: string, args: Args, result: ToolResult): Pick<AgentStep, 'title' | 'status' | 'detail'> {
   const display = result.display ?? {};
   if (display.denied) {
-    return { status: 'declined', title: tool === 'run_command' ? `You declined: ${clip(text(display.command), 60)}` : `You declined the change to ${text(display.path)}` };
+    return { status: 'declined', title: tool === 'run_command' ? `You declined: ${clip(text(display.command), 60)}` : tool === 'git_commit' ? 'You declined the commit' : `You declined the change to ${text(display.path)}` };
   }
   if (!result.ok) return { status: 'failed', title: `${verb(tool, args)} didn’t work: ${clip(result.text.split('\n')[0], 110)}` };
   switch (display.kind) {
@@ -48,6 +50,13 @@ export function describeDone(tool: string, args: Args, result: ToolResult): Pick
     case 'search': return { status: 'done', title: `Searched for “${clip(text(display.pattern), 40)}”: ${plural(Number(display.matches ?? 0), 'match')} in ${plural(Number(display.files ?? 0), 'file')}` };
     case 'edit': return { status: 'done', title: `Edited ${text(display.path)}  +${display.added} −${display.removed}`, detail: diffOf(display) };
     case 'create': return { status: 'done', title: `Created ${text(display.path)}  +${display.added}`, detail: diffOf(display) };
+    case 'plan': {
+      const items = Array.isArray(display.items) ? display.items as { step?: string; status?: string }[] : [];
+      const mark = (status?: string) => (status === 'completed' ? '[x]' : status === 'in_progress' ? '[>]' : '[ ]');
+      const done = items.filter(item => item.status === 'completed').length;
+      return { status: 'done', title: `Plan: ${done} of ${plural(items.length, 'step')} done`, detail: { kind: 'output', body: items.map(item => `${mark(item.status)} ${text(item.step)}`).join('\n') } };
+    }
+    case 'commit': return { status: 'done', title: `Committed ${plural(Array.isArray(display.files) ? display.files.length : 0, 'file')} (${text(display.hash)})`, detail: text(display.message) ? { kind: 'output', body: text(display.message) } : undefined };
     case 'repo': return { status: 'done', title: `Opened ${text(display.repo)}` };
     case 'web_search': {
       const results = Array.isArray(display.results) ? display.results as { title?: string; url?: string }[] : [];
@@ -77,6 +86,8 @@ function verb(tool: string, args: Args): string {
     case 'edit_file': return `Editing ${text(args.path)}`;
     case 'write_file': return `Writing ${text(args.path)}`;
     case 'run_command': return `Running ${clip(text(args.command), 50)}`;
+    case 'update_plan': return 'Updating the plan';
+    case 'git_commit': return 'Committing';
     case 'open_repo': return `Opening ${text(args.repo)}`;
     case 'web_search': return 'Searching the web';
     case 'fetch_url': return `Reading ${host(text(args.url))}`;

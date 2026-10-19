@@ -44,7 +44,7 @@ export function useCodeMode({ support, conversationId, modelId }: { support: Cod
   async function start(project: CodeProject) {
     code?.end();
     const settings = codeSettings();
-    const session = await CodeSession.start(project, { autoReadOnly: settings.autoReadOnly, compact });
+    const session = await CodeSession.start(project, { autoReadOnly: settings.autoReadOnly, compact, creditQuo: settings.creditQuo });
     if (settings.startInPlan) await session.setPlan(true);
     setPlan(session.plan);
     setCode(session);

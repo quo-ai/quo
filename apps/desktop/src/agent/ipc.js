@@ -69,7 +69,9 @@ function setupAgent({ web = null } = {}) {
 
   /** Asks the person, in a window the page can't draw or click, whether to allow something. */
   async function ask(window, request) {
-    const buttons = request.kind === 'command' ? ['Run it', request.rememberLabel, 'Don’t run it'] : ['Allow', request.rememberLabel, 'Don’t allow'];
+    // A commit is always asked about, with no "for this session" choice.
+    const single = request.kind === 'commit';
+    const buttons = single ? ['Commit', 'Don’t commit'] : request.kind === 'command' ? ['Run it', request.rememberLabel, 'Don’t run it'] : ['Allow', request.rememberLabel, 'Don’t allow'];
     try {
       const result = await dialog.showMessageBox(window ?? undefined, {
         type: 'question',
@@ -77,11 +79,11 @@ function setupAgent({ web = null } = {}) {
         message: request.title,
         detail: request.detail.length > DIALOG_DETAIL_CHARS ? `${request.detail.slice(0, DIALOG_DETAIL_CHARS)}…` : request.detail,
         buttons,
-        defaultId: 2, // Enter means no.
-        cancelId: 2,
+        defaultId: buttons.length - 1, // Enter means no.
+        cancelId: buttons.length - 1,
         noLink: true,
       });
-      return ['once', 'session', 'deny'][result.response] ?? 'deny';
+      return (single ? ['once', 'deny'] : ['once', 'session', 'deny'])[result.response] ?? 'deny';
     } catch {
       return 'deny';
     }
@@ -98,6 +100,10 @@ function setupAgent({ web = null } = {}) {
         return { error: { code: 'failed', message: 'Something went wrong.' } };
       }
     });
+
+  const abortAll = entry => {
+    for (const controller of entry.controllers) controller.abort();
+  };
 
   const owned = (id, event) => {
     const entry = sessions.get(String(id));
@@ -129,7 +135,7 @@ function setupAgent({ web = null } = {}) {
 
   handle('agent:forget', ({ id }) => projects.remove(String(id)));
 
-  handle('agent:start', async ({ projectId, autoReadOnly, compact }, event) => {
+  handle('agent:start', async ({ projectId, autoReadOnly, compact, creditQuo }, event) => {
     const project = (await projects.list()).find(entry => entry.id === String(projectId));
     if (!project) throw new AgentError('no_project', 'That project isn’t in the list any more. Choose the folder again.');
     const real = await fsp.realpath(project.path).catch(() => null);
@@ -139,10 +145,10 @@ function setupAgent({ web = null } = {}) {
     if (sessions.size >= MAX_SESSIONS) throw new AgentError('busy', 'Too many Code sessions are open. Close one first.');
     const id = crypto.randomBytes(8).toString('hex');
     const window = BrowserWindow.fromWebContents(event.sender) ?? undefined;
-    const session = new AgentSession({ root: real, name: project.name, repos, web, webSession: id, autoReadOnly: autoReadOnly !== false, compact: compact === true, approve: request => ask(window, request) });
-    sessions.set(id, { session, owner: event.sender.id, project: project.id, controller: null });
+    const session = new AgentSession({ root: real, name: project.name, repos, web, webSession: id, autoReadOnly: autoReadOnly !== false, compact: compact === true, creditQuo: creditQuo !== false, approve: request => ask(window, request) });
+    sessions.set(id, { session, owner: event.sender.id, project: project.id, controllers: new Set() });
     event.sender.once('destroyed', () => endSession(id));
-    return { sessionId: id, name: project.name, platform: process.platform, tools: TOOL_NAMES, planTools: PLAN_TOOLS, instructions: await readInstructions(real), hint: whereIs(real), git: await gitInfo(real) };
+    return { sessionId: id, name: project.name, platform: process.platform, tools: compact === true ? TOOL_NAMES.filter(name => name !== 'update_plan') : TOOL_NAMES, planTools: compact === true ? PLAN_TOOLS.filter(name => name !== 'update_plan') : PLAN_TOOLS, instructions: await readInstructions(real), hint: whereIs(real), git: await gitInfo(real) };
   });
 
   handle('agent:files', ({ sessionId, query }, event) => owned(sessionId, event).session.suggestFiles(query));
@@ -152,18 +158,20 @@ function setupAgent({ web = null } = {}) {
   handle('agent:undo', async ({ sessionId, count }, event) => owned(sessionId, event).session.undo(count));
 
   handle('agent:tool', async ({ sessionId, name, args }, event) => {
+    // Several reading tools may be in flight at once (the page sends a reply's independent reads together), so each
+    // call has its own controller; "stop" aborts all of them.
     const entry = owned(sessionId, event);
-    entry.controller?.abort();
-    entry.controller = new AbortController();
+    const controller = new AbortController();
+    entry.controllers.add(controller);
     try {
-      return await entry.session.callTool(String(name), args, { signal: entry.controller.signal });
+      return await entry.session.callTool(String(name), args, { signal: controller.signal });
     } finally {
-      entry.controller = null;
+      entry.controllers.delete(controller);
     }
   });
 
   handle('agent:abort', ({ sessionId }, event) => {
-    owned(sessionId, event).controller?.abort();
+    abortAll(owned(sessionId, event));
   });
 
   handle('agent:end', ({ sessionId }, event) => {
@@ -175,12 +183,12 @@ function setupAgent({ web = null } = {}) {
 
   function endSession(id) {
     const entry = sessions.get(id);
-    entry?.controller?.abort();
+    if (entry) abortAll(entry);
     sessions.delete(id);
   }
 
   app.on('will-quit', () => {
-    for (const entry of sessions.values()) entry.controller?.abort();
+    for (const entry of sessions.values()) abortAll(entry);
   });
   return { sessions };
 }

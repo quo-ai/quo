@@ -316,3 +316,41 @@ describe('telling how full the memory is', () => {
     expect(estimateTokens([{ role: 'assistant', content: '', tool_calls: [{ id: '1', type: 'function', function: { name: 'read_file', arguments: '{"path":"a"}' } }] }])).toBeGreaterThan(6);
   });
 });
+
+describe('reading tools in one reply', () => {
+  it('start together, are answered in the order asked, and a change waits for them', async () => {
+    const log: string[] = [];
+    const releases: (() => void)[] = [];
+    const { deps, asked } = script([
+      reply({ toolCalls: [call('a', 'read_file', { path: 'a.js' }), call('b', 'search_text', { pattern: 'x' }), call('c', 'edit_file', { path: 'a.js', old_string: 'x', new_string: 'y' }), call('d', 'read_file', { path: 'b.js' })], finish: 'tool_calls' }),
+      reply({ content: 'Done.' }),
+    ]);
+    deps.runTool = async (name, args) => {
+      log.push(`start ${name} ${String(args.path ?? args.pattern)}`);
+      if (name === 'read_file' || name === 'search_text') await new Promise<void>(resolve => releases.push(resolve));
+      log.push(`end ${name}`);
+      return { ok: true, text: `${name} ok`, display: { kind: 'list', entries: 1 } };
+    };
+    const running = runAgent(user, deps);
+    await new Promise(resolve => setTimeout(resolve, 10));
+    expect(log).toEqual(['start read_file a.js', 'start search_text x']); // both reads in flight, the edit not yet
+    releases.forEach(release => release());
+    await new Promise(resolve => setTimeout(resolve, 10));
+    expect(log.slice(2)).toEqual(['end read_file', 'end search_text', 'start edit_file a.js', 'end edit_file', 'start read_file b.js']);
+    releases.forEach(release => release());
+    await running;
+    const second = asked[1].filter(m => m.role === 'tool');
+    expect(second.map(m => m.tool_call_id)).toEqual(['a', 'b', 'c', 'd']);
+  });
+
+  it('give every call an answer when the person stops in the middle', async () => {
+    const { deps, controller } = script([reply({ toolCalls: [call('a', 'read_file', { path: 'a.js' }), call('b', 'read_file', { path: 'b.js' })], finish: 'tool_calls' })]);
+    deps.runTool = async () => {
+      controller.abort();
+      return { ok: true, text: 'late', display: { kind: 'list', entries: 1 } };
+    };
+    const outcome = await runAgent(user, deps);
+    expect(outcome.stopped).toBe(true);
+    expect(outcome.steps.map(step => step.status)).toEqual(['stopped', 'stopped']);
+  });
+});

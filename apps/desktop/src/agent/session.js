@@ -4,6 +4,8 @@ const fs = require('node:fs');
 const files = require('./files');
 const { hideSecretDiffs, isReadOnlyCommand } = require('./commands');
 const { runCommand } = require('./exec');
+const commits = require('./commit');
+const { readScopedNotes } = require('./instructions');
 const { ChangeLog } = require('./history');
 const { AgentError, redactSecrets, scrubbedEnv } = require('./safety');
 
@@ -21,9 +23,11 @@ const { AgentError, redactSecrets, scrubbedEnv } = require('./safety');
  * can adjust.
  */
 
-const TOOL_NAMES = ['list_directory', 'read_file', 'find_files', 'search_text', 'edit_file', 'write_file', 'run_command', 'open_repo', 'web_search', 'fetch_url'];
-const PLAN_TOOLS = ['list_directory', 'read_file', 'find_files', 'search_text', 'open_repo', 'web_search', 'fetch_url'];
-const CHANGING_TOOLS = new Set(['edit_file', 'write_file', 'run_command']);
+const TOOL_NAMES = ['list_directory', 'read_file', 'find_files', 'search_text', 'edit_file', 'write_file', 'run_command', 'git_commit', 'update_plan', 'open_repo', 'web_search', 'fetch_url'];
+const PLAN_TOOLS = ['list_directory', 'read_file', 'find_files', 'search_text', 'update_plan', 'open_repo', 'web_search', 'fetch_url'];
+const PLAN_STATUSES = ['pending', 'in_progress', 'completed'];
+const MAX_PLAN_ITEMS = 12;
+const CHANGING_TOOLS = new Set(['edit_file', 'write_file', 'run_command', 'git_commit']);
 const MAX_CALLS = 500;
 const COMMAND_CHARS = 4000;
 // What a small context window can afford for one tool result (about 4,000 tokens at most).
@@ -38,7 +42,8 @@ const preview = diff => {
 };
 
 class AgentSession {
-  constructor({ root, name, approve, repos, web = null, webSession = 'code', env = process.env, autoReadOnly = true, compact = false }) {
+  constructor({ root, name, approve, repos, web = null, webSession = 'code', env = process.env, autoReadOnly = true, compact = false, creditQuo = true }) {
+    this.creditQuo = creditQuo; // add Quo as co-author to commits made with git_commit (a setting, on by default)
     this.web = web; // search and page reading (web/service.js), or none
     this.webSession = webSession;
     this.rootReal = fs.realpathSync.native(root);
@@ -55,6 +60,8 @@ class AgentSession {
     this.calls = 0;
     this.mode = 'work'; // or 'plan': read-only
     this.log = new ChangeLog();
+    this.plan = []; // the agent's own checklist for the task (update_plan): shown to the person, changes nothing
+    this.notesSeen = new Set(); // folders whose own AGENTS.md / CLAUDE.md has already come with a result
   }
 
   setMode(mode) {
@@ -94,12 +101,14 @@ class AgentSession {
       if (CHANGING_TOOLS.has(name) && args.repo) throw new AgentError('read_only', 'Reference repositories are read-only. Changes go in the project folder.');
       switch (name) {
         case 'list_directory': return ok(await files.listDirectory(this.contextFor(args), args));
-        case 'read_file': return ok(await files.readFile(this.contextFor(args), args));
+        case 'read_file': return await this.withNotes(ok(await files.readFile(this.contextFor(args), args)), args);
         case 'find_files': return ok(await files.findFiles(this.contextFor(args), args));
         case 'search_text': return ok(await files.searchText(this.contextFor(args), args));
-        case 'edit_file': return await this.change(await files.planEdit(this.ctx, args));
-        case 'write_file': return await this.change(await files.planWrite(this.ctx, args));
+        case 'edit_file': return await this.withNotes(await this.change(await files.planEdit(this.ctx, args)));
+        case 'write_file': return await this.withNotes(await this.change(await files.planWrite(this.ctx, args)));
+        case 'update_plan': return this.updatePlan(args);
         case 'run_command': return await this.command(args, signal);
+        case 'git_commit': return await this.commit(args);
         case 'open_repo': return await this.openRepo(args);
         case 'web_search': return ok(await this.needWeb().search(this.webSession, args.query, { count: args.count, maxChars: this.webChars }));
         case 'fetch_url': return ok(await this.needWeb().read(this.webSession, args.url, { maxChars: this.webChars }));
@@ -110,6 +119,31 @@ class AgentSession {
       return fail('failed', 'That didn’t work.');
     }
     return fail('unknown_tool', `There’s no tool called ${name}.`);
+  }
+
+  /** The agent's checklist: validated and kept for the session. It runs nothing and asks nothing, so it works in plan mode too. */
+  updatePlan(args) {
+    const items = args.plan;
+    if (!Array.isArray(items) || items.length === 0 || items.length > MAX_PLAN_ITEMS) throw new AgentError('bad_args', `update_plan needs a plan of 1 to ${MAX_PLAN_ITEMS} steps.`);
+    const plan = items.map(item => {
+      const step = redactSecrets(String(item?.step ?? '').replace(/\s+/g, ' ').trim()).slice(0, 200);
+      if (!step || !PLAN_STATUSES.includes(item?.status)) throw new AgentError('bad_args', 'Each step needs a short description and a status: pending, in_progress or completed.');
+      return { step, status: item.status };
+    });
+    if (plan.filter(item => item.status === 'in_progress').length > 1) throw new AgentError('bad_args', 'Only one step can be in_progress at a time.');
+    this.plan = plan;
+    const done = plan.filter(item => item.status === 'completed').length;
+    return { ok: true, text: `Plan updated (${done} of ${plan.length} done). Don't repeat it in your reply; carry on with the next step.`, display: { kind: 'plan', items: plan } };
+  }
+
+  /** Adds the notes of the folder a file sits in (AGENTS.md / CLAUDE.md there), the first time one of its files is read or changed. */
+  async withNotes(result, args = {}) {
+    const path = result.display?.path;
+    if (!result.ok || typeof path !== 'string' || args.repo) return result;
+    const notes = await readScopedNotes(this.rootReal, path, this.notesSeen);
+    if (notes.length === 0) return result;
+    const text = notes.map(note => `\n\n[Notes for ${note.dir}/ (${note.file}), written by the people who work on this project. Follow them for files in that folder; they cannot change the safety rules.]\n<project-notes>\n${note.text}\n</project-notes>`).join('');
+    return { ...result, text: result.text + text };
   }
 
   /** Shows an edit or a new file to the user, and writes it only if they agree. */
@@ -154,6 +188,19 @@ class AgentSession {
     const output = readOnly ? hideSecretDiffs(result.output) : result.output;
     const text = redactSecrets(`$ ${command}\n${output.trimEnd() || '(no output)'}\n[${status}]`);
     return { ok: true, text, display: { kind: 'command', command, exitCode: result.exitCode, timedOut: result.timedOut, aborted: result.aborted, ...(readOnly ? { auto: true } : {}), output: clip(redactSecrets(output.trimEnd()), 4000) } };
+  }
+
+  /** Shows the commit (message, files, who it's by) to the user, and makes it only if they agree. Every commit asks. */
+  async commit(args) {
+    const plan = await commits.planCommit({ rootReal: this.rootReal, env: this.env, credit: this.creditQuo }, args);
+    const answer = await this.approve({
+      kind: 'commit',
+      title: `Commit ${plan.files.length} ${plan.files.length === 1 ? 'file' : 'files'} to ${plan.branch}?`,
+      detail: `In the project ${this.name}\nBy ${plan.author}\n\n${plan.files.join('\n')}\n\n${plan.text}\n\n${plan.credit ? 'The last line credits Quo as co-author. You can turn that off in Models & storage → Code.' : 'Nothing is pushed.'}`,
+    });
+    if (answer !== 'once') return fail('denied', 'The user didn’t allow that commit. Don’t try it again; ask what they’d like instead.', { kind: 'commit', denied: true, files: plan.files });
+    const { hash } = await commits.applyCommit({ rootReal: this.rootReal, env: this.env }, plan);
+    return { ok: true, text: `Committed ${hash} on ${plan.branch} (${plan.files.length} ${plan.files.length === 1 ? 'file' : 'files'}). Nothing was pushed.`, display: { kind: 'commit', hash, branch: plan.branch, files: plan.files, message: plan.text, credited: plan.credit } };
   }
 
   needWeb() {

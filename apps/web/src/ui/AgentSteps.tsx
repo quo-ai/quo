@@ -69,6 +69,8 @@ const KINDS: [string[], string, string?][] = [
   [['list_directory', 'read_file', 'find_files', 'search_text'], 'look'],
   [['edit_file', 'write_file'], 'change'],
   [['run_command'], 'command'],
+  [['git_commit'], 'commit'],
+  [['update_plan'], 'plan update'],
   [['web_search', 'fetch_url'], 'web lookup'],
 ];
 

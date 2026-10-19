@@ -122,3 +122,51 @@ describe('changing files', () => {
     assert.equal((await files.planWrite(ctx, { path: 'src/new.js', content: 'ok' })).kind, 'create');
   });
 });
+
+describe('edits that miss, and several at once', () => {
+  it('points at the nearest line when old_string misses, and still refuses', async () => {
+    const root = temp();
+    write(root, 'a.js', 'function one() {\n  return 1;\n}\n\nfunction two() {\n    return 2;\n}\n');
+    const ctx = ctxFor(root);
+    await files.readFile(ctx, { path: 'a.js' });
+    await assert.rejects(files.planEdit(ctx, { path: 'a.js', old_string: 'function two() {\n  return 2;\n}', new_string: 'x' }), error => error.code === 'not_found' && /line 5/.test(error.message));
+    await assert.rejects(files.planEdit(ctx, { path: 'a.js', old_string: 'nothing like it', new_string: 'x' }), error => error.code === 'not_found' && /Read the file again/.test(error.message));
+  });
+
+  it('matches an edit written with \\n against a CRLF file, and keeps its line endings', async () => {
+    const root = temp();
+    const target = write(root, 'win.txt', 'one\r\ntwo\r\nthree\r\n');
+    const ctx = ctxFor(root);
+    await files.readFile(ctx, { path: 'win.txt' });
+    await files.applyPlan(ctx, await files.planEdit(ctx, { path: 'win.txt', old_string: 'one\ntwo', new_string: 'uno\ndos' }));
+    assert.equal(fs.readFileSync(target, 'utf8'), 'uno\r\ndos\r\nthree\r\n');
+  });
+
+  it('applies a list in order as one change, or none of it', async () => {
+    const root = temp();
+    const target = write(root, 'a.js', 'a = 1\nb = 2\nc = 3\n');
+    const ctx = ctxFor(root);
+    await files.readFile(ctx, { path: 'a.js' });
+    const plan = await files.planEdit(ctx, { path: 'a.js', edits: [{ old_string: 'a = 1', new_string: 'a = 10' }, { old_string: 'a = 10', new_string: 'a = 11' }, { old_string: 'c = 3', new_string: 'c = 30' }] });
+    assert.equal(plan.replacements, 3);
+    assert.equal(fs.readFileSync(target, 'utf8'), 'a = 1\nb = 2\nc = 3\n', 'planning changes nothing');
+    await assert.rejects(files.planEdit(ctx, { path: 'a.js', edits: [{ old_string: 'a = 1', new_string: 'a = 9' }, { old_string: 'nope', new_string: 'x' }] }), error => error.code === 'not_found' && /^Edit 2 of 2/.test(error.message));
+    assert.equal(fs.readFileSync(target, 'utf8'), 'a = 1\nb = 2\nc = 3\n');
+    await files.applyPlan(ctx, plan);
+    assert.equal(fs.readFileSync(target, 'utf8'), 'a = 11\nb = 2\nc = 30\n');
+  });
+
+  it('keeps every rule for a list: secrets, bad shapes, too many, edits that undo themselves', async () => {
+    const root = temp();
+    write(root, '.env', 'A=1\n');
+    write(root, 'a.js', 'x\n');
+    const ctx = ctxFor(root);
+    await files.readFile(ctx, { path: 'a.js' });
+    await rejects(files.planEdit(ctx, { path: '.env', edits: [{ old_string: 'A', new_string: 'B' }] }), 'secret');
+    await rejects(files.planEdit(ctx, { path: 'a.js', edits: [] }), 'bad_args');
+    await rejects(files.planEdit(ctx, { path: 'a.js', edits: 'x' }), 'bad_args');
+    await rejects(files.planEdit(ctx, { path: 'a.js', edits: Array(21).fill({ old_string: 'x', new_string: 'y' }) }), 'bad_args');
+    await rejects(files.planEdit(ctx, { path: 'a.js', edits: [{ old_string: 'x', new_string: 'y' }, { old_string: 'y', new_string: 'x' }] }), 'no_change');
+    await rejects(files.planEdit(ctx, { path: 'a.js', edits: [{ old_string: '', new_string: 'y' }] }), 'bad_args');
+  });
+});

@@ -8,6 +8,8 @@ import { useSyncExternalStore } from 'react';
 export interface CodeSettings {
   /** Run read-only commands (git status, git diff…) without asking. Off: every command asks. */
   autoReadOnly: boolean;
+  /** Add Quo as co-author on commits it makes (a Co-Authored-By line at the end of the message). On by default; shown in every commit's approval window. */
+  creditQuo: boolean;
   /** Follow the project's AGENTS.md or CLAUDE.md. */
   useNotes: boolean;
   /** Start every Code session in plan mode (read-only). */
@@ -16,7 +18,7 @@ export interface CodeSettings {
   maxSteps: number;
 }
 
-export const DEFAULT_CODE_SETTINGS: CodeSettings = { autoReadOnly: true, useNotes: true, startInPlan: false, maxSteps: 40 };
+export const DEFAULT_CODE_SETTINGS: CodeSettings = { autoReadOnly: true, creditQuo: true, useNotes: true, startInPlan: false, maxSteps: 40 };
 export const STEP_CHOICES = [10, 20, 40, 80, 150] as const;
 
 const KEY = 'quo.codeSettings';
@@ -26,6 +28,7 @@ function read(): CodeSettings {
     const saved = JSON.parse(localStorage.getItem(KEY) ?? '{}') as Partial<CodeSettings>;
     return {
       autoReadOnly: typeof saved.autoReadOnly === 'boolean' ? saved.autoReadOnly : DEFAULT_CODE_SETTINGS.autoReadOnly,
+      creditQuo: typeof saved.creditQuo === 'boolean' ? saved.creditQuo : DEFAULT_CODE_SETTINGS.creditQuo,
       useNotes: typeof saved.useNotes === 'boolean' ? saved.useNotes : DEFAULT_CODE_SETTINGS.useNotes,
       startInPlan: typeof saved.startInPlan === 'boolean' ? saved.startInPlan : DEFAULT_CODE_SETTINGS.startInPlan,
       maxSteps: STEP_CHOICES.includes(saved.maxSteps as (typeof STEP_CHOICES)[number]) ? (saved.maxSteps as number) : DEFAULT_CODE_SETTINGS.maxSteps,

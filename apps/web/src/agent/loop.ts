@@ -1,4 +1,5 @@
 import { describeDone, describeRunning } from './describe';
+import { READ_ONLY_TOOLS } from '../../shared/agentTools';
 import type { AgentMessage, AgentStep, StepReply, ToolCall, ToolResult } from './types';
 
 /**
@@ -9,6 +10,8 @@ import type { AgentMessage, AgentStep, StepReply, ToolCall, ToolResult } from '.
  */
 
 export const MAX_STEPS = 40;
+/** Tools that only look, so several in one reply can run at once. */
+const PARALLEL_TOOLS = new Set(READ_ONLY_TOOLS);
 /** Past this many characters of conversation, the oldest tool output is dropped from what's sent. */
 export const CONTEXT_CHARS = 450_000;
 // A model that keeps making the same call, or keeps failing, isn't getting anywhere. Small models especially can loop.
@@ -120,6 +123,22 @@ export async function runAgent(history: AgentMessage[], deps: AgentDeps): Promis
     const calls: ToolCall[] = reply.toolCalls.map(call => ({ ...call, arguments: parseArguments(call.arguments) ? call.arguments || '{}' : '{}' }));
     messages.push({ role: 'assistant', content: reply.content, tool_calls: calls.map(call => ({ id: call.id, type: 'function', function: { name: call.name, arguments: call.arguments } })) });
 
+    // Reading tools that come together in one reply start together and are answered in order; anything that changes
+    // something waits for the reads before it to finish (an edit needs the read that came first).
+    const pending: { call: (typeof reply.toolCalls)[number]; step: AgentStep; args: Record<string, unknown>; promise: Promise<ToolResult> }[] = [];
+    const record = (call: (typeof reply.toolCalls)[number], step: AgentStep, args: Record<string, unknown> | null, result: ToolResult) => {
+      // A change or command the person declined is their choice, not the model failing.
+      failures = result.ok || result.display?.denied ? 0 : failures + 1;
+      Object.assign(step, describeDone(call.name, args ?? {}, result));
+      if (deps.signal.aborted) step.status = 'stopped';
+      messages.push({ role: 'tool', tool_call_id: call.id, content: result.text });
+      show();
+    };
+    const flush = async (): Promise<boolean> => {
+      for (const item of pending.splice(0)) record(item.call, item.step, item.args, await item.promise);
+      return deps.signal.aborted;
+    };
+
     for (const [index, call] of reply.toolCalls.entries()) {
       const args = parseArguments(call.arguments);
       const step: AgentStep = { id: call.id, tool: call.name, status: 'running', title: describeRunning(call.name, args ?? {}), ...(index === 0 && reply.content.trim() ? { text: reply.content.trim() } : {}) };
@@ -128,18 +147,23 @@ export async function runAgent(history: AgentMessage[], deps: AgentDeps): Promis
       const sameAsBefore = args !== null && `${call.name} ${JSON.stringify(args)}` === previous;
       repeats = sameAsBefore ? repeats + 1 : 0;
       if (args !== null) previous = `${call.name} ${JSON.stringify(args)}`;
-      const result: ToolResult = args === null
+      const refused: ToolResult | null = args === null
         ? { ok: false, text: 'The arguments weren’t valid JSON. Send them again as a JSON object.' }
         : deps.signal.aborted ? { ok: false, text: 'Stopped by the user.', display: { kind: 'error' } }
-          : repeats >= REPEATS_ALLOWED ? { ok: false, text: REPEATED, display: { kind: 'error' } } : await deps.runTool(call.name, args);
-      // A change or command the person declined is their choice, not the model failing.
-      failures = result.ok || result.display?.denied ? 0 : failures + 1;
-      Object.assign(step, describeDone(call.name, args ?? {}, result));
-      if (deps.signal.aborted) step.status = 'stopped';
-      messages.push({ role: 'tool', tool_call_id: call.id, content: result.text });
-      show();
+          : repeats >= REPEATS_ALLOWED ? { ok: false, text: REPEATED, display: { kind: 'error' } } : null;
+      if (args !== null && !refused && PARALLEL_TOOLS.has(call.name)) {
+        pending.push({ call, step, args, promise: deps.runTool(call.name, args) });
+        continue;
+      }
+      if (await flush()) {
+        step.status = 'stopped';
+        show();
+        return { ...outcome, stopped: true };
+      }
+      record(call, step, args, refused ?? await deps.runTool(call.name, args as Record<string, unknown>));
       if (deps.signal.aborted) return { ...outcome, stopped: true };
     }
+    if (await flush()) return { ...outcome, stopped: true };
     if (failures >= FAILURES_ALLOWED) return { ...outcome, limited: true, text: 'I kept running into errors, so I stopped. Tell me how you’d like to go on, or try a more capable model.' };
   }
 }
