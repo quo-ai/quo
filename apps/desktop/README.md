@@ -35,6 +35,24 @@ Voice input is the exception, and for a measured reason: Whisper through the nat
 2. `npm run fetch:engine -- --all`, then `npm run check:engine -- /path/to/model.gguf [/path/to/mmproj.gguf]`. It loads the model, streams replies, tests thinking, stopping and (with a projector) an image, and prints speeds.
 3. CI runs `check:engine --version` on all three platforms, which proves the binary and its libraries load there.
 
+
+### Engine tuning: what other engines do (read from their source, 19 Oct 2026) and what Quo does
+
+Sources: Ollama (`llm/llama_server.go`, `server/sched.go`, `server/routes.go`, `envconfig/config.go`), Jan (`extensions/llamacpp-extension/src/index.ts`), LM Studio's SDK (`lmstudio-js`: `LLMLoadModelConfig.ts`), llama.cpp's `llama-server --help` for the pinned build.
+
+**Done**
+- **A model that does not fit is loaded again with a smaller window** (`engine/fallback.js`): halved down to 8,192, only on an out-of-memory failure. Ollama steps its automatic context down (262,144 → 32,768 → 4,096) and retries once; before, Quo just said "too big for your computer's memory". The engine reports the window it really got and the app plans the agent's budget from that.
+- **An idle model is unloaded after 30 minutes** (`engine/idle.js`): it stops holding graphics memory a game or editor may want. Ollama unloads after 5 minutes and LM Studio's idle timer defaults to 60. A request counts as active from its first byte to its last, so a long reply is never cut. The next message loads it again.
+- **`--offline`** is passed to llama-server (Ollama does too): it can never reach for the network.
+- **Said plainly when a graphics card is not used** (Jan checks the same, because a backend that fails still starts "healthy" on the processor): the engine note under the message box reads "On your processor" with the reason.
+- **Left to llama-server on purpose**: `-ngl` (auto, memory-fitted), flash attention (auto), KV cache type, batch sizes. Jan's old default pinned `n_gpu_layers` to 100, which defeated the automatic setting and made small GPUs run out of memory; Ollama also passes almost nothing ("minimal set, let llama-server auto-detect the rest"). `engine-tuning.test.js` fails if any of those get pinned.
+
+**Candidates, not switched on (each needs a real before-and-after on the shipped files first)**
+- **Multi-token prediction (MTP)**: LM Studio (`speculativeDraftMtp`) and Ollama (`draft-mtp`) use it; the pinned llama-server supports `--spec-type draft-mtp`. Qwen3.5 4B, 9B and 27B were trained with an MTP head (`mtp_num_hidden_layers: 1`), **but the GGUF files Quo ships do not contain it** (checked: 427 tensors, blocks 0–31 only). Unsloth publishes `Qwen3.5-4B-MTP-GGUF` and `Qwen3.5-9B-MTP-GGUF`, which keep it. Switching the catalog to those and passing `--spec-type draft-mtp` is the likeliest real generation speed-up; it needs the new files' sizes and a check that quality and memory are unchanged.
+- **N-gram speculation** (`--spec-type ngram-mod`): needs no extra model and suits code edits, where the output repeats the input. Unmeasured here.
+- **KV cache quantisation** (`-ctk q8_0 -ctv q8_0`, LM Studio exposes it): would roughly halve the cache of the memory-heavy models (Llama 3.2, Phi-4 mini); needs flash attention, so check it on the Vulkan build first.
+- **Default context by memory tier**: Ollama uses 4,096 below 23 GiB of video memory, 32,768 from 23 GiB, 262,144 from 47 GiB. Quo's own rule (`src/engine/tuning.ts`: about 12% of the memory the model runs in, per model) gives more on a mid-size card, and the out-of-memory fallback now covers the case where that is too optimistic.
+
 ## How it works
 
 - `src/protocol.js` serves the built web app from `app://quo/` (a privileged standard, secure scheme). Every response carries `Cross-Origin-Opener-Policy: same-origin`, `Cross-Origin-Embedder-Policy: require-corp` and `Cross-Origin-Resource-Policy: same-origin`, so `crossOriginIsolated` is true. Unknown paths without a file extension fall back to `index.html` (client-side routes).

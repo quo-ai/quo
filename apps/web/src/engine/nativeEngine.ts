@@ -50,7 +50,8 @@ export class NativeEngine implements InferenceEngine {
     // The window asked for, held back where this computer cannot hold it (tuning.ts).
     const contextSize = contextFor(model, options.contextSize ?? model.contextSize, engineMemoryGB(await getDeviceProfile()));
     // Loaded already, with the room that was asked for.
-    const ready = () => this.modelId === model.id && this.status?.contextSize === contextSize;
+    // A model that settled on a smaller window (it did not fit with the one asked for) is not loaded again for the same request.
+    const ready = () => this.modelId === model.id && (this.status?.requestedContextSize ?? this.status?.contextSize) === contextSize;
     if (ready()) return;
     if (this.loading) await this.loading.catch(() => {});
     if (ready()) return;
@@ -78,7 +79,7 @@ export class NativeEngine implements InferenceEngine {
   info(): EngineInfo | null {
     if (!this.status?.running) return null;
     const gpu = this.status.backend !== 'cpu';
-    return { backend: this.status.backend ?? 'cpu', gpu, device: this.status.device, vision: this.status.vision };
+    return { backend: this.status.backend ?? 'cpu', gpu, device: this.status.device, vision: this.status.vision, gpuMissing: !gpu && Boolean(this.status.gpuAvailable) };
   }
 
   async stop(): Promise<void> {

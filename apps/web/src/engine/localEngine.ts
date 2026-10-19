@@ -50,6 +50,8 @@ export interface EngineInfo {
   gpu: boolean;
   /** The graphics card's name, when known. */
   device?: string | null;
+  /** There is a graphics card but the model is running on the processor (a driver or backend that didn't load). */
+  gpuMissing?: boolean;
   /** The loaded model can read images. */
   vision?: boolean;
   threads?: number;

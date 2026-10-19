@@ -120,8 +120,11 @@ async function serveFile(request, url, root) {
 
 // Where the running llama-server listens (set by main.js); null with no model loaded.
 let engineTarget = () => null;
-function setEngineTarget(provider) {
+let engineActivity = { started() {}, ended() {} };
+/** `activity` hears when a request starts and ends, so an idle model can be told from a busy one. */
+function setEngineTarget(provider, activity) {
   engineTarget = provider;
+  if (activity) engineActivity = activity;
 }
 
 const ENGINE_IDLE_BODY = JSON.stringify({ error: 'engine_not_running', message: 'No model is loaded.' });
@@ -138,6 +141,12 @@ async function proxyEngine(request, url) {
 
   const body = await request.arrayBuffer();
   const controller = new AbortController();
+  engineActivity.started();
+  let finished = false;
+  const finish = () => {
+    if (!finished) engineActivity.ended();
+    finished = true;
+  };
   let upstream;
   try {
     // Node's fetch, not the session's: no proxy settings apply to loopback.
@@ -148,11 +157,12 @@ async function proxyEngine(request, url) {
       signal: controller.signal,
     });
   } catch {
+    finish();
     return respond(503, ENGINE_IDLE_BODY, 'application/json; charset=utf-8', { 'cache-control': 'no-store' });
   }
   const headers = new Headers({ 'content-type': upstream.headers.get('content-type') ?? 'application/json', 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' });
   for (const [name, value] of Object.entries(ISOLATION_HEADERS)) headers.set(name, value);
-  return new Response(passThrough(upstream, controller), { status: upstream.status, headers });
+  return new Response(passThrough(upstream, controller, finish), { status: upstream.status, headers });
 }
 
 /**
@@ -160,16 +170,27 @@ async function proxyEngine(request, url) {
  * streamed reply) also aborts the upstream request. Chunks pass straight
  * through, so server-sent events are not buffered.
  */
-function passThrough(upstream, controller) {
-  if (!upstream.body) return null;
+function passThrough(upstream, controller, finish = () => {}) {
+  if (!upstream.body) {
+    finish();
+    return null;
+  }
   const reader = upstream.body.getReader();
   return new ReadableStream({
     async pull(stream) {
-      const { done, value } = await reader.read();
-      if (done) stream.close();
-      else stream.enqueue(value);
+      try {
+        const { done, value } = await reader.read();
+        if (done) {
+          finish();
+          stream.close();
+        } else stream.enqueue(value);
+      } catch (error) {
+        finish();
+        stream.error(error);
+      }
     },
     cancel(reason) {
+      finish();
       controller.abort(reason);
     },
   });

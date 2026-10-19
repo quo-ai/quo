@@ -161,7 +161,7 @@ function start() {
   hasEngine = engineAvailable();
   if (hasEngine) {
     const { engine } = setupEngine();
-    setEngineTarget(() => engine.target());
+    setEngineTarget(() => engine.target(), { started: () => engine.requestStarted(), ended: () => engine.requestEnded() });
   } else {
     console.warn('[quo] The native engine is missing; using the in-browser engine. Run "npm run fetch:engine".');
   }

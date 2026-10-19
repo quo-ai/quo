@@ -237,7 +237,7 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
               : status === 'loading' ? 'Loading model…'
               : cloud ? <><Cloud size={13} /> Cloud{freeLeft !== null ? ` · ${freeLeft} free today` : ''}</>
                 : choice?.kind === 'own' ? <><KeyRound size={13} /> Your {choice.provider.name} key</>
-                : choice ? <><HardDrive size={13} /> <span title={info?.device ?? undefined}>{info?.gpu ? 'On your GPU' : 'On this device'}</span> · private</> : ''}
+                : choice ? <><HardDrive size={13} /> <span title={info?.gpuMissing ? 'Your computer has a graphics card, but this model is running on the processor, which is much slower. A graphics driver may be missing.' : info?.device ?? undefined}>{info?.gpu ? 'On your GPU' : info?.gpuMissing ? 'On your processor' : 'On this device'}</span> · private</> : ''}
           </span>
           <span className="spacer" />
           {context.usage && <ContextMeter usage={context.usage} busy={busy} canSummarize={context.canSummarize} onSummarize={context.onSummarize} onNewChat={context.onNewChat} />}

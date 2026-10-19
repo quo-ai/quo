@@ -53,8 +53,12 @@ export interface NativeStatus {
   backend?: string;
   device?: string | null;
   vision?: boolean;
-  /** The context window the engine was started with. */
+  /** The context window the engine was started with (smaller than asked for when the model did not fit with it). */
   contextSize?: number;
+  /** The window that was asked for, so a model that settled on less is not loaded again every time. */
+  requestedContextSize?: number;
+  /** The computer has a graphics card the engine could use. */
+  gpuAvailable?: boolean;
 }
 
 export interface ModelFileRequest {

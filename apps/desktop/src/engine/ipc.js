@@ -7,6 +7,7 @@ const path = require('node:path');
 const { app, BrowserWindow, dialog, ipcMain, shell } = require('electron');
 const { trusted } = require('../trust');
 const lock = require('../../engine.lock.json');
+const { startWithFallback } = require('./fallback');
 const { LlamaEngine, EngineError, engineTarget } = require('./llama');
 const { ModelStore, ModelError } = require('./models');
 
@@ -104,7 +105,10 @@ function setupEngine() {
       const projector = store.filePath(modelId, 'mmproj.gguf');
       if (await exists(projector)) mmprojPath = projector;
     }
-    return engine.start({ modelId, modelPath, mmprojPath, contextSize: clamp(contextSize, 2048, 131072, 8192) });
+    // Too big for this computer's memory with that window: try a smaller one (a model that fits is better than an error).
+    const asked = clamp(contextSize, 2048, 131072, 8192);
+    const status = await startWithFallback(size => engine.start({ modelId, modelPath, mmprojPath, contextSize: size }), asked);
+    return { ...status, requestedContextSize: asked };
   });
 
   handle('models:state', ({ modelId, files }) => store.state(modelId, files));

@@ -31,6 +31,8 @@ function binaryIn(directory, platform = process.platform) {
   return path.join(directory, platform === 'win32' ? 'llama-server.exe' : 'llama-server');
 }
 
+const { IdleWatch } = require('./idle');
+
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 function freePort() {
@@ -80,13 +82,38 @@ class EngineError extends Error {
   }
 }
 
+/**
+ * What llama-server is started with. Deliberately few: everything not named here is left to llama-server's own automatic
+ * choices (GPU layers fitted to free memory, flash attention where it helps), which is also what Ollama does and what Jan
+ * went back to after pinning the layer count made small GPUs run out of memory.
+ */
+function serverArgs({ modelPath, mmprojPath, port, key, contextSize }) {
+  const args = [
+    '-m', modelPath,
+    '--host', '127.0.0.1', '--port', String(port), '--api-key', key,
+    '-c', String(contextSize),
+    '--parallel', '1',
+    '--jinja', '--reasoning-format', 'auto',
+    '--no-webui', '--no-slots',
+    // The model is a local file; this stops llama-server from ever reaching for the network.
+    '--offline',
+    // Level 4 is what prints which device the model runs on (parsed below); it stays quiet per token.
+    '-lv', '4',
+    // Prompt checkpoints kept in RAM; the default is far too generous for a desktop app.
+    '--cache-ram', '1024',
+  ];
+  if (mmprojPath) args.push('--mmproj', mmprojPath);
+  return args;
+}
+
 class LlamaEngine extends EventEmitter {
   /**
-   * @param {{ directory: string, pidFile?: string }} options directory holds
+   * @param {{ directory: string, pidFile?: string, idleMs?: number }} options directory holds
    *   llama-server and its libraries; pidFile lets the next launch clean up
-   *   after a crash that orphaned the child.
+   *   after a crash that orphaned the child; idleMs is how long the model may sit
+   *   unused before it is unloaded (idle.js).
    */
-  constructor({ directory, pidFile }) {
+  constructor({ directory, pidFile, idleMs }) {
     super();
     this.directory = directory;
     this.binary = binaryIn(directory);
@@ -94,7 +121,9 @@ class LlamaEngine extends EventEmitter {
     this.child = null;
     this.current = null; // { modelId, port, key, backend, device }
     this.devicesCache = null;
+    this.deviceCount = null; // GPUs found, once known
     this.queue = Promise.resolve();
+    this.idle = new IdleWatch({ idleMs, onIdle: () => void this.stop() });
   }
 
   get available() {
@@ -119,14 +148,26 @@ class LlamaEngine extends EventEmitter {
       execFile(this.binary, ['--list-devices'], { cwd: this.directory, timeout: 30_000, windowsHide: true }, (error, stdout, stderr) => {
         resolve(error && !stdout ? [] : parseDevices(`${stdout}\n${stderr}`));
       });
+    }).then(list => {
+      this.deviceCount = list.length;
+      return list;
     });
     return this.devicesCache;
   }
 
   status() {
     return this.current
-      ? { running: true, modelId: this.current.modelId, contextSize: this.current.contextSize, backend: this.current.backend, device: this.current.device, vision: this.current.vision }
+      ? { running: true, modelId: this.current.modelId, contextSize: this.current.contextSize, backend: this.current.backend, device: this.current.device, vision: this.current.vision, gpuAvailable: Boolean(this.deviceCount) }
       : { running: false };
+  }
+
+  /** A request to the model started or ended: the model is not idle while one is going (idle.js). */
+  requestStarted() {
+    this.idle.begin();
+  }
+
+  requestEnded() {
+    this.idle.end();
   }
 
   /** The loopback address and key the protocol handler forwards to, or null. */
@@ -143,19 +184,7 @@ class LlamaEngine extends EventEmitter {
 
       const port = await freePort();
       const key = crypto.randomBytes(24).toString('hex');
-      const args = [
-        '-m', modelPath,
-        '--host', '127.0.0.1', '--port', String(port), '--api-key', key,
-        '-c', String(contextSize),
-        '--parallel', '1',
-        '--jinja', '--reasoning-format', 'auto',
-        '--no-webui', '--no-slots',
-        // Level 4 is what prints which device the model runs on (parsed below); it stays quiet per token.
-        '-lv', '4',
-        // Prompt checkpoints kept in RAM; the default is far too generous for a desktop app.
-        '--cache-ram', '1024',
-      ];
-      if (mmprojPath) args.push('--mmproj', mmprojPath);
+      const args = serverArgs({ modelPath, mmprojPath, port, key, contextSize });
 
       const lines = [];
       const info = { gpuLayers: 0, totalLayers: 0, backends: new Set(), device: null };
@@ -230,6 +259,7 @@ class LlamaEngine extends EventEmitter {
         device: gpu ? info.device : null,
         vision: Boolean(mmprojPath),
       };
+      this.idle.start();
       return this.status();
     });
   }
@@ -239,6 +269,7 @@ class LlamaEngine extends EventEmitter {
   }
 
   async _stop() {
+    this.idle.stop();
     const child = this.child;
     this.child = null;
     this.current = null;
@@ -256,6 +287,7 @@ class LlamaEngine extends EventEmitter {
 
   /** Kills synchronously; for app shutdown, where nothing can be awaited. */
   killNow() {
+    this.idle.stop();
     const child = this.child;
     this.child = null;
     this.current = null;
@@ -307,4 +339,5 @@ class LlamaEngine extends EventEmitter {
   }
 }
 
-module.exports = { LlamaEngine, EngineError, engineTarget, binaryIn, parseDevices, explainFailure };
+module.exports = {
+  serverArgs, LlamaEngine, EngineError, engineTarget, binaryIn, parseDevices, explainFailure };
