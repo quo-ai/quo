@@ -349,6 +349,8 @@ describe('a model file from an earlier edition', () => {
     assert.equal((await store.state('m', edition())).installed, false);
     fs.writeFileSync(path.join(store.directory, 'm', 'model.gguf'), Buffer.alloc(1500, 7));
     assert.equal((await store.state('m', edition([1500]))).installed, false, 'the signature is still checked');
+    fs.rmSync(path.join(store.directory, 'm', 'model.gguf'));
+    for (const bad of [[0], [-1], [Number.NaN], ['1500']]) assert.equal((await store.state('m', edition(bad))).installed, false, `a missing file is not whole at ${bad}`);
   });
 
   it('still counts the current size, and ignores a malformed list of old sizes', async () => {

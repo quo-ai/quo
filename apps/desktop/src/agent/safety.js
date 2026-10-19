@@ -147,11 +147,15 @@ function checkProjectRoot(rootReal, home = os.homedir()) {
   }
   // The system's own folders are off limits with everything under them; a few shared ones (/var, /usr, /private)
   // only as themselves, because people keep real projects below them (/var/www/site).
+  // On macOS /etc, /var and /tmp are links into /private, and a real path is what arrives here, so both are listed.
   const tree = process.platform === 'win32'
     ? [process.env.SystemRoot ?? 'C:\\Windows', process.env.ProgramFiles ?? 'C:\\Program Files', process.env['ProgramFiles(x86)'] ?? 'C:\\Program Files (x86)']
-    : ['/bin', '/boot', '/dev', '/etc', '/lib', '/lib64', '/proc', '/sbin', '/sys', '/System', '/Library'];
-  const exact = process.platform === 'win32' ? [] : ['/usr', '/var', '/root', '/run', '/private', '/Applications', '/opt', '/srv', '/home', '/Users', '/mnt', '/media', '/tmp'];
-  if (tree.some(directory => same(rootReal, directory) || inside(path.relative(directory, rootReal))) || exact.some(directory => same(rootReal, directory))) {
+    : ['/bin', '/boot', '/dev', '/etc', '/lib', '/lib64', '/proc', '/sbin', '/sys', '/System', '/Library', '/private/etc'];
+  const exact = process.platform === 'win32' ? [] : ['/usr', '/var', '/root', '/run', '/private', '/Applications', '/opt', '/srv', '/home', '/Users', '/mnt', '/media', '/tmp', '/private/var', '/private/tmp'];
+  // macOS file systems ignore case, so /SYSTEM/Library is /System/Library; path.relative does not know that.
+  const fold = p => (process.platform === 'darwin' ? p.toLowerCase() : p);
+  const under = directory => inside(path.relative(fold(directory), fold(rootReal)));
+  if (tree.some(directory => same(rootReal, directory) || under(directory)) || exact.some(directory => same(rootReal, directory))) {
     throw new AgentError('system_folder', 'That’s a system folder. Choose your own project folder.');
   }
   return rootReal;

@@ -90,7 +90,8 @@ class ModelStore {
       const part = done ? 0 : await sizeOf(`${target}.part`);
       // A file is whole at the size the catalog says now, or at a size it had before (an earlier edition of the same model
       // that someone already downloaded: it still works, so it is not downloaded again).
-      const whole = done === file.sizeBytes || (Array.isArray(file.altSizes) && file.altSizes.includes(done));
+      const earlier = Array.isArray(file.altSizes) ? file.altSizes.filter(size => Number.isSafeInteger(size) && size > 0) : [];
+      const whole = done > 0 && (done === file.sizeBytes || earlier.includes(done));
       total += file.sizeBytes;
       downloaded += whole ? file.sizeBytes : Math.min(done || part, file.sizeBytes);
       if (!whole) complete = false;

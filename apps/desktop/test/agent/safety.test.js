@@ -138,3 +138,34 @@ describe('finding the repository a folder is in', () => {
     assert.equal(findRepoRoot(path.join(repo, 'src'), { stop: home }), repo);
   });
 });
+
+describe('system folders by their real path on macOS', () => {
+  const asPlatform = (platform, fn) => {
+    const original = Object.getOwnPropertyDescriptor(process, 'platform');
+    Object.defineProperty(process, 'platform', { value: platform });
+    try {
+      fn();
+    } finally {
+      Object.defineProperty(process, 'platform', original);
+    }
+  };
+
+  it('refuses /private/etc and the bare /private/var and /private/tmp, where /etc, /var and /tmp really lead', () => {
+    const home = temp();
+    throwsCode(() => safety.checkProjectRoot('/private/etc', home), 'system_folder');
+    throwsCode(() => safety.checkProjectRoot('/private/etc/ssh', home), 'system_folder');
+    throwsCode(() => safety.checkProjectRoot('/private/var', home), 'system_folder');
+    throwsCode(() => safety.checkProjectRoot('/private/tmp', home), 'system_folder');
+    assert.equal(safety.checkProjectRoot('/private/var/folders/x/project', home), '/private/var/folders/x/project', 'temporary folders below stay usable');
+  });
+
+  it('ignores case on macOS, whose disks do', () => {
+    const home = temp();
+    asPlatform('darwin', () => {
+      throwsCode(() => safety.checkProjectRoot('/system/library/x', home), 'system_folder');
+      throwsCode(() => safety.checkProjectRoot('/PRIVATE/ETC/ssh', home), 'system_folder');
+      throwsCode(() => safety.checkProjectRoot('/LIBRARY/Keychains', home), 'system_folder');
+    });
+    asPlatform('linux', () => assert.equal(safety.checkProjectRoot('/LIBRARY/x', home), '/LIBRARY/x', 'Linux disks keep case'));
+  });
+});
