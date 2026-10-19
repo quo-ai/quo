@@ -26,35 +26,38 @@ describe('addresses in a message', () => {
 });
 
 describe('which chats can search the web, and how', () => {
-  it('in the desktop app: the models that call tools, with tools run by the app; Quo’s models only in Code mode', () => {
+  it('in the desktop app: the models that call tools, with tools run by the app; Quo’s models through the server, except in Code mode', () => {
     desktop({ web: {}, engine: {}, models: {} });
     expect(webHow(own('openai', true), false)).toBe('tools');
     expect(webHow(local, false)).toBe('tools');
-    expect(webHow(cloud(true), false)).toBeNull();
+    expect(webHow(cloud(true), false)).toBe('native');
     expect(webHow(cloud(true), true)).toBe('tools');
-    expect(webHow(cloud(false), true)).toBeNull();
+    expect(webHow(cloud(false), true)).toBe('native');
     expect(webHow(own('custom-abc123', false, true), false)).toBeNull();
     expect(webHow(own('anthropic', false), false)).toBe('native');
     expect(webHow(null, false)).toBeNull();
   });
 
-  it('in a browser: only the providers that search for themselves', () => {
+  it('in a browser: Quo’s models and the providers that search for themselves', () => {
     vi.stubGlobal('window', {});
     expect(webHow(own('openrouter', true), false)).toBe('native');
     expect(webHow(own('anthropic', true), false)).toBe('native');
     expect(webHow(own('openai', true), false)).toBeNull();
     expect(webHow(own('custom-abc123', true, true), false)).toBeNull();
     expect(webHow(local, false)).toBeNull();
-    expect(webHow(cloud(true), true)).toBeNull();
+    expect(webHow(cloud(false), false)).toBe('native');
+    expect(webHow(cloud(true), true)).toBe('native');
   });
 
-  it('starts on for cloud models and the user’s own keys, off for offline models, as set', () => {
-    expect(webDefault(own('openai', true))).toBe(true);
-    expect(webDefault(cloud(true))).toBe(true);
-    expect(webDefault(local)).toBe(false);
+  it('starts on for the user’s own keys and Code mode, off for offline models, as set; never for Quo’s chat models', () => {
+    expect(webDefault(own('openai', true), 'tools')).toBe(true);
+    expect(webDefault(cloud(true), 'tools')).toBe(true);
+    expect(webDefault(cloud(false), 'native')).toBe(false);
+    expect(webDefault(local, 'tools')).toBe(false);
     setWebSettings({ offline: true, online: false });
-    expect(webDefault(local)).toBe(true);
-    expect(webDefault(own('openai', true))).toBe(false);
+    expect(webDefault(local, 'tools')).toBe(true);
+    expect(webDefault(own('openai', true), 'tools')).toBe(false);
+    expect(webDefault(cloud(false), 'native')).toBe(false);
     expect(webSettings()).toEqual({ online: false, offline: true });
   });
 });

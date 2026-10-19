@@ -51,6 +51,8 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const busy = status !== 'idle';
   const cloud = choice?.kind === 'cloud';
+  /** Quo's own search for its chat models (the server runs it), as opposed to tools or the provider's own. */
+  const quoSearch = cloud && web.how === 'native';
   const remote = choice !== null && choice.kind !== 'local';
   const vision = choice?.kind === 'local' && Boolean(choice.model.vision);
   // Files stay on this device: attachments only go to offline models.
@@ -219,7 +221,7 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
               aria-pressed={web.on}
               disabled={!web.usable || busy}
               onClick={web.toggle}
-              title={!web.online ? 'You’re offline, so web search is off' : web.on ? 'Web search is on. The model may search the web and read pages; what it searches for leaves this computer.' : 'Let the model search the web and read pages'}
+              title={!web.online ? 'You’re offline, so web search is off' : quoSearch ? (web.on ? 'Web search is on: each message is searched for first. Your message goes to a search service.' : 'Search the web for each message. The free model gets a few a day.') : web.on ? 'Web search is on. The model may search the web and read pages; what it searches for leaves this computer.' : 'Let the model search the web and read pages'}
             >
               <Globe size={14} /> Web
             </button>
@@ -251,7 +253,7 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
         </div>
       </form>
       <div className="composer-hint">
-        {web.on ? `${code ? 'Code mode' : choice?.kind === 'local' ? 'On this computer' : `Straight to ${choice?.kind === 'own' ? choice.provider.name : 'the provider'}`} · web search on · what it searches for leaves this computer` : code ? `${codeMode.plan ? 'Plan mode · nothing is changed or run' : 'Code mode · edits and commands need your OK'} · ${choice?.kind === 'local' ? 'everything stays on this computer' : `files Quo reads are sent to ${choice?.kind === 'own' ? choice.provider.name : 'the model’s provider'}`}` : choice?.kind === 'own' ? `Straight to ${choice.provider.name} with your key · not through Quo` : cloud ? 'Cloud replies via OpenRouter · Quo doesn’t store your messages' : 'Runs privately on this device'} · Enter to send · Shift+Enter for a new line · / for commands
+        {web.on ? `${code ? 'Code mode' : choice?.kind === 'local' ? 'On this computer' : quoSearch ? 'Cloud replies via OpenRouter' : `Straight to ${choice?.kind === 'own' ? choice.provider.name : 'the provider'}`} · web search on · ${quoSearch ? 'your message goes to a search service' : 'what it searches for leaves this computer'}` : code ? `${codeMode.plan ? 'Plan mode · nothing is changed or run' : 'Code mode · edits and commands need your OK'} · ${choice?.kind === 'local' ? 'everything stays on this computer' : `files Quo reads are sent to ${choice?.kind === 'own' ? choice.provider.name : 'the model’s provider'}`}` : choice?.kind === 'own' ? `Straight to ${choice.provider.name} with your key · not through Quo` : cloud ? 'Cloud replies via OpenRouter · Quo doesn’t store your messages' : 'Runs privately on this device'} · Enter to send · Shift+Enter for a new line · / for commands
       </div>
     </div>
   );

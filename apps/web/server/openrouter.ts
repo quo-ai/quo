@@ -1,5 +1,6 @@
 import { config } from './env.js';
 import type { CloudModel } from './cloudModels.js';
+import { webPlugin } from './webSearch.js';
 
 /**
  * Streams a chat completion from OpenRouter (OpenAI-compatible SSE).
@@ -40,6 +41,8 @@ export interface StreamOptions {
   onDelta: (delta: StreamDelta) => void;
   /** Code mode: the tools the model may call (OpenAI function format). */
   tools?: unknown[];
+  /** Search the web once and add what it finds (see webSearch.ts). */
+  web?: boolean;
 }
 
 export class UpstreamError extends Error {
@@ -69,6 +72,7 @@ export async function streamChat(
       // An assistant turn that only called tools has no text; the API wants null, not "".
       messages: messages.map(m => (m.role === 'assistant' && m.tool_calls?.length && !m.content ? { ...m, content: null } : m)),
       ...(options.tools?.length ? { tools: options.tools, tool_choice: 'auto' } : {}),
+      ...(options.web ? { plugins: [webPlugin()] } : {}),
       stream: true,
       max_tokens: options.maxTokens,
       usage: { include: true },
@@ -146,7 +150,7 @@ export async function streamChat(
 async function standIn(model: CloudModel, messages: ChatMessage[], options: StreamOptions): Promise<StreamUsage> {
   if (options.tools?.length) return standInAgent(model, messages, options);
   const question = [...messages].reverse().find(m => m.role === 'user')?.content ?? '';
-  const reply = `This is a **sandbox test reply** from the stand-in for ${model.name}. Add an OpenRouter API key to get real answers.\n\nYou asked: “${question.slice(0, 120)}”`;
+  const reply = `This is a **sandbox test reply** from the stand-in for ${model.name}. Add an OpenRouter API key to get real answers.${options.web ? ' (Web search was on.)' : ''}\n\nYou asked: “${question.slice(0, 120)}”`;
   if (options.thinking) options.onDelta({ reasoning: 'Thinking about the question (sandbox stand-in).' });
   await streamWords(reply, options);
   const promptChars = messages.reduce((sum, m) => sum + m.content.length, 0);

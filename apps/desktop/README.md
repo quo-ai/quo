@@ -104,7 +104,7 @@ A key from OpenRouter, Anthropic, OpenAI, Google, xAI, DeepSeek, Mistral or Groq
 
 ## Web search
 
-`web_search` and `fetch_url` give a model the web: Code mode, and chats with the user's own key or an offline model (`src/web/`; the page side is `apps/web/src/web/`). The risk is a page or search result telling the model to send something out, so:
+`web_search` and `fetch_url` give a model the web: Code mode, and chats with the user's own key or an offline model (Quo's chat models are searched for by the server instead) (`src/web/`; the page side is `apps/web/src/web/`). The risk is a page or search result telling the model to send something out, so:
 
 - **Only found addresses can be opened** (`sessions.js`): ones the user wrote, a search returned, or a page the model read links to, exactly as written. It can't make up an address with the conversation or a file's contents written into it.
 - **Only public addresses** (`guard.js`): never this computer, a local network or a metadata address, however written, and checked on the address actually connected to and on every redirect. No cookies or logins, GET only, size and time limits, binary files refused, and what a page says is data, never instructions (the prompt says so).

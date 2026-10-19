@@ -149,7 +149,8 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
           agentRun.current = null;
         }
       } else if (choice.kind === 'cloud') {
-        await replyInCloud(choice, thinking, target);
+        const searched = await replyInCloud(choice, thinking, target, { web: web.on && web.how === 'native' });
+        if (searched === 'limit') toast('Today’s free web searches are used up, so Quo answered without searching.');
       } else if (choice.kind === 'own') {
         await replyOwn(choice, target, { web: web.on && web.how === 'native' });
       } else {

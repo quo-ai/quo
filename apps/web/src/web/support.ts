@@ -8,15 +8,16 @@ import { webSettings } from './settings';
  *    tools: the user's own keys, offline models, and Quo's models while Code mode is on).
  *  - 'native': the provider searches itself (OpenRouter's web plugin, Anthropic's search tool), which is what works in
  *    a browser, where other sites can't be reached from the page.
- * Quo's own free model isn't offered web search: every search costs money.
+ * Quo's own models use the second: the server asks OpenRouter to search once per message (a few a day on the free model,
+ * credits on the others), except in Code mode on the desktop, where its own tools are used.
  */
 
 export type WebHow = 'tools' | 'native';
 
 export function webHow(choice: ModelChoice | null, codeOn: boolean): WebHow | null {
   if (!choice) return null;
+  if (choice.kind === 'cloud') return codeOn && choice.model.agent && webBridge() ? 'tools' : 'native';
   if (webBridge()) {
-    if (choice.kind === 'cloud') return codeOn && choice.model.agent ? 'tools' : null;
     if (choice.kind === 'own') return choice.model.agent ? 'tools' : choice.provider.custom ? null : nativeProvider(choice.provider.id);
     return hasNativeEngine() ? 'tools' : null;
   }
@@ -25,8 +26,9 @@ export function webHow(choice: ModelChoice | null, codeOn: boolean): WebHow | nu
 
 const nativeProvider = (id: string): WebHow | null => (id === 'openrouter' || id === 'anthropic' ? 'native' : null);
 
-/** Whether a new chat on this model starts with web search on. */
-export function webDefault(choice: ModelChoice | null): boolean {
+/** Whether a new chat on this model starts with web search on. Quo's own search is never on by itself: every message would search, and a search costs. */
+export function webDefault(choice: ModelChoice | null, how: WebHow | null): boolean {
+  if (choice?.kind === 'cloud' && how === 'native') return false;
   const settings = webSettings();
   return choice?.kind === 'local' ? settings.offline : settings.online;
 }

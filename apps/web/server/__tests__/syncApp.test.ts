@@ -43,13 +43,18 @@ async function startSignIn(email: string): Promise<string> {
   return (await (await call(null, 'POST', 'auth/start', { email })).json()).devCode;
 }
 
+// "Sign out everywhere" ends sessions issued before it; a moment apart keeps "before" clear when the database answers within a millisecond.
+const tick = () => new Promise(resolve => setTimeout(resolve, 3));
+
 async function signInWithApp(email: string): Promise<Auth> {
   const verify = await call(null, 'POST', 'auth/verify', { email, code: await startSignIn(email), client: 'app' });
+  await tick();
   return { token: (await verify.json()).token };
 }
 
 async function signInWithCookie(email: string): Promise<Auth> {
   const verify = await call(null, 'POST', 'auth/verify', { email, code: await startSignIn(email) });
+  await tick();
   return { cookie: verify.headers.get('set-cookie')!.split(';')[0] };
 }
 

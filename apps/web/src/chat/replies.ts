@@ -7,7 +7,7 @@ import { askAgentModel } from '../agent/stream';
 import type { CodeSession } from '../agent/session';
 import type { AgentMessage } from '../agent/types';
 import { applyUsage } from '../cloud/account';
-import { generateCloud } from '../cloud/cloudEngine';
+import { generateCloud, type CloudResult } from '../cloud/cloudEngine';
 import { localEngine } from '../engine/localEngine';
 import { listMemories, memoryPrompt } from '../memory/store';
 import { generateOwn } from '../providers/generate';
@@ -110,15 +110,18 @@ export async function replyWithWeb(choice: OwnChoice | LocalChoice, sessionId: s
   update({ content: outcome.text, steps: outcome.steps, stopped: outcome.stopped || undefined, ...(choice.kind === 'own' ? { usage: outcome.usage ?? undefined } : {}) }, true);
 }
 
-export async function replyInCloud(choice: CloudChoice, thinking: boolean, { prior, update, setStatus }: ReplyTarget): Promise<void> {
+/** Whether the web search that was asked for ran (see CloudResult.web). */
+export async function replyInCloud(choice: CloudChoice, thinking: boolean, { prior, update, setStatus }: ReplyTarget, options: { web?: boolean } = {}): Promise<CloudResult['web']> {
   setStatus('generating');
   const history = buildContext(CLOUD_PROMPT, prior, CLOUD_CONTEXT.contextSize, CLOUD_CONTEXT.maxTokens);
   const result = await generateCloud(choice.model.id, history, {
     thinking,
+    web: options.web,
     onUpdate: ({ content, reasoning }) => update({ content, reasoning }, false),
   });
   applyUsage(result);
   update({ content: result.content, reasoning: result.reasoning || undefined, stopped: result.stopped || undefined, charged: result.charged }, true);
+  return result.web;
 }
 
 /** A model at a provider the user reached with their own key: straight from this computer to the provider, nothing through Quo. */

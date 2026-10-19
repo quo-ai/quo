@@ -47,6 +47,9 @@ export const config = {
   defaultCloudModel: env.DEFAULT_CLOUD_MODEL || 'openai/gpt-6-luna',
   freeDailyMessages: int(env.FREE_DAILY_MESSAGES, 20),
   freeDailyMessagesPerIp: int(env.FREE_DAILY_MESSAGES_PER_IP, 60),
+  /** Web searches that come with the free model (each costs us a search fee, so it has its own, smaller allowance). */
+  freeDailySearches: int(env.FREE_DAILY_SEARCHES, 3),
+  freeDailySearchesPerIp: int(env.FREE_DAILY_SEARCHES_PER_IP, 10),
 
   /** Lets the host's scheduler call /api/cron/*; unset means those routes don't exist. */
   cronSecret: env.CRON_SECRET || null,

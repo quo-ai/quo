@@ -8,6 +8,7 @@ import { HttpError, readJson } from './http.js';
 import { freeSubject, identify } from './identity.js';
 import { agentSystemPrompt, AGENT_TOOL_NAMES, parseNotes, READ_ONLY_TOOLS, toolDefinitions, type Platform } from '../shared/agentTools.js';
 import { streamChat, UpstreamError, type ChatMessage, type ToolCall } from './openrouter.js';
+import { SEARCH_FEE_USD, SEARCH_INPUT_TOKENS } from './webSearch.js';
 
 /**
  * POST /api/chat — cloud chat, streamed as server-sent events:
@@ -21,6 +22,10 @@ import { streamChat, UpstreamError, type ChatMessage, type ToolCall } from './op
  * with text and/or tool calls, and the call arrives as one more event before `done`:
  *   event: tool_calls  data: {"calls": [{"id", "name", "arguments"}], "finish": "tool_calls"}
  * Only paid agent-capable models can be used, and each step is billed like a message.
+ *
+ * With `web` set (an ordinary chat) the model's reply is grounded by one web search (webSearch.ts). On the free
+ * model that draws on a small daily search allowance of its own; once it is used the message is answered without
+ * a search and `done` says so (`web: "limit"`). On credits, the search is paid for with them.
  *
  * The free default model uses the daily allowance first; everything else
  * (and the default model beyond the allowance) draws credits: reserved
@@ -37,6 +42,7 @@ interface ChatRequest {
   model?: string;
   messages?: unknown;
   thinking?: boolean;
+  web?: boolean;
   agent?: { tools?: unknown; project?: unknown; platform?: unknown; instructions?: unknown };
 }
 
@@ -69,22 +75,33 @@ export async function handleChat(request: Request): Promise<Response> {
   const identity = await identify(db, request);
   const freeKeys = { subject: freeSubject(identity), ip: identity.ip };
   const freeLimits = { perSubject: config.freeDailyMessages, perIp: config.freeDailyMessagesPerIp };
-  const inputTokens = Math.ceil((messages.reduce((sum, m) => sum + charsOf(m), 0) + (agent?.toolChars ?? 0)) / 3.5) + 8 * messages.length;
+  const webKeys = { subject: `web:${freeKeys.subject}`, ip: `web:${freeKeys.ip}` };
+  const webLimits = { perSubject: config.freeDailySearches, perIp: config.freeDailySearchesPerIp };
+  const wantsWeb = !agent && body.web === true;
+  let inputTokens = Math.ceil((messages.reduce((sum, m) => sum + charsOf(m), 0) + (agent?.toolChars ?? 0)) / 3.5) + 8 * messages.length;
 
   // Decide how this request is paid for.
   let mode: 'free' | 'credits';
   let maxTokens = model.maxOutput;
   let holdId: string | null = null;
+  let searching = false;
+  let searchCost = 0;
   if (isFreeModel(model) && (await takeFreeMessage(db, freeKeys, freeLimits))) {
     mode = 'free';
+    searching = wantsWeb && (await takeFreeMessage(db, webKeys, webLimits));
   } else {
     if (!identity.userId) {
       throw isFreeModel(model)
         ? new HttpError(429, 'free_limit', 'You’ve used today’s free cloud messages.')
         : new HttpError(401, 'sign_in_required', 'Sign in to use this model.');
     }
-    const want = Math.ceil(estimateCost(model, inputTokens, model.maxOutput) * RESERVE_MARGIN);
-    const min = Math.ceil(estimateCost(model, inputTokens, MIN_OUTPUT_TOKENS) * RESERVE_MARGIN);
+    if (wantsWeb) {
+      searching = true;
+      searchCost = costToMillicredits(SEARCH_FEE_USD);
+      inputTokens += SEARCH_INPUT_TOKENS;
+    }
+    const want = Math.ceil((estimateCost(model, inputTokens, model.maxOutput) + searchCost) * RESERVE_MARGIN);
+    const min = Math.ceil((estimateCost(model, inputTokens, MIN_OUTPUT_TOKENS) + searchCost) * RESERVE_MARGIN);
     const hold = await reserveCredits(db, identity.userId, want, min);
     if (!hold) {
       throw isFreeModel(model)
@@ -95,7 +112,7 @@ export async function handleChat(request: Request): Promise<Response> {
     mode = 'credits';
     if (hold.amount < want) {
       // Not enough for a maximum-length reply: cap the reply to what's affordable.
-      const affordable = hold.amount / RESERVE_MARGIN - estimateCost(model, inputTokens, 0);
+      const affordable = hold.amount / RESERVE_MARGIN - estimateCost(model, inputTokens, 0) - searchCost;
       maxTokens = Math.max(MIN_OUTPUT_TOKENS, Math.floor(((affordable / MILLI) * CREDIT_USD * 1e6) / model.usdOut));
     }
   }
@@ -121,6 +138,7 @@ export async function handleChat(request: Request): Promise<Response> {
           maxTokens,
           thinking,
           tools: agent?.tools,
+          web: searching,
           signal: upstream.signal,
           onDelta: delta => {
             outputChars += (delta.content?.length ?? 0) + (delta.reasoning?.length ?? 0);
@@ -144,12 +162,13 @@ export async function handleChat(request: Request): Promise<Response> {
         if (mode === 'credits' && holdId && identity.userId) {
           const actual = usage?.costUsd != null
             ? costToMillicredits(usage.costUsd)
-            : estimateCost(model, usage?.promptTokens || inputTokens, usage?.completionTokens || Math.ceil(outputChars / 3.5));
+            : estimateCost(model, usage?.promptTokens || inputTokens, usage?.completionTokens || Math.ceil(outputChars / 3.5)) + searchCost;
           const result = await settleCredits(db, identity.userId, holdId, outputChars === 0 && failure ? 0 : actual, `chat:${model.id}`, randomUUID());
           charged = result.charged;
           balance = result.balance;
         } else if (mode === 'free' && failure && outputChars === 0) {
           await refundFreeMessage(db, freeKeys);
+          if (searching) await refundFreeMessage(db, webKeys);
         }
         if (mode === 'free' && identity.userId) balance = await getBalance(db, identity.userId);
       } catch (error) {
@@ -164,6 +183,8 @@ export async function handleChat(request: Request): Promise<Response> {
           charged: toCharge(charged),
           balance: balance === null ? null : toCredits(balance),
           freeRemaining: isFreeModel(model) ? await freeRemaining(db, freeKeys, freeLimits).catch(() => null) : null,
+          web: wantsWeb ? (searching ? 'searched' : 'limit') : null,
+          webRemaining: mode === 'free' && wantsWeb ? await freeRemaining(db, webKeys, webLimits).catch(() => null) : null,
         });
       }
       try {
