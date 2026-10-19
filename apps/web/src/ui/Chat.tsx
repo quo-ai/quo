@@ -1,6 +1,11 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { titleFrom } from '../chat/store';
 import { newId, type Attachment, type Conversation, type Message } from '../chat/types';
+import { AGENT_CONTEXT } from '../agent/local';
+import { rememberChatProject } from '../agent/session';
+import { modelMessages, summarize } from '../chat/summary';
+import { autoSummarize, MIN_MESSAGES, SUMMARIZE_AT } from '../context/settings';
+import { contextUsage, ratio, type ContextMode } from '../context/usage';
 import { replyInCloud, replyOffline, replyOwn, replyWithAgent, replyWithWeb, type ReplyTarget } from '../chat/replies';
 import { ApiError } from '../cloud/api';
 import type { Account } from '../cloud/account';
@@ -59,6 +64,10 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
   const codeMode = useCodeMode({ support: codeSupport(choice), conversationId: conversation?.id, modelId: choice?.model.id });
   const { code } = codeMode;
   const web = useWebMode(choice, Boolean(code), conversation?.id);
+  // How full the model's memory is: counted live while it works, estimated from the messages otherwise.
+  const [live, setLive] = useState<{ tokens: number; exact: boolean } | null>(null);
+  const mode: ContextMode = code ? 'code' : web.on && web.how === 'tools' ? 'web' : 'chat';
+  const usage = contextUsage(choice, mode, modelMessages(messages), live);
 
   useImperativeHandle(ref, () => ({ focus: () => composer.current?.focus() }), []);
 
@@ -109,7 +118,8 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
       onChange(current, persist);
     };
     onChange(current, true, created);
-    const target: ReplyTarget = { prior: current.messages.filter(m => m.id !== assistant.id), update, setStatus };
+    if (code) rememberChatProject(current.id, code.project.id);
+    const target: ReplyTarget = { prior: modelMessages(current.messages.filter(m => m.id !== assistant.id)), update, setStatus, onContext: (tokens, exact) => setLive({ tokens, exact }) };
 
     beginGeneration(); // Quo Sync waits until the reply is finished
     try {
@@ -157,6 +167,28 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
       onChange(current, true);
     } finally {
       endGeneration();
+      setLive(null);
+      setStatus('idle');
+    }
+  }
+
+  /** The model writes notes on the conversation, and it goes on from those. Returns the conversation with them added, or null if that failed. */
+  async function summarizeConversation(base: Conversation, automatic: boolean): Promise<Conversation | null> {
+    if (!choice) return null;
+    setStatus('generating');
+    beginGeneration();
+    try {
+      const notes = await summarize(choice, base.messages, { contextSize: code && choice.kind === 'local' ? AGENT_CONTEXT : undefined });
+      const note: Message = { id: newId(), role: 'assistant', content: notes, summary: true, modelName: choice.model.name };
+      const updated: Conversation = { ...base, updatedAt: Date.now(), messages: [...base.messages, note] };
+      onChange(updated, true);
+      toast(automatic ? 'The memory was nearly full, so Quo summarised the earlier messages.' : 'Summarised. The conversation goes on from the notes.');
+      return updated;
+    } catch (error) {
+      toast(error instanceof ApiError || error instanceof NativeError || error instanceof Error ? error.message : 'Couldn’t summarise the conversation.');
+      return null;
+    } finally {
+      endGeneration();
       setStatus('idle');
     }
   }
@@ -191,9 +223,13 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
     void run({ ...conversation, messages: list.slice(0, lastUserIndex) }, list[lastUserIndex].content, false, list[lastUserIndex].attachments);
   }
 
-  const send = (text: string, attachments: Attachment[] = []) => {
+  const send = async (text: string, attachments: Attachment[] = []) => {
     if (busy || !choice) return;
-    void run(conversation, text, !conversation, attachments);
+    let base = conversation;
+    // Nearly full: make room first, as the person chose (it can be turned off in the memory menu).
+    const full = usage ? ratio(usage) : null;
+    if (base && autoSummarize() && full !== null && full >= SUMMARIZE_AT && modelMessages(base.messages).length >= MIN_MESSAGES) base = (await summarizeConversation(base, true)) ?? base;
+    void run(base, text, !conversation, attachments);
   };
 
   return (
@@ -225,6 +261,7 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
         conversationId={conversation?.id}
         codeMode={codeMode}
         web={web}
+        context={{ usage, canSummarize: Boolean(conversation) && modelMessages(messages).length >= 2, onSummarize: () => conversation && void summarizeConversation(conversation, false), onNewChat: () => onAction('new-chat') }}
         thinking={thinking}
         onThinking={setThinking}
         freeLeft={cloud && choice.model.free && account ? account.free.remaining : null}

@@ -44,6 +44,8 @@ export interface Message {
   modelName?: string;
   /** Replies from a model reached with the user's own key: the provider's name. Kept on this device; not synced. */
   own?: string;
+  /** Not a reply: notes standing in for everything before it, written when the conversation's memory filled. Kept on this device; not synced. */
+  summary?: boolean;
   /** Tokens that reply used, when the provider said. Kept on this device; not synced. */
   usage?: { input: number; output: number };
 }

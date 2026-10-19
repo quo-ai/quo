@@ -6,6 +6,10 @@ import { localEngine } from '../../engine/localEngine';
 import type { ModelChoice } from '../../models';
 import { AttachmentChips } from '../Attachments';
 import { CodeChip } from '../CodeChip';
+import type { ContextUsage } from '../../context/usage';
+import { ContextMeter } from './ContextMeter';
+import { MentionList } from './MentionList';
+import { useMentions } from './useMentions';
 import { useVoiceInput } from '../useVoiceInput';
 import type { ChatStatus } from './types';
 import type { CodeMode } from './useCodeMode';
@@ -22,6 +26,8 @@ interface ComposerProps {
   conversationId: string | undefined;
   codeMode: CodeMode;
   web: WebMode;
+  /** How full the model's memory is, with what can be done about it. */
+  context: { usage: ContextUsage | null; canSummarize: boolean; onSummarize: () => void; onNewChat: () => void };
   thinking: boolean;
   onThinking: (on: boolean) => void;
   /** Free cloud messages left today, when the model is the free one. */
@@ -32,7 +38,7 @@ interface ComposerProps {
 
 /** The message box and the row of controls under it. */
 export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Composer(
-  { choice, status, conversationId, codeMode, web, thinking, onThinking, freeLeft, onSend, onStop },
+  { choice, status, conversationId, codeMode, web, context, thinking, onThinking, freeLeft, onSend, onStop },
   ref,
 ) {
   const [input, setInput] = useState('');
@@ -74,6 +80,8 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
     return () => document.removeEventListener('keydown', onKey);
   }, [voice]);
 
+  const mentions = useMentions({ code, input, setInput, inputRef });
+
   function send() {
     const trimmed = input.trim();
     if ((!trimmed && !files.attachments.length) || busy || !choice) return;
@@ -84,6 +92,7 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
   }
 
   function onKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (mentions.onKey(event)) return;
     if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
       event.preventDefault();
       send();
@@ -103,12 +112,14 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
           </div>
         </div>
       )}
+      <MentionList items={mentions.items} index={mentions.index} onHover={mentions.setIndex} onPick={mentions.choose} />
       <form className={`composer glass${files.dragging ? ' dragging' : ''}`} onSubmit={event => { event.preventDefault(); send(); }} {...files.dropTarget}>
         <AttachmentChips items={files.attachments} onRemove={files.remove} />
         <textarea
           ref={inputRef}
           value={input}
-          onChange={e => setInput(e.target.value)}
+          onChange={e => { setInput(e.target.value); mentions.track(e.target); }}
+          onSelect={e => mentions.track(e.currentTarget)}
           onKeyDown={onKeyDown}
           placeholder={choice ? `Message ${choice.model.name}` : 'Choose a model to start'}
           rows={1}
@@ -154,11 +165,11 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
               active={Boolean(code)}
               starting={codeMode.starting}
               disabled={busy}
-              project={code?.project.name ?? null}
+              session={code}
               plan={codeMode.plan}
-              notes={code?.info.instructions?.file ?? null}
               onToggle={() => void codeMode.toggle()}
-              onChangeFolder={() => void codeMode.changeFolder()}
+              onSwitchProject={project => void codeMode.switchProject(project)}
+              onChooseFolder={() => void codeMode.changeFolder()}
               onTogglePlan={() => void codeMode.togglePlan()}
             />
           )}
@@ -188,6 +199,7 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
                 : choice ? <><HardDrive size={13} /> <span title={info?.device ?? undefined}>{info?.gpu ? 'On your GPU' : 'On this device'}</span> · private</> : ''}
           </span>
           <span className="spacer" />
+          {context.usage && <ContextMeter usage={context.usage} busy={busy} canSummarize={context.canSummarize} onSummarize={context.onSummarize} onNewChat={context.onNewChat} />}
           {busy ? (
             <button key="stop" type="button" className="send stop" onClick={onStop} aria-label="Stop (Esc)" title="Stop (Esc)">
               <Square size={14} fill="currentColor" />

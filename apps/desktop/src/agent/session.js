@@ -62,6 +62,11 @@ class AgentSession {
     this.mode = mode;
   }
 
+  /** Files in the project matching part of a name, best first, for the @ picker. */
+  suggestFiles(query) {
+    return files.suggestFiles(this.ctx, query);
+  }
+
   /** Takes back the last `count` changes the agent made, where the files are still as it left them. */
   undo(count) {
     return this.log.undo(this.ctx, count);

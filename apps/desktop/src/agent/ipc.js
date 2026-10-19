@@ -7,6 +7,8 @@ const { app, BrowserWindow, dialog, ipcMain } = require('electron');
 const { trusted } = require('../trust');
 const { AgentError, checkProjectRoot } = require('./safety');
 const { RepoCache } = require('./repos');
+const { gitInfo } = require('./git');
+const { whereIs } = require('./location');
 const { readInstructions } = require('./instructions');
 const { AgentSession, PLAN_TOOLS, TOOL_NAMES } = require('./session');
 
@@ -56,8 +58,8 @@ class Projects {
   }
 }
 
-/** What the page may know about a project: an id and a name, never the path. */
-const publicProject = project => ({ id: project.id, name: project.name });
+/** What the page may know about a project: an id, a name and roughly where it is, never the path itself. */
+const publicProject = project => ({ id: project.id, name: project.name, hint: whereIs(project.path) });
 
 function setupAgent({ web = null } = {}) {
   const userData = app.getPath('userData');
@@ -140,8 +142,10 @@ function setupAgent({ web = null } = {}) {
     const session = new AgentSession({ root: real, name: project.name, repos, web, webSession: id, autoReadOnly: autoReadOnly !== false, compact: compact === true, approve: request => ask(window, request) });
     sessions.set(id, { session, owner: event.sender.id, project: project.id, controller: null });
     event.sender.once('destroyed', () => endSession(id));
-    return { sessionId: id, name: project.name, platform: process.platform, tools: TOOL_NAMES, planTools: PLAN_TOOLS, instructions: await readInstructions(real) };
+    return { sessionId: id, name: project.name, platform: process.platform, tools: TOOL_NAMES, planTools: PLAN_TOOLS, instructions: await readInstructions(real), hint: whereIs(real), git: await gitInfo(real) };
   });
+
+  handle('agent:files', ({ sessionId, query }, event) => owned(sessionId, event).session.suggestFiles(query));
 
   handle('agent:mode', ({ sessionId, mode }, event) => owned(sessionId, event).session.setMode(mode));
 

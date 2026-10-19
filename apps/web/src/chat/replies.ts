@@ -37,13 +37,15 @@ export interface ReplyTarget {
   prior: Message[];
   update: (patch: Partial<Message>, persist: boolean) => void;
   setStatus: (status: ReplyStatus) => void;
+  /** How full the model's memory is while it works (see agent/loop.ts). */
+  onContext?: (tokens: number, exact: boolean) => void;
 }
 
 /** How much of a conversation to send a model whose window is `model.contextTokens`: about 70% of it, in characters. */
 const contextChars = (model: OwnModel): number => Math.min(CONTEXT_CHARS, Math.round((model.contextTokens ?? 128_000) * 3 * 0.7));
 
 /** Code mode: the model works on the project with the desktop app's tools until it has nothing left to do. Returns how many files it changed. */
-export async function replyWithAgent(choice: CloudChoice | OwnChoice | LocalChoice, code: CodeSession, signal: AbortSignal, { prior, update, setStatus }: ReplyTarget): Promise<number> {
+export async function replyWithAgent(choice: CloudChoice | OwnChoice | LocalChoice, code: CodeSession, signal: AbortSignal, { prior, update, setStatus, onContext }: ReplyTarget): Promise<number> {
   await allowUserUrls(code.info.sessionId, [...prior].reverse().find(m => m.role === 'user')?.content ?? '');
   if (choice.kind === 'local') {
     // An offline model is loaded again with more room than a chat needs, which takes a moment.
@@ -65,6 +67,7 @@ export async function replyWithAgent(choice: CloudChoice | OwnChoice | LocalChoi
     ...(choice.kind === 'own' ? { contextChars: contextChars(choice.model) } : choice.kind === 'local' ? { contextChars: agentContextChars() } : {}),
     runTool: (name, args) => code.run(name, args),
     onUpdate: ({ steps, text }) => update({ content: text, steps }, false),
+    onContext,
   });
   if (choice.kind === 'cloud') applyUsage({ balance: outcome.balance, freeRemaining: null });
   update({
@@ -81,7 +84,7 @@ export async function replyWithAgent(choice: CloudChoice | OwnChoice | LocalChoi
  * app runs, for the user's own key or an offline model. It may open only addresses the user wrote, a search returned,
  * or a page it has read links to (web/sessions.js in the desktop app).
  */
-export async function replyWithWeb(choice: OwnChoice | LocalChoice, sessionId: string, signal: AbortSignal, { prior, update, setStatus }: ReplyTarget): Promise<void> {
+export async function replyWithWeb(choice: OwnChoice | LocalChoice, sessionId: string, signal: AbortSignal, { prior, update, setStatus, onContext }: ReplyTarget): Promise<void> {
   const compact = choice.kind === 'local';
   await allowUserUrls(sessionId, [...prior].reverse().find(m => m.role === 'user')?.content ?? '');
   if (choice.kind === 'local') {
@@ -102,6 +105,7 @@ export async function replyWithWeb(choice: OwnChoice | LocalChoice, sessionId: s
     contextChars: choice.kind === 'own' ? contextChars(choice.model) : agentContextChars(choice.model.contextSize),
     runTool: (name, args) => runWebTool(sessionId, name, args, compact),
     onUpdate: ({ steps, text }) => update({ content: text, steps }, false),
+    onContext,
   });
   update({ content: outcome.text, steps: outcome.steps, stopped: outcome.stopped || undefined, ...(choice.kind === 'own' ? { usage: outcome.usage ?? undefined } : {}) }, true);
 }

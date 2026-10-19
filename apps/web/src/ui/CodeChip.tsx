@@ -1,21 +1,25 @@
-import { Code2, FolderOpen, ListChecks, Loader2 } from 'lucide-react';
+import { Code2, ListChecks, Loader2 } from 'lucide-react';
+import type { CodeSession } from '../agent/session';
+import type { CodeProject } from '../native';
+import { ProjectMenu } from './chat/ProjectMenu';
 
 interface CodeChipProps {
   active: boolean;
   starting: boolean;
   disabled: boolean;
-  project: string | null;
+  /** The running Code session, which knows its folder, its branch and the project's notes. */
+  session: CodeSession | null;
   /** Plan mode: only reading. */
   plan: boolean;
-  /** The project's notes file Quo is following (AGENTS.md or CLAUDE.md), if any. */
-  notes: string | null;
   onToggle: () => void;
-  onChangeFolder: () => void;
   onTogglePlan: () => void;
+  onSwitchProject: (project: CodeProject) => void;
+  onChooseFolder: () => void;
 }
 
-/** Turns Code mode on or off, shows which folder it works in, and offers plan mode (read-only). */
-export function CodeChip({ active, starting, disabled, project, plan, notes, onToggle, onChangeFolder, onTogglePlan }: CodeChipProps) {
+/** Turns Code mode on or off, shows the folder it works in (and switches it), and offers plan mode (read-only). */
+export function CodeChip({ active, starting, disabled, session, plan, onToggle, onTogglePlan, onSwitchProject, onChooseFolder }: CodeChipProps) {
+  const notes = session?.info.instructions?.file;
   return (
     <>
       <button
@@ -28,15 +32,13 @@ export function CodeChip({ active, starting, disabled, project, plan, notes, onT
           ? `Code mode is on. It reads files in this folder, and changes them or runs commands only when you say yes each time.${notes ? ` It follows the notes in ${notes}.` : ''}`
           : 'Let this model work in one of your project folders: read code, make changes, run commands. You approve every change.'}
       >
-        {starting ? <Loader2 size={14} className="spin" /> : <Code2 size={14} />} Code{active && project ? ` · ${project}` : ''}
+        {starting ? <Loader2 size={14} className="spin" /> : <Code2 size={14} />} Code
       </button>
-      {active && (
+      {active && session && (
         <>
+          <ProjectMenu project={session.project} info={session.info} disabled={disabled} onPick={onSwitchProject} onBrowse={onChooseFolder} />
           <button type="button" className="chip press" aria-pressed={plan} disabled={disabled} onClick={onTogglePlan} title="Plan mode: Quo only reads, and suggests a plan. Nothing is changed or run.">
             <ListChecks size={14} /> Plan
-          </button>
-          <button type="button" className="icon-btn round press" disabled={disabled} onClick={onChangeFolder} aria-label="Use a different folder" title="Use a different folder">
-            <FolderOpen size={16} />
           </button>
         </>
       )}

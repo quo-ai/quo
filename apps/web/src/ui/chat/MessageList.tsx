@@ -1,5 +1,5 @@
 import { useState, type RefObject, type UIEvent } from 'react';
-import { Brain, Check, Copy, RotateCcw, Undo2, Volume2, VolumeX } from 'lucide-react';
+import { Brain, Check, Copy, Layers, RotateCcw, Undo2, Volume2, VolumeX } from 'lucide-react';
 import type { CodeSession } from '../../agent/session';
 import type { Message } from '../../chat/types';
 import type { ModelChoice } from '../../models';
@@ -62,7 +62,8 @@ function intro(choice: ModelChoice | null, code: CodeSession | null): string {
   if (code) {
     const notes = code.info.instructions ? ` It follows the notes in ${code.info.instructions.file}.` : '';
     const privacy = choice.kind === 'local' ? ` ${choice.model.name} runs here, so your code never leaves this computer.` : '';
-    return `Code mode is on in ${code.project.name}.${notes}${privacy} Ask about the code, or ask for a change. ${code.plan ? 'Plan mode is on: nothing is changed or run.' : 'Nothing is changed or run without your OK.'}`;
+    const git = code.info.git?.branch ? ` (on ${code.info.git.branch}${code.info.git.changed ? `, ${code.info.git.changed} changed file${code.info.git.changed === 1 ? '' : 's'}` : ''})` : '';
+    return `Code mode is on in ${code.project.name}${git}.${notes}${privacy} Ask about the code, or ask for a change. ${code.plan ? 'Plan mode is on: nothing is changed or run.' : 'Nothing is changed or run without your OK.'}`;
   }
   if (choice.kind === 'own') {
     const where = choice.provider.custom ? `on ${choice.provider.name}, a server of your own` : `on your ${choice.provider.name} account`;
@@ -114,6 +115,14 @@ export function MessageList({ conversationId, messages, busy, choice, code, fail
               <MessageAttachments items={message.attachments ?? []} />
               {message.content && <div className="bubble">{message.content}</div>}
             </article>
+          );
+        }
+        if (message.summary) {
+          return (
+            <details key={message.id} className="summary-note">
+              <summary><Layers size={14} /> Earlier messages summarised</summary>
+              <Markdown text={message.content} muted />
+            </details>
           );
         }
         const streaming = isLast && busy;

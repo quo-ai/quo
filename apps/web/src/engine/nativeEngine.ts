@@ -83,10 +83,10 @@ export class NativeEngine implements InferenceEngine {
   async generate(
     model: LocalModel,
     messages: ChatTurn[],
-    options: { thinking: boolean; onUpdate: (update: GenerationUpdate) => void },
+    options: { thinking: boolean; onUpdate: (update: GenerationUpdate) => void; contextSize?: number },
   ): Promise<GenerationResult> {
     await this.stop();
-    await this.load(model);
+    await this.load(model, { contextSize: options.contextSize });
 
     const controller = new AbortController();
     const thinking = options.thinking && model.supportsThinking;

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { describeDone, describeRunning } from '../describe';
-import { CONTEXT_CHARS, MAX_STEPS, parseArguments, runAgent, trimToolOutput, type AgentDeps } from '../loop';
+import { CONTEXT_CHARS, MAX_STEPS, estimateTokens, parseArguments, runAgent, trimToolOutput, type AgentDeps } from '../loop';
 import type { AgentMessage, StepReply, ToolResult } from '../types';
 
 const reply = (patch: Partial<StepReply> = {}): StepReply => ({ content: '', toolCalls: [], finish: 'stop', charged: 0.5, balance: 20, ...patch });
@@ -293,5 +293,26 @@ describe('a model that is going round in circles', () => {
     let n = 0;
     const flaky = script([...Array.from({ length: 10 }, (_, i) => read(`d${i}`, `g${i}.ts`)), reply({ content: 'Done.' })], { read_file: () => (++n % 3 === 0 ? { ok: true, text: 'fine' } : { ok: false, text: 'nope', display: { kind: 'error' } }) });
     expect((await runAgent(user, flaky.deps)).limited).toBe(false);
+  });
+});
+
+describe('telling how full the memory is', () => {
+  it('estimates before each question, and uses the provider’s own count after a reply', async () => {
+    const seen: [number, boolean][] = [];
+    const { deps } = script([
+      reply({ toolCalls: [call('c1', 'list_directory', {})], usage: { input: 1200, output: 30 } }),
+      reply({ content: 'Done.' }),
+    ]);
+    await runAgent(user, { ...deps, onContext: (tokens, exact) => seen.push([tokens, exact]) });
+    expect(seen[0][1]).toBe(false);
+    expect(seen[0][0]).toBeGreaterThan(0);
+    expect(seen[1]).toEqual([1230, true]);
+    expect(seen[2][1]).toBe(false);
+    expect(seen[2][0]).toBeGreaterThan(seen[0][0]);
+  });
+
+  it('counts messages and tool calls', () => {
+    expect(estimateTokens([{ role: 'user', content: 'x'.repeat(350) }])).toBe(106);
+    expect(estimateTokens([{ role: 'assistant', content: '', tool_calls: [{ id: '1', type: 'function', function: { name: 'read_file', arguments: '{"path":"a"}' } }] }])).toBeGreaterThan(6);
   });
 });

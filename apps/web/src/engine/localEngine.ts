@@ -66,7 +66,7 @@ export interface InferenceEngine {
   generate(
     model: LocalModel,
     messages: ChatTurn[],
-    options: { thinking: boolean; onUpdate: (update: GenerationUpdate) => void },
+    options: { thinking: boolean; onUpdate: (update: GenerationUpdate) => void; /** A larger window than the model's default (the native engine only). */ contextSize?: number },
   ): Promise<GenerationResult>;
 }
 

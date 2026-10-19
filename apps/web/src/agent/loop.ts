@@ -29,6 +29,8 @@ export interface AgentDeps {
   maxSteps?: number;
   /** How much conversation to send before old tool output is dropped, for a model with a smaller window. */
   contextChars?: number;
+  /** How many tokens the conversation is about to take (counted by the provider after a reply, when it says; otherwise estimated). */
+  onContext?: (tokens: number, exact: boolean) => void;
 }
 
 export interface AgentOutcome {
@@ -63,6 +65,12 @@ export function countChanges(steps: AgentStep[]): number {
   return steps.filter(step => (step.tool === 'edit_file' || step.tool === 'write_file') && step.status === 'done').length;
 }
 
+/** About how many tokens a conversation takes (3.5 characters to a token, the same rough count as the rest of the app). */
+export function estimateTokens(messages: AgentMessage[]): number {
+  const chars = messages.reduce((sum, m) => sum + m.content.length + (m.role === 'assistant' ? (m.tool_calls ?? []).reduce((total, call) => total + call.function.arguments.length + call.function.name.length, 0) : 0), 0);
+  return Math.ceil(chars / 3.5) + 6 * messages.length;
+}
+
 /** Tool arguments as an object, or null if the model sent something that isn't one. */
 export function parseArguments(raw: string): Record<string, unknown> | null {
   try {
@@ -90,13 +98,16 @@ export async function runAgent(history: AgentMessage[], deps: AgentDeps): Promis
 
     let reply: StepReply;
     try {
-      reply = await deps.askModel([...trimToolOutput(messages, deps.contextChars)], text => show(text));
+      const sent = trimToolOutput(messages, deps.contextChars);
+      deps.onContext?.(estimateTokens(sent), false);
+      reply = await deps.askModel([...sent], text => show(text));
     } catch (error) {
       if (deps.signal.aborted) return { ...outcome, stopped: true };
       throw error;
     }
     outcome.charged = Math.round((outcome.charged + reply.charged) * 100) / 100;
     outcome.balance = reply.balance ?? outcome.balance;
+    if (reply.usage?.input) deps.onContext?.(reply.usage.input + reply.usage.output, true);
     if (reply.usage) outcome.usage = { input: (outcome.usage?.input ?? 0) + reply.usage.input, output: (outcome.usage?.output ?? 0) + reply.usage.output };
     if (deps.signal.aborted) return { ...outcome, stopped: true, text: reply.content };
 

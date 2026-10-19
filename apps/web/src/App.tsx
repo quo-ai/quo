@@ -277,6 +277,7 @@ export function App() {
     if (action === 'use-offline' && installed[0]) choose(`local:${installed[0].id}`);
     else if (action === 'use-free' && freeCloud) choose(`cloud:${freeCloud.id}`);
     else if (action === 'keys') openModels('keys');
+    else if (action === 'new-chat') newChat();
     else setAccountOpen(true);
   }
 

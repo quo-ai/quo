@@ -120,6 +120,8 @@ export interface NativeBridge {
 export interface CodeProject {
   id: string;
   name: string;
+  /** Roughly where it is (the last few folders, home as ~), to tell two with the same name apart. Never the full path. */
+  hint?: string;
 }
 
 export interface CodeSessionInfo {
@@ -132,6 +134,9 @@ export interface CodeSessionInfo {
   planTools: string[];
   /** The project's own notes for coding agents (AGENTS.md or CLAUDE.md), if it has any. */
   instructions: { file: string; text: string } | null;
+  hint?: string;
+  /** The branch and how many files have changed, when the project is a git repository. */
+  git?: { branch: string | null; changed: number } | null;
 }
 
 export interface UndoResult {
@@ -147,6 +152,8 @@ export interface DesktopAgent {
   start: (projectId: string, options?: { autoReadOnly?: boolean; compact?: boolean }) => Promise<NativeResult<CodeSessionInfo>>;
   tool: (sessionId: string, name: string, args: Record<string, unknown>) => Promise<NativeResult<{ ok: boolean; text: string; display?: Record<string, unknown> }>>;
   mode: (sessionId: string, mode: 'work' | 'plan') => Promise<NativeResult<unknown>>;
+  /** Files in the project matching part of a name, best first. */
+  files: (sessionId: string, query: string) => Promise<NativeResult<string[]>>;
   undo: (sessionId: string, count: number) => Promise<NativeResult<UndoResult>>;
   abort: (sessionId: string) => Promise<NativeResult<unknown>>;
   end: (sessionId: string) => Promise<NativeResult<unknown>>;

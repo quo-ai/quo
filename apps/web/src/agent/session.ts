@@ -12,6 +12,29 @@ export const lastProjectId = (): string | null => {
     return null;
   }
 };
+const CHATS_KEY = 'quo.chatProjects';
+
+/** The project a chat used, so turning Code on in it again goes back to the same folder. */
+export function chatProject(conversationId: string | undefined): string | null {
+  if (!conversationId) return null;
+  try {
+    return (JSON.parse(localStorage.getItem(CHATS_KEY) ?? '{}') as Record<string, string>)[conversationId] ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export function rememberChatProject(conversationId: string, projectId: string): void {
+  try {
+    const all = JSON.parse(localStorage.getItem(CHATS_KEY) ?? '{}') as Record<string, string>;
+    delete all[conversationId];
+    const kept = Object.entries({ ...all, [conversationId]: projectId }).slice(-60);
+    localStorage.setItem(CHATS_KEY, JSON.stringify(Object.fromEntries(kept)));
+  } catch {
+    // Private mode: it just won't be remembered.
+  }
+}
+
 const remember = (id: string) => {
   try {
     localStorage.setItem(LAST_KEY, id);
@@ -38,6 +61,15 @@ export class CodeSession {
   async setPlan(plan: boolean): Promise<void> {
     unwrap(await this.bridge.mode(this.info.sessionId, plan ? 'plan' : 'work'));
     this.plan = plan;
+  }
+
+  /** Files in the project matching part of a name, for the @ picker. Empty if the desktop app can't say. */
+  async files(query: string): Promise<string[]> {
+    try {
+      return unwrap(await this.bridge.files(this.info.sessionId, query));
+    } catch {
+      return [];
+    }
   }
 
   /** Takes back the last `count` changes the agent made, wherever the files are still as it left them. */

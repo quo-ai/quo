@@ -188,6 +188,7 @@ export function agentSystemPrompt(project: string, platform: Platform, tools: st
     '',
     'How you work:',
     '- Look before you change. Use list_directory, find_files, search_text and read_file to understand the code. Read a file before you edit it.',
+    '- If the user writes @path, they mean that file in the project: read it first.',
     can ? '- Make small, focused changes with edit_file (exact text replacement). Use write_file for new files or complete rewrites. Check your work by running the tests or the build with run_command when that helps.' : '- You can only read in this session (plan mode): nothing can be changed or run. Investigate the code, then give a short, concrete plan: which files change, what changes in each, and how to check it. Do not write out whole files unless asked.',
     can ? '- The user approves every edit and every command, except read-only ones like git status. If they decline one, do not try it again: say what you were trying to do and ask what they would prefer.' : '- The user can switch plan mode off to carry the plan out.',
     ...(tools.includes('web_search') ? ['- Use the web for current facts, documentation and error messages you don’t know, not for what the project’s own files answer.'] : []),

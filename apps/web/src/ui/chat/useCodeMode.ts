@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { CodeSession, lastProjectId, pickProject, recentProjects } from '../../agent/session';
+import { chatProject, CodeSession, lastProjectId, pickProject, recentProjects } from '../../agent/session';
 import type { CodeSupport } from '../../agent/support';
 import { codeSettings } from '../../codeSettings';
 import { NativeError, type CodeProject } from '../../native';
@@ -59,8 +59,10 @@ export function useCodeMode({ support, conversationId, modelId }: { support: Cod
     setCaution(false);
     setStarting(true);
     try {
-      const last = (await recentProjects()).find(project => project.id === lastProjectId());
-      const project = last ?? (await pickProject());
+      // The folder this chat used, else the last one used anywhere, else ask.
+      const recent = await recentProjects();
+      const remembered = recent.find(project => project.id === chatProject(conversationId)) ?? recent.find(project => project.id === lastProjectId());
+      const project = remembered ?? (await pickProject());
       if (project) await start(project);
     } catch (error) {
       toast(error instanceof NativeError ? error.message : 'Couldn’t turn on Code mode.');
@@ -73,6 +75,15 @@ export function useCodeMode({ support, conversationId, modelId }: { support: Cod
     try {
       const project = await pickProject();
       if (project) await start(project);
+    } catch (error) {
+      toast(error instanceof NativeError ? error.message : 'Couldn’t use that folder.');
+    }
+  }
+
+  /** Switches to another folder from the recent ones. */
+  async function switchProject(project: CodeProject) {
+    try {
+      await start(project);
     } catch (error) {
       toast(error instanceof NativeError ? error.message : 'Couldn’t use that folder.');
     }
@@ -94,7 +105,7 @@ export function useCodeMode({ support, conversationId, modelId }: { support: Cod
     await toggle(true);
   }
 
-  return { code, available, gate, caution, dismissCaution: () => setCaution(false), confirmCaution, starting, plan, toggle: () => toggle(), changeFolder, togglePlan, end };
+  return { code, available, gate, caution, dismissCaution: () => setCaution(false), confirmCaution, starting, plan, toggle: () => toggle(), changeFolder, switchProject, togglePlan, end };
 }
 
 export type CodeMode = ReturnType<typeof useCodeMode>;

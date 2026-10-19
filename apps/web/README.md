@@ -101,6 +101,10 @@ A new provider in either format is one line in `registry.ts` and one in the desk
 
 `net/status.ts` knows whether the internet is reachable (the browser's flag, then a request to Quo's own address after a failure, retried while offline; nothing else is contacted). While offline the Web chip is off and an Offline pill shows. `net/fallback.ts` moves a chat to the offline model when a cloud model can't be used (no internet, free messages or credits gone, a refused key), as the user chose in Models & storage → Web: switch (with Undo, and the message runs again there), ask, or nothing. It only ever moves toward the offline model; when the connection returns it offers to go back.
 
+## Context
+
+`context/usage.ts` works out how full the model's memory is: the rules and tools that always go first plus the conversation, against the window Quo actually loads or sends (`contextWindow`), counted by the provider after a reply when it reports usage and estimated (3.5 characters a token) otherwise; the agent loop reports it live (`onContext`). `chat/summary.ts` is the other half: the model writes notes on the conversation (`summarize`), saved as a message with `summary: true` (kept on this device), and from then on `modelMessages` sends the notes in front of the first message after them instead of everything before. The messages stay on screen and in the saved chat. It runs by itself from 85% full unless turned off (`context/settings.ts`). `ui/chat/useMentions.ts` is the `@` file picker in Code mode: it only writes the path into the message, and the prompt says `@path` means "read that file first".
+
 ## Getting Quo onto the computer
 
 Quo Web is the fastest way in; the install prompt and desktop app keep people coming back.
