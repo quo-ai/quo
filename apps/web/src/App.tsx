@@ -31,6 +31,7 @@ import { MOD_KEY, Sidebar } from './ui/Sidebar';
 import { MemorySheet } from './ui/MemorySheet';
 import { PaywallSheet } from './ui/PaywallSheet';
 import { ProSheet } from './ui/ProSheet';
+import { SettingsSheet, type SettingsTarget } from './ui/SettingsSheet';
 import { SyncSheet } from './ui/SyncSheet';
 import { toast, Toasts } from './ui/Toasts';
 import { Welcome } from './ui/Welcome';
@@ -78,6 +79,9 @@ export function App() {
   const [getAppOpen, setGetAppOpen] = useState(false);
   const [syncOpen, setSyncOpen] = useState(false);
   const [memoriesOpen, setMemoriesOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  // A sheet opened from Settings goes back to Settings when it is closed.
+  const [fromSettings, setFromSettings] = useState(false);
   const [paywall, setPaywall] = useState<CloudModel | null>(null);
   const [proOpen, setProOpen] = useState(false);
   const [wantedKey, setWanted] = useState<string | null>(storedWanted);
@@ -86,7 +90,10 @@ export function App() {
   const chatRef = useRef<ChatHandle>(null);
   const previousStatus = useRef<Record<string, string>>({});
 
-  const closeModels = useCallback(() => setModelsOpen(false), []);
+  const closeModels = useCallback(() => {
+    setModelsOpen(false);
+    if (fromSettings) setSettingsOpen(true);
+  }, [fromSettings]);
   const openModels = useCallback((tab: ModelsTab = 'device') => {
     setModelsTab(tab);
     setModelsOpen(true);
@@ -95,10 +102,33 @@ export function App() {
     setAccountOpen(false);
     setWanted(null);
     storeWanted(null);
-  }, []);
+    if (fromSettings) setSettingsOpen(true);
+  }, [fromSettings]);
   const closeGetApp = useCallback(() => setGetAppOpen(false), []);
-  const closeSync = useCallback(() => setSyncOpen(false), []);
-  const closeMemories = useCallback(() => setMemoriesOpen(false), []);
+  const closeSync = useCallback(() => {
+    setSyncOpen(false);
+    if (fromSettings) setSettingsOpen(true);
+  }, [fromSettings]);
+  const closeMemories = useCallback(() => {
+    setMemoriesOpen(false);
+    if (fromSettings) setSettingsOpen(true);
+  }, [fromSettings]);
+  const closeSettings = useCallback(() => setSettingsOpen(false), []);
+  // Once nothing opened from Settings is left on screen (a model was chosen, say), there is nowhere to go back to.
+  const childOpen = modelsOpen || accountOpen || memoriesOpen || syncOpen || proOpen || getAppOpen;
+  useEffect(() => {
+    if (!childOpen && !settingsOpen && fromSettings) setFromSettings(false);
+  }, [childOpen, settingsOpen, fromSettings]);
+  const openFromSettings = useCallback((target: SettingsTarget) => {
+    setSettingsOpen(false);
+    setFromSettings(true);
+    if (target.kind === 'models') openModels(target.tab);
+    else if (target.kind === 'memories') setMemoriesOpen(true);
+    else if (target.kind === 'sync') setSyncOpen(true);
+    else if (target.kind === 'account') setAccountOpen(true);
+    else if (target.kind === 'pro') setProOpen(true);
+    else setGetAppOpen(true);
+  }, [openModels]);
 
   const select = useCallback((key: string) => {
     rememberChoice(key);
@@ -188,7 +218,7 @@ export function App() {
     setTimeout(() => chatRef.current?.focus(), 0);
   }, []);
 
-  // Keyboard: ⌘/Ctrl+Shift+O new chat, ⌘/Ctrl+B sidebar, "/" focuses the composer.
+  // Keyboard: ⌘/Ctrl+Shift+O new chat, ⌘/Ctrl+B sidebar, ⌘/Ctrl+, settings, "/" focuses the composer.
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       const mod = event.metaKey || event.ctrlKey;
@@ -196,6 +226,10 @@ export function App() {
       if (mod && event.shiftKey && event.key.toLowerCase() === 'o') {
         event.preventDefault();
         newChat();
+      } else if (mod && !event.shiftKey && event.key === ',') {
+        event.preventDefault();
+        setFromSettings(false);
+        setSettingsOpen(true);
       } else if (mod && !event.shiftKey && event.key.toLowerCase() === 'b') {
         event.preventDefault();
         setSidebar(!collapsed);
@@ -341,8 +375,7 @@ export function App() {
           onDelete={removeConversation}
           onCollapse={() => setSidebar(true)}
           onOpenModels={() => openModels()}
-          onOpenSync={() => setSyncOpen(true)}
-          onOpenMemories={() => setMemoriesOpen(true)}
+          onOpenSettings={() => { setFromSettings(false); setSettingsOpen(true); }}
           onOpenPro={() => setProOpen(true)}
           onGetApp={() => setGetAppOpen(true)}
         />
@@ -421,12 +454,13 @@ export function App() {
           onClose={closeModels}
         />
       )}
+      {settingsOpen && <SettingsSheet account={account} installedCount={installed.length} hasCloud={Boolean(catalog && catalog.models.length)} onOpen={openFromSettings} onClose={closeSettings} />}
       {accountOpen && <AccountSheet account={account} onClose={closeAccount} />}
       {memoriesOpen && <MemorySheet onClose={closeMemories} />}
-      {proOpen && <ProSheet catalog={catalog} account={account} onClose={() => setProOpen(false)} onContinue={continueFromPro} />}
+      {proOpen && <ProSheet catalog={catalog} account={account} onClose={() => { setProOpen(false); if (fromSettings) setSettingsOpen(true); }} onContinue={continueFromPro} />}
       {paywall && <PaywallSheet model={paywall} account={account} currentName={choice?.model.name ?? null} onClose={() => setPaywall(null)} onContinue={continueFromPaywall} />}
       {syncOpen && <SyncSheet account={account} onClose={closeSync} onOpenAccount={() => { setSyncOpen(false); setAccountOpen(true); }} />}
-      {getAppOpen && <GetAppSheet slowBrowser={slowBrowser} onClose={closeGetApp} />}
+      {getAppOpen && <GetAppSheet slowBrowser={slowBrowser} onClose={() => { closeGetApp(); if (fromSettings) setSettingsOpen(true); }} />}
       <Toasts />
     </>
   );

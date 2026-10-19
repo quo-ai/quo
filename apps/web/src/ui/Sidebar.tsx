@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Boxes, Brain, CloudAlert, Crown, MonitorDown, PanelLeftClose, Plus, RefreshCw, Search, Trash2, UserRound } from 'lucide-react';
+import { Boxes, Crown, MonitorDown, PanelLeftClose, Plus, Search, Settings, Trash2, UserRound } from 'lucide-react';
 import type { Account } from '../cloud/account';
 import { groupConversations } from '../chat/groups';
 import type { Conversation } from '../chat/types';
@@ -20,16 +20,16 @@ interface SidebarProps {
   onDelete: (conversation: Conversation) => void;
   onCollapse: () => void;
   onOpenModels: () => void;
-  onOpenSync: () => void;
-  onOpenMemories: () => void;
+  onOpenSettings: () => void;
   /** What Quo Pro is (shown to people who aren't signed in or on Pro). */
   onOpenPro: () => void;
   onGetApp: () => void;
 }
 
-export function Sidebar({ conversations, currentId, installedCount, account, onOpenAccount, onNewChat, onOpen, onDelete, onCollapse, onOpenModels, onOpenSync, onOpenMemories, onOpenPro, onGetApp }: SidebarProps) {
+export function Sidebar({ conversations, currentId, installedCount, account, onOpenAccount, onNewChat, onOpen, onDelete, onCollapse, onOpenModels, onOpenSettings, onOpenPro, onGetApp }: SidebarProps) {
   const sync = useSyncStatus();
   const [query, setQuery] = useState('');
+  const syncNeedsAttention = sync.phase === 'error' && sync.error?.code !== 'offline';
   const groups = useMemo(() => groupConversations(conversations, Date.now(), query), [conversations, query]);
 
   return (
@@ -78,12 +78,9 @@ export function Sidebar({ conversations, currentId, installedCount, account, onO
             <Boxes size={18} /> Offline models
             <span className="count">{installedCount ? `${installedCount} on device` : 'None yet'}</span>
           </button>
-          <button className="footer-btn press" onClick={onOpenMemories}>
-            <Brain size={18} /> Memories
-          </button>
-          <button className="footer-btn press" onClick={onOpenSync}>
-            {sync.phase === 'error' && sync.error?.code !== 'offline' ? <CloudAlert size={18} /> : <RefreshCw size={18} className={sync.phase === 'syncing' ? 'spin' : undefined} />} Quo Sync
-            <span className="count">{sync.phase === 'off' ? 'Off' : sync.phase === 'syncing' ? 'Syncing…' : sync.phase === 'error' ? (sync.error?.code === 'offline' ? 'Offline' : 'Needs attention') : 'On'}</span>
+          <button className="footer-btn press" onClick={onOpenSettings}>
+            <Settings size={18} /> Settings
+            {syncNeedsAttention && <span className="count attention" title="Quo Sync needs attention">Sync needs attention</span>}
           </button>
           <button className="footer-btn press" onClick={onGetApp}>
             <MonitorDown size={18} /> Get the app

@@ -32,6 +32,7 @@
 .footer-btn { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px; border: 0; border-radius: 12px; background: transparent; color: var(--text-2); font-size: 14px; text-align: left; }
 .footer-btn:hover { background: rgba(14, 14, 40, 0.045); color: var(--text); }
 .footer-btn .count { margin-left: auto; font-size: 12px; color: var(--text-3); }
+.footer-btn .count.attention { color: var(--error); font-weight: 600; }
 
 /* ---------- Main ---------- */
 .main { position: relative; min-width: 0; min-height: 0; height: 100%; display: flex; flex-direction: column; overflow: hidden; }

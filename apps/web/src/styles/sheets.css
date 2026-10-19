@@ -46,3 +46,13 @@
 .progress.lg { height: 10px; }
 .progress-fill { height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--indigo), var(--violet), var(--indigo)) 0 0 / 200% 100%; transition: width 0.6s var(--ease); animation: sheen 2.4s linear infinite; }
 @keyframes sheen { to { background-position: -200% 0; } }
+
+/* Settings: one row per place, each opening the sheet that does the job. */
+.settings-row { display: flex; align-items: center; gap: 12px; width: 100%; padding: 11px 10px; border: 0; border-radius: 14px; background: transparent; color: var(--text); text-align: left; font: inherit; }
+.settings-row:hover { background: rgba(14, 14, 40, 0.045); }
+.settings-icon { display: grid; place-items: center; flex: none; width: 34px; height: 34px; border-radius: 10px; background: rgba(14, 14, 40, 0.06); color: var(--indigo); }
+.settings-text { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.settings-label { font-size: 14.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.settings-detail { font-size: 12.5px; color: var(--text-3); }
+.settings-value { flex: none; font-size: 12.5px; color: var(--text-3); }
+.settings-chevron { flex: none; color: var(--text-3); }
