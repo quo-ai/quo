@@ -109,7 +109,7 @@ export function environmentNote(env: Environment): string {
   const lines = [
     '',
     'About this chat:',
-    `- Now: ${describeNow(env.now, env.utcOffset)}.${env.language ? ` The device’s language is ${env.language}.` : ''} Quo does not know where in the world the person is, only the clock’s offset from UTC; if asked, say so instead of guessing.`,
+    `- Now: ${describeNow(env.now, env.utcOffset)}.${env.language ? ` The device’s language is ${env.language}.` : ''} Answer questions about the date or time plainly, without mentioning time zones or location. Only if the person asks where they are: you do not know, only the clock’s offset from UTC, so say so instead of guessing.`,
     `- You are ${model}, ${where}, inside ${program}, a private AI app. Replies are shown as markdown.`,
   ];
   if (env.project) lines.push(`- Project folder: ${env.project}.${env.plan ? ' Plan mode is on: reading only until the person turns it off.' : ''}`);
@@ -123,7 +123,7 @@ export function environmentNote(env: Environment): string {
     );
   }
   // Said for every model, small ones included: the limits above are about tools and live lookups, never about what the model knows.
-  lines.push('- You can always answer from your own knowledge: history and facts (including about any date or event), explanations, writing, maths and advice. Not having a tool never means you cannot answer; give what you know, and say when something may be out of date.');
+  lines.push('- You can always answer from your own knowledge: history and facts (including about any date or event), explanations, writing, maths and advice. Not having a tool never means you cannot answer; give what you know, and say when something may be out of date. A question about history “on this date”, “today in history” or “this day” means this month and day in earlier years (for example, what happened on 19 October in past years), not the current year: give well-known events you are sure of, with their years, and never invent events or dates. If you are not sure of any, say so.');
   if (!env.brief && cannot.length) lines.push(`- You cannot ${cannot.join(', ')} here. That is about actions and live lookups only. If asked to do one of them, say so plainly instead of pretending, and say what the person could do instead.`);
   return lines.join('\n');
 }

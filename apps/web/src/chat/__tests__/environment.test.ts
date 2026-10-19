@@ -49,7 +49,7 @@ describe('the note about where a model is', () => {
     expect(note).toContain('Project folder: my-app.');
     expect(note).toMatch(/you can read files in the project folder; change files .*; run commands/);
     expect(note).toMatch(/You cannot browse the web, read attached documents/);
-    expect(note).toMatch(/does not know where in the world/);
+    expect(note).toMatch(/Only if the person asks where they are: you do not know/);
   });
 
   it('is honest about each route', () => {
@@ -146,5 +146,22 @@ describe('limits are about tools, never about knowledge', () => {
 
   it('puts the date in front of the model so a question about today has an answer', () => {
     expect(environmentNote(base)).toContain('Monday 19 October 2026');
+  });
+});
+
+describe('questions about the date and about history', () => {
+  it('answers a plain date question plainly, without bringing up time zones or location unasked', () => {
+    const note = environmentNote(base);
+    expect(note).toMatch(/Answer questions about the date or time plainly, without mentioning time zones or location/);
+    expect(note).toMatch(/Only if the person asks where they are/);
+  });
+
+  it('tells every model that "history on this date" means this month and day in earlier years, and not to invent events', () => {
+    for (const env of [base, { ...base, brief: true }, { ...base, can: [], project: undefined }]) {
+      const note = environmentNote(env);
+      expect(note).toMatch(/“on this date”, “today in history” or “this day” means this month and day in earlier years/);
+      expect(note).toMatch(/not the current year/);
+      expect(note).toMatch(/never invent events or dates/);
+    }
   });
 });
