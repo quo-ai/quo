@@ -278,6 +278,7 @@ export function App() {
     else if (action === 'use-free' && freeCloud) choose(`cloud:${freeCloud.id}`);
     else if (action === 'keys') openModels('keys');
     else if (action === 'new-chat') newChat();
+    else if (action === 'models') openModels();
     else setAccountOpen(true);
   }
 

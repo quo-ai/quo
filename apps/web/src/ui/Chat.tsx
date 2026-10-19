@@ -1,4 +1,5 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import { ArrowDown } from 'lucide-react';
 import { titleFrom } from '../chat/store';
 import { newId, type Attachment, type Conversation, type Message } from '../chat/types';
 import { AGENT_CONTEXT } from '../agent/local';
@@ -20,6 +21,7 @@ import { beginGeneration, endGeneration } from '../sync';
 import { Composer, type ComposerHandle } from './chat/Composer';
 import { MessageList } from './chat/MessageList';
 import type { ChatAction, ChatStatus, Failure, Undoable } from './chat/types';
+import { buildCommands } from './chat/useCommands';
 import { useCodeMode } from './chat/useCodeMode';
 import { useWebMode } from './chat/useWebMode';
 import { toast } from './Toasts';
@@ -58,6 +60,7 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
   const scroller = useRef<HTMLDivElement>(null);
   const composer = useRef<ComposerHandle>(null);
   const stickToBottom = useRef(true);
+  const [atBottom, setAtBottom] = useState(true);
   const messages = conversation?.messages ?? [];
   const busy = status !== 'idle';
   const cloud = choice?.kind === 'cloud';
@@ -223,6 +226,49 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
     void run({ ...conversation, messages: list.slice(0, lastUserIndex) }, list[lastUserIndex].content, false, list[lastUserIndex].attachments);
   }
 
+  async function copyLast() {
+    const reply = [...messages].reverse().find(m => m.role === 'assistant' && !m.summary && m.content);
+    if (!reply) return;
+    try {
+      await navigator.clipboard.writeText(reply.content);
+      toast('Copied the last reply');
+    } catch {
+      toast('Couldn’t copy. Select the text and copy it instead.');
+    }
+  }
+
+  const commands = buildCommands(
+    {
+      busy,
+      hasUserMessage: messages.some(m => m.role === 'user'),
+      hasReply: messages.some(m => m.role === 'assistant' && !m.summary && m.content),
+      codeAvailable: codeMode.available,
+      codeOn: Boolean(code),
+      plan: codeMode.plan,
+      webAvailable: web.usable,
+      webOn: web.on,
+      canThink: Boolean(choice && choice.kind !== 'own' && choice.model.supportsThinking && !code && !(web.on && web.how === 'tools')),
+      thinking,
+      canSummarize: Boolean(conversation) && modelMessages(messages).length >= 2,
+      canUndo: Boolean(undo) && !busy,
+    },
+    {
+      newChat: () => onAction('new-chat'),
+      stop,
+      retry,
+      copy: () => void copyLast(),
+      summarize: () => conversation && void summarizeConversation(conversation, false),
+      toggleCode: () => void codeMode.toggle(),
+      togglePlan: () => void codeMode.togglePlan(),
+      toggleWeb: web.toggle,
+      toggleThinking: () => setThinking(on => !on),
+      undo: () => void takeBack(),
+      chooseFolder: () => void codeMode.changeFolder(),
+      models: () => onAction('models'),
+      keys: () => onAction('keys'),
+    },
+  );
+
   const send = async (text: string, attachments: Attachment[] = []) => {
     if (busy || !choice) return;
     let base = conversation;
@@ -248,12 +294,18 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
         onScroll={event => {
           const el = event.currentTarget;
           stickToBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+          setAtBottom(stickToBottom.current);
         }}
         onSuggest={send}
         onRetry={retry}
         onUndo={() => void takeBack()}
         onAction={onAction}
       />
+      {!atBottom && messages.length > 0 && (
+        <button type="button" className="jump glass thick press" onClick={() => { stickToBottom.current = true; scroller.current?.scrollTo({ top: scroller.current.scrollHeight, behavior: 'smooth' }); }}>
+          <ArrowDown size={15} /> Latest
+        </button>
+      )}
       <Composer
         ref={composer}
         choice={choice}
@@ -261,6 +313,8 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
         conversationId={conversation?.id}
         codeMode={codeMode}
         web={web}
+        commands={commands}
+        lastUserText={[...messages].reverse().find(m => m.role === 'user')?.content ?? ''}
         context={{ usage, canSummarize: Boolean(conversation) && modelMessages(messages).length >= 2, onSummarize: () => conversation && void summarizeConversation(conversation, false), onNewChat: () => onAction('new-chat') }}
         thinking={thinking}
         onThinking={setThinking}

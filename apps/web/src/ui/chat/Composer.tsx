@@ -7,6 +7,8 @@ import type { ModelChoice } from '../../models';
 import { AttachmentChips } from '../Attachments';
 import { CodeChip } from '../CodeChip';
 import type { ContextUsage } from '../../context/usage';
+import { matchCommands, type Command } from '../../chat/commands';
+import { CommandList } from './CommandList';
 import { ContextMeter } from './ContextMeter';
 import { MentionList } from './MentionList';
 import { useMentions } from './useMentions';
@@ -27,6 +29,9 @@ interface ComposerProps {
   codeMode: CodeMode;
   web: WebMode;
   /** How full the model's memory is, with what can be done about it. */
+  /** The slash commands that apply now, and the last thing the user wrote (an arrow up in an empty box brings it back). */
+  commands: Command[];
+  lastUserText: string;
   context: { usage: ContextUsage | null; canSummarize: boolean; onSummarize: () => void; onNewChat: () => void };
   thinking: boolean;
   onThinking: (on: boolean) => void;
@@ -38,7 +43,7 @@ interface ComposerProps {
 
 /** The message box and the row of controls under it. */
 export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Composer(
-  { choice, status, conversationId, codeMode, web, context, thinking, onThinking, freeLeft, onSend, onStop },
+  { choice, status, conversationId, codeMode, web, context, commands, lastUserText, thinking, onThinking, freeLeft, onSend, onStop },
   ref,
 ) {
   const [input, setInput] = useState('');
@@ -81,6 +86,19 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
   }, [voice]);
 
   const mentions = useMentions({ code, input, setInput, inputRef });
+  const slash = matchCommands(input, commands);
+  const [slashIndex, setSlashIndex] = useState(0);
+  const [slashClosed, setSlashClosed] = useState(false);
+  useEffect(() => {
+    setSlashIndex(0);
+    setSlashClosed(false);
+  }, [input]);
+  const slashOpen = slash.length > 0 && !slashClosed;
+
+  function runCommand(command: Command) {
+    setInput('');
+    command.run();
+  }
 
   function send() {
     const trimmed = input.trim();
@@ -93,6 +111,26 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
 
   function onKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
     if (mentions.onKey(event)) return;
+    if (slashOpen) {
+      if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+        event.preventDefault();
+        return setSlashIndex(i => (i + (event.key === 'ArrowDown' ? 1 : slash.length - 1)) % slash.length);
+      }
+      if ((event.key === 'Enter' && !event.shiftKey) || event.key === 'Tab') {
+        event.preventDefault();
+        return runCommand(slash[slashIndex]);
+      }
+      if (event.key === 'Escape') return setSlashClosed(true);
+    }
+    // Shift+Tab switches plan mode in Code mode; an arrow up in an empty box brings back the last message.
+    if (event.key === 'Tab' && event.shiftKey && code) {
+      event.preventDefault();
+      return void codeMode.togglePlan();
+    }
+    if (event.key === 'ArrowUp' && !input && lastUserText && !event.shiftKey) {
+      event.preventDefault();
+      return setInput(lastUserText);
+    }
     if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
       event.preventDefault();
       send();
@@ -112,8 +150,9 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
           </div>
         </div>
       )}
+      {slashOpen && <CommandList items={slash} index={slashIndex} onHover={setSlashIndex} onRun={runCommand} />}
       <MentionList items={mentions.items} index={mentions.index} onHover={mentions.setIndex} onPick={mentions.choose} />
-      <form className={`composer glass${files.dragging ? ' dragging' : ''}`} onSubmit={event => { event.preventDefault(); send(); }} {...files.dropTarget}>
+      <form className={`composer glass${files.dragging ? ' dragging' : ''}${busy ? ' busy' : ''}`} onSubmit={event => { event.preventDefault(); send(); }} {...files.dropTarget}>
         <AttachmentChips items={files.attachments} onRemove={files.remove} />
         <textarea
           ref={inputRef}
@@ -212,7 +251,7 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
         </div>
       </form>
       <div className="composer-hint">
-        {web.on ? `${code ? 'Code mode' : choice?.kind === 'local' ? 'On this computer' : `Straight to ${choice?.kind === 'own' ? choice.provider.name : 'the provider'}`} · web search on · what it searches for leaves this computer` : code ? `${codeMode.plan ? 'Plan mode · nothing is changed or run' : 'Code mode · edits and commands need your OK'} · ${choice?.kind === 'local' ? 'everything stays on this computer' : `files Quo reads are sent to ${choice?.kind === 'own' ? choice.provider.name : 'the model’s provider'}`}` : choice?.kind === 'own' ? `Straight to ${choice.provider.name} with your key · not through Quo` : cloud ? 'Cloud replies via OpenRouter · Quo doesn’t store your messages' : 'Runs privately on this device'} · Enter to send · Shift+Enter for a new line
+        {web.on ? `${code ? 'Code mode' : choice?.kind === 'local' ? 'On this computer' : `Straight to ${choice?.kind === 'own' ? choice.provider.name : 'the provider'}`} · web search on · what it searches for leaves this computer` : code ? `${codeMode.plan ? 'Plan mode · nothing is changed or run' : 'Code mode · edits and commands need your OK'} · ${choice?.kind === 'local' ? 'everything stays on this computer' : `files Quo reads are sent to ${choice?.kind === 'own' ? choice.provider.name : 'the model’s provider'}`}` : choice?.kind === 'own' ? `Straight to ${choice.provider.name} with your key · not through Quo` : cloud ? 'Cloud replies via OpenRouter · Quo doesn’t store your messages' : 'Runs privately on this device'} · Enter to send · Shift+Enter for a new line · / for commands
       </div>
     </div>
   );

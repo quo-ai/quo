@@ -105,6 +105,10 @@ A new provider in either format is one line in `registry.ts` and one in the desk
 
 `context/usage.ts` works out how full the model's memory is: the rules and tools that always go first plus the conversation, against the window Quo actually loads or sends (`contextWindow`), counted by the provider after a reply when it reports usage and estimated (3.5 characters a token) otherwise; the agent loop reports it live (`onContext`). `chat/summary.ts` is the other half: the model writes notes on the conversation (`summarize`), saved as a message with `summary: true` (kept on this device), and from then on `modelMessages` sends the notes in front of the first message after them instead of everything before. The messages stay on screen and in the saved chat. It runs by itself from 85% full unless turned off (`context/settings.ts`). `ui/chat/useMentions.ts` is the `@` file picker in Code mode: it only writes the path into the message, and the prompt says `@path` means "read that file first".
 
+## Look and commands
+
+`styles/crt.css` is the look of motion: an ordered (Bayer 4×4) dither in 2px cells, drawn once as small SVG masks (custom properties), so new things *dissolve* in (`mask-image` stepping from sparse to solid), "working" is a dither bar sweeping (`dither-run`, in `steps()`), and terminal output gets scanlines. Keep new motion stepped and let it stop for reduced motion (the global rule in `responsive.css`). `chat/commands.ts` and `ui/chat/useCommands.ts` are the slash commands: the list is built from the chat's state, so only commands that apply are offered. `ui/AgentSteps.tsx` folds long runs of steps; `ui/Markdown.tsx` gives code blocks their header and copy button.
+
 ## Getting Quo onto the computer
 
 Quo Web is the fastest way in; the install prompt and desktop app keep people coming back.

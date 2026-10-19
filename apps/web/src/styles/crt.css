@@ -1,0 +1,96 @@
+/*
+ * Dither and CRT: the look of things that move. An ordered (Bayer 4x4) dither in 2px cells, drawn once as tiny masks, so
+ * what appears dissolves in through the dither, "working" is a dither bar sweeping, and terminal output has scanlines.
+ * Everything here stops for people who ask for reduced motion (responsive.css).
+ */
+:root {
+  --dither-sweep: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='64'%20height='8'%20shape-rendering='crispEdges'%3E%3Cpath%20d='M8%200h2v2h-2zM12%200h2v2h-2zM16%200h30v2h-30zM48%200h2v2h-2zM52%200h2v2h-2zM56%200h2v2h-2zM18%202h2v2h-2zM22%202h22v2h-22zM46%202h2v2h-2zM50%202h2v2h-2zM12%204h2v2h-2zM16%204h2v2h-2zM20%204h30v2h-30zM52%204h2v2h-2zM14%206h2v2h-2zM18%206h2v2h-2zM22%206h2v2h-2zM26%206h14v2h-14zM42%206h2v2h-2zM46%206h2v2h-2z'/%3E%3C/svg%3E");
+  --dither-1: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='8'%20height='8'%20shape-rendering='crispEdges'%3E%3Cpath%20d='M0%200h2v2h-2zM4%204h2v2h-2z'/%3E%3C/svg%3E");
+  --dither-2: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='8'%20height='8'%20shape-rendering='crispEdges'%3E%3Cpath%20d='M0%200h2v2h-2zM4%200h2v2h-2zM2%202h2v2h-2zM0%204h2v2h-2zM4%204h2v2h-2z'/%3E%3C/svg%3E");
+  --dither-3: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='8'%20height='8'%20shape-rendering='crispEdges'%3E%3Cpath%20d='M0%200h2v2h-2zM4%200h2v2h-2zM2%202h2v2h-2zM6%202h2v2h-2zM0%204h2v2h-2zM4%204h2v2h-2zM2%206h2v2h-2zM6%206h2v2h-2z'/%3E%3C/svg%3E");
+  --dither-4: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='8'%20height='8'%20shape-rendering='crispEdges'%3E%3Cpath%20d='M0%200h8v2h-8zM2%202h2v2h-2zM6%202h2v2h-2zM0%204h2v2h-2zM4%204h4v2h-4zM2%206h2v2h-2zM6%206h2v2h-2z'/%3E%3C/svg%3E");
+  --dither-5: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='8'%20height='8'%20shape-rendering='crispEdges'%3E%3Cpath%20d='M0%200h8v2h-8zM0%202h4v2h-4zM6%202h2v2h-2zM0%204h8v2h-8zM2%206h6v2h-6z'/%3E%3C/svg%3E");
+  --dither-grain: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='8'%20height='8'%20shape-rendering='crispEdges'%3E%3Cpath%20d='M0%200h2v2h-2z'/%3E%3C/svg%3E");
+}
+
+/* Things that appear dissolve in: the dither fills from sparse to solid in five steps. */
+@keyframes dissolve {
+  0%   { -webkit-mask-image: var(--dither-1); mask-image: var(--dither-1); }
+  20%  { -webkit-mask-image: var(--dither-2); mask-image: var(--dither-2); }
+  40%  { -webkit-mask-image: var(--dither-3); mask-image: var(--dither-3); }
+  60%  { -webkit-mask-image: var(--dither-4); mask-image: var(--dither-4); }
+  80%  { -webkit-mask-image: var(--dither-5); mask-image: var(--dither-5); }
+  100% { -webkit-mask-image: none; mask-image: none; }
+}
+.step, .step-pre, .summary-note, .undo-chip, .ctx-pop, .menu-up, .mention-list, .cmd-list, .jump, .code {
+  -webkit-mask-size: 8px 8px; mask-size: 8px 8px;
+  animation: dissolve 0.42s step-end both;
+}
+
+/* Working: a dither bar sweeping along, one tile in sixteen steps. */
+@keyframes dither-run { to { -webkit-mask-position: 64px 0; mask-position: 64px 0; } }
+@keyframes blink { 50% { opacity: 0; } }
+.typing { display: inline-flex; align-items: center; gap: 7px; padding: 12px 2px; color: var(--indigo); }
+.typing .bar { display: block; width: 64px; height: 8px; background: currentColor; -webkit-mask: var(--dither-sweep) 0 0 / 64px 8px repeat-x; mask: var(--dither-sweep) 0 0 / 64px 8px repeat-x; animation: dither-run 1.1s steps(16) infinite; }
+.typing .block { width: 7px; height: 15px; background: currentColor; box-shadow: 0 0 9px rgba(59, 46, 255, 0.55); animation: blink 1s steps(1) infinite; }
+
+/* While a reply is streaming, a block cursor sits at the end of the text. */
+.msg.streaming .md > p:last-child::after,
+.msg.streaming .md > ul:last-child > li:last-child::after,
+.msg.streaming .md > ol:last-child > li:last-child::after {
+  content: ''; display: inline-block; width: 0.5em; height: 1.05em; margin-left: 3px; vertical-align: text-bottom;
+  background: var(--indigo); box-shadow: 0 0 9px rgba(59, 46, 255, 0.5); animation: blink 1s steps(1) infinite;
+}
+
+/* The composer while something is being written or run. */
+.composer.busy::after, .step.running .step-row::after, .step.running summary::after, .reasoning.thinking summary::after, .progress-fill::after {
+  content: ''; position: absolute; background: var(--indigo); opacity: 0.45; pointer-events: none;
+  -webkit-mask: var(--dither-sweep) 0 0 / 64px 8px repeat-x; mask: var(--dither-sweep) 0 0 / 64px 8px repeat-x;
+  animation: dither-run 1s steps(16) infinite;
+}
+.composer.busy::after { left: 30px; right: 30px; bottom: 0; height: 4px; }
+.step.running .step-row, .step.running summary { position: relative; }
+.step.running .step-row::after, .step.running summary::after { left: 30px; right: 8px; bottom: 0; height: 4px; }
+.reasoning.thinking summary::after { position: static; display: inline-block; width: 40px; height: 8px; margin-left: 4px; }
+.progress-fill { position: relative; }
+.progress-fill::after { inset: 0; background: #fff; opacity: 0.55; animation-duration: 1.4s; }
+
+/* A step that finishes flashes once, like a phosphor. */
+@keyframes settle { 0% { color: var(--indigo); filter: drop-shadow(0 0 5px rgba(59, 46, 255, 0.9)); } 100% { filter: none; } }
+.steps.live .step.done svg { animation: settle 0.7s steps(7) both; }
+
+/* Terminal output: dark, with scanlines and a faint glow. */
+.step-pre.output {
+  background-color: #0e0e1f; color: #cfd0ff; text-shadow: 0 0 6px rgba(124, 116, 255, 0.35); border: 1px solid rgba(124, 116, 255, 0.18);
+  background-image: repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.04) 0 1px, transparent 1px 3px);
+}
+.step-pre.output::selection, .step-pre.output *::selection { background: rgba(124, 116, 255, 0.4); }
+
+/* Code in replies: a header with the language and a copy button, and the same scanlines. */
+.code { margin: 14px 0; border-radius: 16px; overflow: hidden; background: #12121c; }
+.code-head { display: flex; align-items: center; justify-content: space-between; padding: 5px 6px 5px 14px; color: #8d8fbf; font: 600 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.08em; text-transform: uppercase; border-bottom: 1px solid rgba(255, 255, 255, 0.07); }
+.code-copy { display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 9px; border: 0; border-radius: 8px; background: transparent; color: inherit; font: inherit; letter-spacing: 0.04em; cursor: pointer; }
+.code-copy:hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
+.md .code pre { margin: 0; border-radius: 0; background-color: transparent; background-image: repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 3px); }
+
+/* Commands, and the jump to the latest reply. */
+.cmd-list { pointer-events: auto; margin: 0 0 8px; padding: 6px; border-radius: 16px; display: grid; gap: 1px; max-height: 300px; overflow-y: auto; }
+.cmd { display: flex; align-items: baseline; gap: 10px; padding: 8px 10px; border: 0; border-radius: 10px; background: transparent; font: 500 13.5px/1.3 inherit; text-align: left; color: var(--ink); cursor: pointer; }
+.cmd.on { background: rgba(59, 46, 255, 0.09); }
+.cmd-name { flex: none; min-width: 84px; font: 600 13px/1.3 ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--indigo); }
+.cmd-hint { color: var(--text-3); font-size: 13px; }
+.jump { position: absolute; left: 50%; bottom: 168px; z-index: 5; margin-left: -48px; display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 14px; border: 0; border-radius: 999px; font: 600 13px/1 inherit; color: var(--ink); cursor: pointer; }
+
+/* The background gets a faint dither, so its soft glow reads as part of the same world. */
+.lightfield::after { content: ''; position: absolute; inset: 0; background: var(--indigo); opacity: 0.035; -webkit-mask: var(--dither-grain) 0 0 / 8px 8px; mask: var(--dither-grain) 0 0 / 8px 8px; }
+
+/* Steps: the counts as badges, and a fold for the older ones. */
+.diffstat { flex: none; display: inline-flex; gap: 6px; font: 600 11.5px/1 ui-monospace, SFMono-Regular, Menlo, monospace; }
+.diffstat .add { color: #1a7f4b; }
+.diffstat .del { color: #b3243c; }
+.step-fold summary { display: flex; align-items: center; gap: 6px; padding: 4px 6px; border-radius: 10px; color: var(--text-3); font-size: 13px; cursor: pointer; list-style: none; }
+.step-fold summary::-webkit-details-marker { display: none; }
+.step-fold summary:hover { background: rgba(59, 46, 255, 0.06); }
+.step-fold details[open] .step-chev-start { transform: rotate(90deg); }
+.step-chev-start { transition: transform 0.2s var(--ease); }
+.step-fold .steps { margin: 2px 0 4px 12px; padding-left: 8px; border-left: 2px solid rgba(59, 46, 255, 0.12); }

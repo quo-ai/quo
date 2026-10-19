@@ -127,22 +127,22 @@ export function MessageList({ conversationId, messages, busy, choice, code, fail
         }
         const streaming = isLast && busy;
         return (
-          <article key={message.id} className={`msg assistant${isLast ? ' last' : ''}`}>
-            {message.steps?.length ? <AgentSteps steps={message.steps} /> : null}
+          <article key={message.id} className={`msg assistant${isLast ? ' last' : ''}${streaming && message.content ? ' streaming' : ''}`}>
+            {message.steps?.length ? <AgentSteps steps={message.steps} live={streaming} /> : null}
             {undo?.messageId === message.id && !busy && (
               <button type="button" className="chip undo-chip press" onClick={onUndo} title="Put the files back the way they were before this reply">
                 <Undo2 size={14} /> Undo {undo.count === 1 ? 'the change' : `${undo.count} changes`}
               </button>
             )}
             {message.reasoning && (
-              <details className="reasoning" open={!message.content}>
+              <details className={`reasoning${streaming && !message.content ? ' thinking' : ''}`} open={!message.content}>
                 <summary><Brain size={14} /> {message.content ? 'Thought process' : 'Thinking…'}</summary>
                 <Markdown text={message.reasoning} muted />
               </details>
             )}
             {message.content
               ? <Markdown text={message.content} />
-              : streaming && !message.reasoning && <div className="typing" aria-label="Writing"><span /><span /><span /></div>}
+              : streaming && !message.reasoning && !message.steps?.some(step => step.status === 'running') && <div className="typing" aria-label="Writing"><span className="bar" /><span className="block" /></div>}
             {!streaming && message.content && (
               <div className="msg-actions">
                 <button className="icon-btn press" onClick={() => void copy(message)} aria-label="Copy reply" title="Copy">
