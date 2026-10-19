@@ -22,7 +22,7 @@
   80%  { -webkit-mask-image: var(--dither-5); mask-image: var(--dither-5); }
   100% { -webkit-mask-image: none; mask-image: none; }
 }
-.step, .step-pre, .summary-note, .undo-chip, .ctx-pop, .menu-up, .mention-list, .cmd-list, .jump, .code, .filepanel, .fp-viewer, .step-plan {
+.step, .step-pre, .summary-note, .sources, .undo-chip, .ctx-pop, .menu-up, .mention-list, .cmd-list, .jump, .code, .filepanel, .fp-viewer, .step-plan {
   -webkit-mask-size: 8px 8px; mask-size: 8px 8px;
   animation: dissolve 0.42s step-end both;
 }

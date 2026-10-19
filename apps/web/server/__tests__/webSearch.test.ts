@@ -33,7 +33,7 @@ async function reply(model: string, extra: Record<string, unknown> = {}, id = de
     const [eventLine, dataLine] = block.split('\n');
     return { event: eventLine.replace('event: ', ''), data: JSON.parse(dataLine.replace('data: ', '')) };
   });
-  return { status: response.status, text: events.filter(e => e.event === 'delta').map(e => e.data.c ?? '').join(''), done: events.find(e => e.event === 'done')?.data };
+  return { status: response.status, text: events.filter(e => e.event === 'delta').map(e => e.data.c ?? '').join(''), done: events.find(e => e.event === 'done')?.data, searches: events.filter(e => e.event === 'search').map(e => e.data.q) };
 }
 
 describe('web search in cloud chat', () => {
@@ -61,8 +61,14 @@ describe('web search in cloud chat', () => {
     expect((await reply(free, { web: true }, id)).done).toMatchObject({ web: 'searched', webRemaining: 1 });
   });
 
-  it('a search the model makes comes from the allowance', async () => {
-    expect((await reply(free, { web: true })).done).toMatchObject({ web: 'searched', webRemaining: 1 });
+  it('a search the model makes comes from the allowance, is announced as it starts, and its sources come with the reply', async () => {
+    const searched = await reply(free, { web: true });
+    expect(searched.done).toMatchObject({ web: 'searched', webRemaining: 1 });
+    expect(searched.searches).toEqual(['What happened today?']);
+    expect(searched.done.sources).toEqual([{ url: 'https://example.com/sandbox-source', title: 'Sandbox source' }]);
+    const answered = await reply(free, { web: true }, randomUUID(), 'Write a haiku about rain.');
+    expect(answered.searches).toEqual([]);
+    expect(answered.done.sources).toBeUndefined();
   });
 
   it('the free model has a small daily allowance of searches, then answers without one and says so', async () => {

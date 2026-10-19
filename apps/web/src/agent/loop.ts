@@ -1,3 +1,4 @@
+import { addSource, pickSources, type WebSource } from '../../shared/webSources';
 import { describeDone, describeRunning } from './describe';
 import { READ_ONLY_TOOLS } from '../../shared/agentTools';
 import { previousReport, originalGoal, splitForSummary, transcriptOf, withSummary } from './summarize';
@@ -53,6 +54,8 @@ export interface AgentOutcome {
   stopped: boolean;
   /** Hit the step limit before the model was done. */
   limited: boolean;
+  /** Web pages the reply drew on (see pickSources). */
+  sources: WebSource[];
 }
 
 /** What a dropped result was the answer to, in a few words: "read_file {"path":"src/app.ts"}". */
@@ -142,7 +145,10 @@ export async function runAgent(history: AgentMessage[], deps: AgentDeps): Promis
   const maxSteps = deps.maxSteps ?? MAX_STEPS;
   const messages = [...history];
   const steps: AgentStep[] = [];
-  const outcome: AgentOutcome = { steps, text: '', charged: 0, balance: null, usage: null, stopped: false, limited: false };
+  const outcome: AgentOutcome = { steps, text: '', charged: 0, balance: null, usage: null, stopped: false, limited: false, sources: [] };
+  // Pages the model read and results its searches found, for the sources under the reply.
+  const read: WebSource[] = [];
+  const found: WebSource[] = [];
   const show = (text = '') => deps.onUpdate({ steps: steps.map(step => ({ ...step })), text });
   let previous = '';
   let nextSummary = 0;
@@ -175,7 +181,7 @@ export async function runAgent(history: AgentMessage[], deps: AgentDeps): Promis
 
     if (reply.toolCalls.length === 0) {
       show(reply.content);
-      return { ...outcome, text: reply.content };
+      return { ...outcome, text: reply.content, sources: pickSources(read, found, reply.content) };
     }
 
     // The echo of what the model asked for must carry valid JSON arguments, or the next request is refused.
@@ -189,6 +195,8 @@ export async function runAgent(history: AgentMessage[], deps: AgentDeps): Promis
       // A change or command the person declined is their choice, not the model failing.
       failures = result.ok || result.display?.denied ? 0 : failures + 1;
       Object.assign(step, describeDone(call.name, args ?? {}, result));
+      if (result.ok && result.display?.kind === 'fetch') addSource(read, result.display.url, result.display.title);
+      if (result.ok && result.display?.kind === 'web_search' && Array.isArray(result.display.results)) for (const r of result.display.results as { url?: unknown; title?: unknown }[]) addSource(found, r?.url, r?.title);
       if (deps.signal.aborted) step.status = 'stopped';
       messages.push({ role: 'tool', tool_call_id: call.id, content: result.text });
       show();

@@ -2,6 +2,7 @@ import { textOf, type ChatTurn, type GenerationUpdate } from '../engine/localEng
 import { chatWithProvider } from './chat';
 import type { OwnModel } from './ownModels';
 import type { ProviderInfo } from './registry';
+import type { WebSource } from '../../shared/webSources';
 
 /** A reply from a model reached with the user's own key. Like the cloud engine: the text so far goes through onUpdate. */
 
@@ -10,6 +11,8 @@ export interface OwnResult {
   reasoning: string;
   stopped: boolean;
   usage: { input: number; output: number } | null;
+  /** Pages the provider's own search drew on. */
+  sources: WebSource[];
 }
 
 const CHAT_MAX_TOKENS = 4096;
@@ -20,11 +23,11 @@ export function stopOwn(): void {
 }
 
 /** `web`: offer the model the provider's own search tool (OpenRouter's, Anthropic's); the model decides whether to search. */
-export async function generateOwn(provider: ProviderInfo, model: OwnModel, messages: ChatTurn[], onUpdate: (update: GenerationUpdate) => void, options: { web?: boolean } = {}): Promise<OwnResult> {
+export async function generateOwn(provider: ProviderInfo, model: OwnModel, messages: ChatTurn[], onUpdate: (update: GenerationUpdate & { searches?: string[] }) => void, options: { web?: boolean } = {}): Promise<OwnResult> {
   current?.abort();
   const controller = new AbortController();
   current = controller;
-  const result: OwnResult = { content: '', reasoning: '', stopped: false, usage: null };
+  const result: OwnResult = { content: '', reasoning: '', stopped: false, usage: null, sources: [] };
   try {
     const reply = await chatWithProvider(
       provider,
@@ -38,10 +41,10 @@ export async function generateOwn(provider: ProviderInfo, model: OwnModel, messa
       partial => {
         result.content = partial.content;
         result.reasoning = partial.reasoning;
-        onUpdate({ content: partial.content, reasoning: partial.reasoning });
+        onUpdate({ content: partial.content, reasoning: partial.reasoning, ...(partial.searches ? { searches: partial.searches } : {}) });
       },
     );
-    Object.assign(result, { content: reply.content, reasoning: reply.reasoning, usage: reply.usage });
+    Object.assign(result, { content: reply.content, reasoning: reply.reasoning, usage: reply.usage, sources: reply.sources ?? [] });
   } catch (error) {
     if (controller.signal.aborted) result.stopped = true;
     else throw error;

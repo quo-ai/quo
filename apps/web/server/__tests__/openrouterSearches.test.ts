@@ -18,7 +18,8 @@ function respond(chunks: unknown[]) {
   return sent;
 }
 
-const run = () => streamChat(model, [{ role: 'user', content: 'news?' }], { maxTokens: 50, signal: new AbortController().signal, onDelta: () => {}, web: { maxUses: 1 } });
+const started: string[] = [];
+const run = () => streamChat(model, [{ role: 'user', content: 'news?' }], { maxTokens: 50, signal: new AbortController().signal, onDelta: () => {}, onSearch: q => started.push(q), web: { maxUses: 1 } });
 const text = { choices: [{ delta: { content: 'Headline.' } }] };
 
 describe('how many searches a reply made', () => {
@@ -41,6 +42,15 @@ describe('how many searches a reply made', () => {
     const record = { type: 'reasoning.server_tool_call', tool_name: 'openrouter:web_search', tool_call_id: 'ws_1' };
     respond([{ choices: [{ delta: { reasoning_details: [record] } }] }, { choices: [{ delta: { reasoning_details: [record] } }] }, text, { choices: [{ delta: {} }], usage: { prompt_tokens: 1, completion_tokens: 1 } }]);
     expect((await run()).searches).toBe(1);
+  });
+
+  it('announces each search once as it starts, with its words, and collects the pages cited', async () => {
+    started.length = 0;
+    const record = { type: 'reasoning.server_tool_call', tool_name: 'openrouter:web_search', tool_call_id: 'ws_9', arguments: '{"query":"leeds weather"}' };
+    respond([{ choices: [{ delta: { reasoning_details: [record] } }] }, { choices: [{ delta: { reasoning_details: [record], content: 'Rain', annotations: [{ type: 'url_citation', url_citation: { url: 'https://met.example/', title: 'Met' } }, { type: 'url_citation', url_citation: { url: 'javascript:x' } }] } }] }]);
+    const usage = await run();
+    expect(started).toEqual(['leeds weather']);
+    expect(usage.sources).toEqual([{ url: 'https://met.example/', title: 'Met' }]);
   });
 
   it('is none when nothing says a search ran, and ignores nonsense', async () => {

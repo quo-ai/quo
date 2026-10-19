@@ -1,5 +1,6 @@
 import { config } from './env.js';
 import type { CloudModel } from './cloudModels.js';
+import { addAnnotations, serverSearches, type WebSource } from '../shared/webSources.js';
 import { webTool } from './webSearch.js';
 
 /**
@@ -34,6 +35,8 @@ export interface StreamUsage {
   finishReason: string | null;
   /** Web searches the model made (OpenRouter's `usage.server_tool_use.web_search_requests`). */
   searches: number;
+  /** The pages the reply drew on, from the search (`url_citation` annotations). */
+  sources: WebSource[];
 }
 
 export interface StreamOptions {
@@ -46,6 +49,8 @@ export interface StreamOptions {
   tools?: unknown[];
   /** Offer the model web search, with at most this many searches (see webSearch.ts). The model decides whether to search. */
   web?: { maxUses: number };
+  /** A search has started, with the words searched for when the provider says them. */
+  onSearch?: (query: string) => void;
 }
 
 export class UpstreamError extends Error {
@@ -86,7 +91,7 @@ export async function streamChat(
     throw new UpstreamError(response.status, (await response.text().catch(() => '')).slice(0, 300));
   }
 
-  const usage: StreamUsage = { promptTokens: 0, completionTokens: 0, costUsd: null, toolCalls: [], finishReason: null, searches: 0 };
+  const usage: StreamUsage = { promptTokens: 0, completionTokens: 0, costUsd: null, toolCalls: [], finishReason: null, searches: 0, sources: [] };
   const calls = new Map<number, ToolCall>();
   const searchRecords = new Set<string>();
   const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
@@ -108,10 +113,12 @@ export async function streamChat(
           delta?: {
             content?: string | null;
             reasoning?: string | null;
-            reasoning_details?: { type?: string; tool_name?: string; tool_call_id?: string }[];
+            reasoning_details?: unknown;
+            annotations?: unknown;
             tool_calls?: { index?: number; id?: string; function?: { name?: string; arguments?: string } }[];
           };
           finish_reason?: string | null;
+          message?: { annotations?: unknown };
         }[];
         usage?: { prompt_tokens?: number; completion_tokens?: number; cost?: number; server_tool_use?: { web_search_requests?: number }; server_tool_use_details?: { web_search_requests?: number } };
       };
@@ -135,10 +142,15 @@ export async function streamChat(
         if (piece.function?.arguments) call.function.arguments += piece.function.arguments;
         calls.set(index, call);
       }
-      // A search OpenRouter ran also arrives as a record among the reasoning details.
-      for (const detail of delta?.reasoning_details ?? []) {
-        if (detail?.type === 'reasoning.server_tool_call' && /web_search/.test(detail.tool_name ?? '')) searchRecords.add(detail.tool_call_id || `search_${searchRecords.size}`);
+      // A search OpenRouter ran also arrives as a record among the reasoning details (once, or in pieces with one id).
+      for (const search of serverSearches(delta?.reasoning_details)) {
+        const id = search.id || `search_${searchRecords.size}`;
+        if (searchRecords.has(id)) continue;
+        searchRecords.add(id);
+        options.onSearch?.(search.query);
       }
+      addAnnotations(usage.sources, delta?.annotations);
+      addAnnotations(usage.sources, choice?.message?.annotations);
       if (choice?.finish_reason) usage.finishReason = choice.finish_reason;
       if (chunk.usage) {
         usage.promptTokens = chunk.usage.prompt_tokens ?? usage.promptTokens;
@@ -165,11 +177,12 @@ async function standIn(model: CloudModel, messages: ChatMessage[], options: Stre
   const question = [...messages].reverse().find(m => m.role === 'user')?.content ?? '';
   // Like a real model, the stand-in searches only when the question is about something current.
   const searches = options.web && /\b(today|latest|news|current|now|this week|price|weather|score)\b/i.test(question) ? 1 : 0;
+  if (searches) options.onSearch?.(question.slice(0, 60));
   const reply = `This is a **sandbox test reply** from the stand-in for ${model.name}. Add an OpenRouter API key to get real answers.${searches ? ' (It searched the web.)' : ''}\n\nYou asked: “${question.slice(0, 120)}”`;
   if (options.reasoning && options.reasoning.effort !== 'none' && options.reasoning.enabled !== false) options.onDelta({ reasoning: 'Thinking about the question (sandbox stand-in).' });
   await streamWords(reply, options);
   const promptChars = messages.reduce((sum, m) => sum + m.content.length, 0);
-  return { promptTokens: Math.ceil(promptChars / 3.5), completionTokens: reply.split(/(?<= )/).length, costUsd: null, toolCalls: [], finishReason: 'stop', searches };
+  return { promptTokens: Math.ceil(promptChars / 3.5), completionTokens: reply.split(/(?<= )/).length, costUsd: null, toolCalls: [], finishReason: 'stop', searches, sources: searches ? [{ url: 'https://example.com/sandbox-source', title: 'Sandbox source' }] : [] };
 }
 
 async function streamWords(text: string, options: StreamOptions): Promise<void> {
@@ -195,7 +208,7 @@ async function standInAgent(model: CloudModel, messages: ChatMessage[], options:
   const call = (name: string, args: unknown): ToolCall => ({ id: `call_${results + 1}`, type: 'function', function: { name, arguments: JSON.stringify(args) } });
   const say = async (text: string, toolCalls: ToolCall[] = []): Promise<StreamUsage> => {
     await streamWords(text, options);
-    return { promptTokens, completionTokens: Math.ceil(text.length / 3.5), costUsd: null, toolCalls, finishReason: toolCalls.length ? 'tool_calls' : 'stop', searches: 0 };
+    return { promptTokens, completionTokens: Math.ceil(text.length / 3.5), costUsd: null, toolCalls, finishReason: toolCalls.length ? 'tool_calls' : 'stop', searches: 0, sources: [] };
   };
   const label = `(sandbox stand-in for ${model.name})`;
 

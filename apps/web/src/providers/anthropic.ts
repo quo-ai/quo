@@ -1,5 +1,6 @@
 import { ProviderError } from './errors';
 import { sseEvents } from './sse';
+import { addSource, queryOf, type WebSource } from '../../shared/webSources';
 import type { Adapter, ChatReply, ChatRequest, WireMessage } from './wire';
 
 /** Anthropic's messages format. */
@@ -52,9 +53,9 @@ export function convert(messages: WireMessage[]): { system: string; turns: Turn[
 interface Event {
   type?: string;
   message?: { usage?: Usage };
-  content_block?: { type?: string; id?: string; name?: string };
+  content_block?: { type?: string; id?: string; name?: string; content?: unknown };
   index?: number;
-  delta?: { type?: string; text?: string; partial_json?: string; thinking?: string; stop_reason?: string };
+  delta?: { type?: string; text?: string; partial_json?: string; thinking?: string; stop_reason?: string; citation?: { url?: unknown; title?: unknown } };
   usage?: Usage;
   error?: { message?: string };
 }
@@ -96,7 +97,12 @@ export const anthropic: Adapter = {
 
   async read(stream, emit): Promise<ChatReply> {
     const reply: ChatReply = { content: '', reasoning: '', toolCalls: [], finish: null, usage: null };
+    const sources: WebSource[] = [];
     const tools = new Map<number, { id: string; name: string; arguments: string }>();
+    // Anthropic's own web search: the searches it runs (their words stream in like a tool's input) and the pages found.
+    const searches: string[] = [];
+    const searchAt = new Map<number, { at: number; input: string }>();
+    const emitAll = () => emit({ content: reply.content, reasoning: reply.reasoning, ...(searches.length ? { searches: [...searches] } : {}) });
     let input = 0;
     let output = 0;
     const counted = (usage: Usage | undefined) => {
@@ -115,6 +121,13 @@ export const anthropic: Adapter = {
         case 'message_start': counted(event.message?.usage); break;
         case 'content_block_start':
           if (event.content_block?.type === 'tool_use' && event.index !== undefined) tools.set(event.index, { id: event.content_block.id ?? '', name: event.content_block.name ?? '', arguments: '' });
+          else if (event.content_block?.type === 'server_tool_use' && event.content_block.name === 'web_search' && event.index !== undefined) {
+            searchAt.set(event.index, { at: searches.length, input: '' });
+            searches.push('');
+            emitAll();
+          } else if (event.content_block?.type === 'web_search_tool_result' && Array.isArray(event.content_block.content)) {
+            for (const result of event.content_block.content as { type?: string; url?: unknown; title?: unknown }[]) if (result?.type === 'web_search_result') addSource(sources, result.url, result.title);
+          }
           break;
         case 'content_block_delta': {
           const delta = event.delta;
@@ -123,8 +136,14 @@ export const anthropic: Adapter = {
           else if (delta?.type === 'input_json_delta' && event.index !== undefined) {
             const tool = tools.get(event.index);
             if (tool) tool.arguments += delta.partial_json ?? '';
-          }
-          emit({ content: reply.content, reasoning: reply.reasoning });
+            const search = searchAt.get(event.index);
+            if (search) {
+              search.input += delta.partial_json ?? '';
+              const words = queryOf(search.input);
+              if (words) searches[search.at] = words;
+            }
+          } else if (delta?.type === 'citations_delta' && delta.citation) addSource(sources, delta.citation.url, delta.citation.title);
+          emitAll();
           break;
         }
         case 'message_delta':
@@ -137,6 +156,7 @@ export const anthropic: Adapter = {
     reply.toolCalls = [...tools.entries()].sort(([a], [b]) => a - b).map(([, tool]) => ({ ...tool, arguments: tool.arguments || '{}' }));
     if (reply.toolCalls.length) reply.finish = 'tool_calls';
     reply.usage = input || output ? { input, output } : null;
+    if (sources.length) reply.sources = sources;
     return reply;
   },
 };

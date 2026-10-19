@@ -21,6 +21,7 @@ import { allowUserUrls, runWebTool } from '../web/run';
 import { buildContext } from './context';
 import { environmentFor, noteFor } from './environment';
 import type { Message } from './types';
+import { SearchSteps } from './searchSteps';
 
 /**
  * The three ways Quo answers: a cloud model working in a project (Code mode), a cloud
@@ -134,6 +135,7 @@ export async function replyWithAgent(choice: CloudChoice | OwnChoice | LocalChoi
   update({
     content: outcome.text,
     steps: outcome.steps,
+    sources: outcome.sources.length ? outcome.sources : undefined,
     stopped: outcome.stopped || undefined,
     ...(choice.kind === 'cloud' ? { charged: Math.round((outcome.charged + helperCost) * 100) / 100 } : choice.kind === 'own' ? { usage: outcome.usage ?? undefined } : {}),
   }, true);
@@ -168,20 +170,28 @@ export async function replyWithWeb(choice: OwnChoice | LocalChoice, sessionId: s
     onUpdate: ({ steps, text }) => update({ content: text, steps }, false),
     onContext,
   });
-  update({ content: outcome.text, steps: outcome.steps, stopped: outcome.stopped || undefined, ...(choice.kind === 'own' ? { usage: outcome.usage ?? undefined } : {}) }, true);
+  update({ content: outcome.text, steps: outcome.steps, sources: outcome.sources.length ? outcome.sources : undefined, stopped: outcome.stopped || undefined, ...(choice.kind === 'own' ? { usage: outcome.usage ?? undefined } : {}) }, true);
 }
 
 /** Whether the web search that was asked for ran (see CloudResult.web). */
 export async function replyInCloud(choice: CloudChoice, thinking: ThinkLevel, { prior, update, setStatus }: ReplyTarget, options: { web?: boolean } = {}): Promise<CloudResult['web']> {
   setStatus('generating');
   const history = buildContext(CLOUD_PROMPT + noteFor(choice), prior, CLOUD_CONTEXT.contextSize, CLOUD_CONTEXT.maxTokens);
+  const searches = new SearchSteps();
+  let text = 0;
   const result = await generateCloud(choice.model.id, history, {
     thinking: wireThinking(choice, thinking),
     web: options.web,
-    onUpdate: ({ content, reasoning }) => update({ content, reasoning }, false),
+    onUpdate: ({ content, reasoning }) => {
+      text = content.length;
+      const settled = searches.answering(text);
+      update({ content, reasoning, ...(settled ? { steps: settled } : {}) }, false);
+    },
+    onSearch: query => update({ steps: searches.start(query, text) }, false),
   });
   applyUsage(result);
-  update({ content: result.content, reasoning: result.reasoning || undefined, stopped: result.stopped || undefined, charged: result.charged }, true);
+  const steps = searches.finish(result.web === 'searched', result.stopped);
+  update({ content: result.content, reasoning: result.reasoning || undefined, stopped: result.stopped || undefined, charged: result.charged, steps, sources: result.sources.length ? result.sources : undefined }, true);
   return result.web;
 }
 
@@ -189,8 +199,17 @@ export async function replyInCloud(choice: CloudChoice, thinking: ThinkLevel, { 
 export async function replyOwn(choice: OwnChoice, { prior, update, setStatus }: ReplyTarget, options: { web?: boolean } = {}): Promise<void> {
   setStatus('generating');
   const history = buildContext(CLOUD_PROMPT + noteFor(choice), prior, Math.min(choice.model.contextTokens ?? CLOUD_CONTEXT.contextSize, 64_000), CLOUD_CONTEXT.maxTokens);
-  const result = await generateOwn(choice.provider, choice.model, history, ({ content, reasoning }) => update({ content, reasoning }, false), options);
-  update({ content: result.content, reasoning: result.reasoning || undefined, stopped: result.stopped || undefined, usage: result.usage ?? undefined }, true);
+  const searches = new SearchSteps();
+  let started = 0;
+  const result = await generateOwn(choice.provider, choice.model, history, ({ content, reasoning, searches: words = [] }) => {
+    // A new search shows as it starts; its words fill in when the provider has sent them.
+    while (started < words.length) searches.start(words[started++], content.length);
+    const named = words.length ? searches.name(words.at(-1) ?? '') : null;
+    const settled = searches.answering(content.length);
+    update({ content, reasoning, ...(settled ?? named ? { steps: settled ?? named! } : {}) }, false);
+  }, options);
+  const steps = searches.finish(false, result.stopped);
+  update({ content: result.content, reasoning: result.reasoning || undefined, stopped: result.stopped || undefined, usage: result.usage ?? undefined, steps, sources: result.sources.length ? result.sources : undefined }, true);
 }
 
 export async function replyOffline(choice: LocalChoice, thinking: boolean, { prior, update, setStatus }: ReplyTarget): Promise<void> {

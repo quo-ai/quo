@@ -10,6 +10,7 @@ import { canSpeak } from '../../voice/readAloud';
 import { AgentSteps } from '../AgentSteps';
 import { MessageAttachments } from '../Attachments';
 import { Markdown } from '../Markdown';
+import { Sources } from './Sources';
 import { QuoMark } from '../QuoMark';
 import { toast } from '../Toasts';
 import { FailureCard } from './FailureCard';
@@ -149,6 +150,7 @@ export function MessageList({ conversationId, messages, busy, choice, code, fail
             {message.content
               ? <Markdown text={message.content} />
               : streaming && !message.reasoning && !message.steps?.some(step => step.status === 'running') && <div className="typing" role="status" aria-label={workingLabel(message) || 'Working'}><span className="bar" /><span className="block" /><span className="typing-label">{workingLabel(message)}</span></div>}
+            {!streaming && message.sources?.length ? <Sources sources={message.sources} /> : null}
             {!streaming && message.content && (
               <div className="msg-actions">
                 <button className="icon-btn press" onClick={() => void copy(message)} aria-label="Copy reply" title="Copy">

@@ -84,3 +84,11 @@
 .toast { pointer-events: auto; display: flex; align-items: center; gap: 12px; padding: 8px 8px 8px 18px; min-height: 48px; border-radius: 999px; font-size: 14px; font-weight: 500; animation: toast-in 0.55s var(--jelly); }
 .toast .btn { height: 32px; padding: 0 14px; font-size: 13.5px; }
 @keyframes toast-in { from { opacity: 0; transform: translateY(18px) scale(0.88); } }
+
+/* The pages a reply drew on. */
+.sources { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 10px; }
+.sources-label { display: inline-flex; align-items: center; gap: 5px; margin-right: 2px; font-size: 12px; font-weight: 600; color: var(--text-3); }
+.source-chip { display: inline-flex; align-items: center; gap: 6px; max-width: 22ch; height: 26px; padding: 0 10px 0 4px; border-radius: 999px; font-size: 12.5px; font-weight: 600; color: var(--text-2); text-decoration: none; background: rgba(14, 14, 40, 0.05); transition: background 0.2s var(--ease), color 0.2s var(--ease); }
+.source-chip:hover, .source-chip:focus-visible { color: var(--indigo); background: rgba(59, 46, 255, 0.1); }
+.source-n { display: grid; place-items: center; min-width: 18px; height: 18px; border-radius: 999px; font-size: 11px; color: var(--text-3); background: rgba(14, 14, 40, 0.07); }
+.source-site { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

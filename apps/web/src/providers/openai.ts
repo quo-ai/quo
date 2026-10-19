@@ -1,5 +1,6 @@
 import { ProviderError } from './errors';
 import { sseEvents } from './sse';
+import { addAnnotations, serverSearches, type WebSource } from '../../shared/webSources';
 import type { Adapter, ChatReply, ChatRequest, WireMessage } from './wire';
 
 /** OpenAI's chat completions format, which most providers (and local servers) copy. */
@@ -7,7 +8,7 @@ import type { Adapter, ChatReply, ChatRequest, WireMessage } from './wire';
 const toApi = (message: WireMessage) => (message.role === 'assistant' && message.tool_calls?.length ? { ...message, content: message.content || null } : message);
 
 interface Chunk {
-  choices?: { delta?: { content?: unknown; reasoning_content?: unknown; reasoning?: unknown; tool_calls?: { index?: number; id?: string; function?: { name?: string; arguments?: unknown } }[] }; finish_reason?: string | null }[];
+  choices?: { delta?: { content?: unknown; reasoning_content?: unknown; reasoning?: unknown; reasoning_details?: unknown; annotations?: unknown; tool_calls?: { index?: number; id?: string; function?: { name?: string; arguments?: unknown } }[] }; finish_reason?: string | null }[];
   usage?: { prompt_tokens?: number; completion_tokens?: number } | null;
   error?: { message?: unknown } | string;
 }
@@ -30,6 +31,10 @@ export const openai: Adapter = {
 
   async read(stream, emit): Promise<ChatReply> {
     const reply: ChatReply = { content: '', reasoning: '', toolCalls: [], finish: null, usage: null };
+    const sources: WebSource[] = [];
+    // OpenRouter's search tool: each search it ran, once, and the pages the reply cites.
+    const searches: string[] = [];
+    const seen = new Set<string>();
     const calls: { id: string; name: string; arguments: string }[] = [];
     for await (const { data } of sseEvents(stream)) {
       if (data.trim() === '[DONE]') break;
@@ -47,6 +52,11 @@ export const openai: Adapter = {
       const choice = chunk.choices?.[0];
       if (!choice) continue;
       const delta = choice.delta ?? {};
+      for (const search of serverSearches(delta.reasoning_details)) {
+        const id = search.id || `search_${seen.size}`;
+        if (!seen.has(id)) (seen.add(id), searches.push(search.query));
+      }
+      addAnnotations(sources, delta.annotations);
       if (typeof delta.content === 'string' && delta.content) reply.content += delta.content;
       const thought = delta.reasoning_content ?? delta.reasoning;
       if (typeof thought === 'string' && thought) reply.reasoning += thought;
@@ -61,10 +71,11 @@ export const openai: Adapter = {
         else if (args && typeof args === 'object') slot.arguments = JSON.stringify(args);
       }
       if (choice.finish_reason) reply.finish = choice.finish_reason === 'tool_calls' || choice.finish_reason === 'function_call' ? 'tool_calls' : choice.finish_reason;
-      emit({ content: reply.content, reasoning: reply.reasoning });
+      emit({ content: reply.content, reasoning: reply.reasoning, ...(searches.length ? { searches: [...searches] } : {}) });
     }
     reply.toolCalls = calls.filter(call => call.name).map((call, index) => ({ ...call, id: call.id || `call_${index + 1}` }));
     if (reply.toolCalls.length && reply.finish !== 'tool_calls') reply.finish = 'tool_calls';
+    if (sources.length) reply.sources = sources;
     return reply;
   },
 };

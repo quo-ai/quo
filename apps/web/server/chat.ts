@@ -17,6 +17,7 @@ import { FREE_SEARCHES_PER_REPLY, PAID_SEARCHES_PER_REPLY, SEARCH_FEE_USD, SEARC
  * POST /api/chat — cloud chat, streamed as server-sent events:
  *   event: delta  data: {"c": "text", "r": "reasoning"}
  *   event: done   data: {"charged": credits, "balance": credits|null, "freeRemaining": n|null}
+ *   event: search data: {"q": words}   (the model started a web search; see `web` below)
  *   event: error  data: {"error": code, "message": text}
  *
  * With `agent` set (Code mode, desktop app only) the request is one step of a coding
@@ -164,6 +165,7 @@ export async function handleChat(request: Request): Promise<Response> {
           tools: agent?.tools,
           ...(web ? { web: { maxUses: searchesAllowed } } : {}),
           signal: upstream.signal,
+          onSearch: query => send('search', { q: query }),
           onDelta: delta => {
             outputChars += (delta.content?.length ?? 0) + (delta.reasoning?.length ?? 0);
             send('delta', { c: delta.content, r: delta.reasoning });
@@ -219,6 +221,7 @@ export async function handleChat(request: Request): Promise<Response> {
           freeRemaining: isFreeModel(model) && !lightAgent ? await freeRemaining(db, freeKeys, freeLimits).catch(() => null) : null,
           web: wantsWeb ? (!searchesAllowed ? 'limit' : usage?.searches ? 'searched' : 'not_needed') : null,
           webRemaining: mode === 'free' && wantsWeb ? await freeRemaining(db, webKeys, webLimits).catch(() => null) : null,
+          ...(usage?.sources?.length ? { sources: usage.sources } : {}),
         });
       }
       try {

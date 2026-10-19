@@ -1,3 +1,5 @@
+import type { WebSource } from '../../shared/webSources';
+
 /** What every provider adapter takes and gives, in one shape (OpenAI's, which the agent loop already uses). */
 
 export interface WireToolCall {
@@ -39,11 +41,15 @@ export interface ChatReply {
   /** `stop`, `tool_calls` or `length` (or null if the provider didn't say). */
   finish: string | null;
   usage: { input: number; output: number } | null;
+  /** Pages the provider's own web search drew on (OpenRouter's search tool, Anthropic's). */
+  sources?: WebSource[];
 }
 
 export interface Streamed {
   content: string;
   reasoning: string;
+  /** Searches the provider has run so far for this reply, by their words ('' until they are known). */
+  searches?: string[];
 }
 
 /** One provider wire format: how to ask, and how to read the streamed answer. */

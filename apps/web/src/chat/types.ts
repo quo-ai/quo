@@ -1,4 +1,5 @@
 import type { AgentStep } from '../agent/types';
+import type { WebSource } from '../../shared/webSources';
 
 export interface MessageStats {
   tokens: number;
@@ -46,6 +47,8 @@ export interface Message {
   own?: string;
   /** Not a reply: notes standing in for everything before it, written when the conversation's memory filled. Kept on this device; not synced. */
   summary?: boolean;
+  /** The web pages a reply drew on, when the model searched. Kept on this device; not synced. */
+  sources?: WebSource[];
   /** Tokens that reply used, when the provider said. Kept on this device; not synced. */
   usage?: { input: number; output: number };
 }

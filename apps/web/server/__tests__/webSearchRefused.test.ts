@@ -17,7 +17,7 @@ vi.mock('../openrouter.js', async original => {
       asked.push({ web: options.web });
       if (options.web && refuse) throw new real.UpstreamError(refuse, 'tool not supported');
       options.onDelta({ content: 'answer' });
-      return { promptTokens: 10, completionTokens: 1, costUsd: null, toolCalls: [], finishReason: 'stop', searches: 0 };
+      return { promptTokens: 10, completionTokens: 1, costUsd: null, toolCalls: [], finishReason: 'stop', searches: 0, sources: [] };
     },
   };
 });
