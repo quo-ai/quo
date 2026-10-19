@@ -4,6 +4,8 @@ import { titleFrom } from '../chat/store';
 import { newId, type Attachment, type Conversation, type Message } from '../chat/types';
 import { AGENT_CONTEXT } from '../agent/local';
 import { usesFolderLoop } from '../agent/route';
+import type { ThinkLevel } from '../../shared/thinking';
+import { defaultThinking, LEVEL_LABEL, nextLevel, thinkingLevels } from '../chat/thinking';
 import { chatProject, rememberChatProject } from '../agent/session';
 import { codeSettings } from '../codeSettings';
 import { modelMessages, summarize } from '../chat/summary';
@@ -54,7 +56,7 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
   { choice, account, offlineReady, conversation, onChange, onAction, onFailure },
   ref,
 ) {
-  const [thinking, setThinking] = useState(false);
+  const [thinking, setThinking] = useState<ThinkLevel>('auto');
   const [status, setStatus] = useState<ChatStatus>('idle');
   const [failure, setFailure] = useState<Failure | null>(null);
   const [undo, setUndo] = useState<Undoable | null>(null);
@@ -69,6 +71,10 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
   const cloud = choice?.kind === 'cloud';
   const codeMode = useCodeMode({ support: codeSupport(choice), conversationId: conversation?.id, modelId: choice?.model.id });
   const { code } = codeMode;
+  const levels = thinkingLevels(choice);
+  const startLevel = defaultThinking(choice);
+  // A model has its own levels and its own starting point; a choice made for another model doesn't carry over.
+  useEffect(() => setThinking(startLevel), [choice?.model.id]); // eslint-disable-line react-hooks/exhaustive-deps
   const web = useWebMode(choice, Boolean(code), conversation?.id);
   // How full the model's memory is: counted live while it works, estimated from the messages otherwise.
   const [live, setLive] = useState<{ tokens: number; exact: boolean } | null>(null);
@@ -134,7 +140,7 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
       const searching = web.on && web.how === 'tools';
       // Plain chats on the desktop go through the same loop when a folder could be wanted, so the model decides. Anything the loop
       // doesn't do (attachments, thinking, Quo's own web search) keeps its own route; the folder button is always there.
-      const folderless = !code && usesFolderLoop({ choice, available: codeMode.available, autoStart: codeSettings().autoStart, gated: Boolean(choice.kind === 'local' && codeMode.gate && !codeMode.gate.allowed), plainFeatures: sent.length > 0 || thinking || (web.on && web.how === 'native') });
+      const folderless = !code && usesFolderLoop({ choice, available: codeMode.available, autoStart: codeSettings().autoStart, gated: Boolean(choice.kind === 'local' && codeMode.gate && !codeMode.gate.allowed), plainFeatures: sent.length > 0 || thinking !== startLevel || (web.on && web.how === 'native') });
       if (code && (choice.kind === 'local' || choice.model.agent || (choice.kind === 'cloud' && choice.model.agentLight))) {
         setStatus('generating');
         const controller = new AbortController();
@@ -168,7 +174,7 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
         } finally {
           agentRun.current = null;
         }
-      } else if (searching && !thinking && (choice.kind === 'own' || choice.kind === 'local') && sent.length === 0) {
+      } else if (searching && thinking === startLevel && (choice.kind === 'own' || choice.kind === 'local') && sent.length === 0) {
         // Web search with a model that calls tools. (A message with photos or documents goes the ordinary way.)
         setStatus('generating');
         const controller = new AbortController();
@@ -184,7 +190,7 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
       } else if (choice.kind === 'own') {
         await replyOwn(choice, target, { web: web.on && web.how === 'native' });
       } else {
-        await replyOffline(choice, thinking, target);
+        await replyOffline(choice, thinking === 'deep', target);
       }
     } catch (err) {
       if (!(err instanceof ApiError)) console.error(err);
@@ -278,8 +284,8 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
       plan: codeMode.plan,
       webAvailable: web.usable && !web.modelDecides,
       webOn: web.on,
-      canThink: Boolean(choice && choice.kind !== 'own' && choice.model.supportsThinking && !code),
-      thinking,
+      canThink: levels.length > 1 && !code,
+      thinking: LEVEL_LABEL[thinking],
       canSummarize: Boolean(conversation) && modelMessages(messages).length >= 2,
       canUndo: Boolean(undo) && !busy,
     },
@@ -292,7 +298,7 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
       toggleCode: () => void codeMode.toggle(),
       togglePlan: () => void codeMode.togglePlan(),
       toggleWeb: web.toggle,
-      toggleThinking: () => setThinking(on => !on),
+      toggleThinking: () => setThinking(current => nextLevel(levels, current)),
       undo: () => void takeBack(),
       chooseFolder: () => void codeMode.changeFolder(),
       models: () => onAction('models'),
@@ -350,6 +356,7 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
         lastUserText={[...messages].reverse().find(m => m.role === 'user')?.content ?? ''}
         context={{ usage, canSummarize: Boolean(conversation) && modelMessages(messages).length >= 2, onSummarize: () => conversation && void summarizeConversation(conversation, false), onNewChat: () => onAction('new-chat') }}
         thinking={thinking}
+        thinkingLevels={levels}
         onThinking={setThinking}
         freeLeft={cloud && choice.model.free && account ? account.free.remaining : null}
         onSend={send}

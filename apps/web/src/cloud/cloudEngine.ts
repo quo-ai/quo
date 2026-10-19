@@ -27,7 +27,7 @@ export function stopCloud(): void {
 export async function generateCloud(
   modelId: string,
   messages: ChatTurn[],
-  options: { thinking: boolean; web?: boolean; onUpdate: (update: GenerationUpdate) => void },
+  options: { thinking: boolean | 'off' | 'quick' | 'auto' | 'deep'; web?: boolean; onUpdate: (update: GenerationUpdate) => void },
 ): Promise<CloudResult> {
   current?.abort();
   const controller = new AbortController();

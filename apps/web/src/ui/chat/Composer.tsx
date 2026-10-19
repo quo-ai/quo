@@ -1,11 +1,13 @@
 import { forwardRef, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react';
-import { AlertTriangle, ArrowUp, Brain, Cloud, Globe, HardDrive, KeyRound, Loader2, Mic, Paperclip, Square } from 'lucide-react';
+import { AlertTriangle, ArrowUp, Cloud, Globe, HardDrive, KeyRound, Loader2, Mic, Paperclip, Square } from 'lucide-react';
 import { ACCEPT_DOCUMENTS, ACCEPT_IMAGES } from '../../attachments';
 import type { Attachment } from '../../chat/types';
 import { localEngine } from '../../engine/localEngine';
 import type { ModelChoice } from '../../models';
 import { AttachmentChips } from '../Attachments';
 import { CodeChip } from '../CodeChip';
+import type { ThinkLevel } from '../../../shared/thinking';
+import { ThinkingMenu } from './ThinkingMenu';
 import type { ContextUsage } from '../../context/usage';
 import { matchCommands, type Command } from '../../chat/commands';
 import { CommandList } from './CommandList';
@@ -33,8 +35,10 @@ interface ComposerProps {
   commands: Command[];
   lastUserText: string;
   context: { usage: ContextUsage | null; canSummarize: boolean; onSummarize: () => void; onNewChat: () => void };
-  thinking: boolean;
-  onThinking: (on: boolean) => void;
+  thinking: ThinkLevel;
+  /** What this model really offers; nothing to show when it is fewer than two. */
+  thinkingLevels: ThinkLevel[];
+  onThinking: (level: ThinkLevel) => void;
   /** Free cloud messages left today, when the model is the free one. */
   freeLeft: number | null;
   onSend: (text: string, attachments: Attachment[]) => void;
@@ -43,7 +47,7 @@ interface ComposerProps {
 
 /** The message box and the row of controls under it. */
 export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Composer(
-  { choice, status, conversationId, codeMode, web, context, commands, lastUserText, thinking, onThinking, freeLeft, onSend, onStop },
+  { choice, status, conversationId, codeMode, web, context, commands, lastUserText, thinking, thinkingLevels, onThinking, freeLeft, onSend, onStop },
   ref,
 ) {
   const [input, setInput] = useState('');
@@ -226,11 +230,7 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
               <Globe size={14} /> Web
             </button>
           )}
-          {choice && choice.kind !== 'own' && choice.model.supportsThinking && !code && !(web.on && web.how === 'tools') && (
-            <button type="button" className="chip press" aria-pressed={thinking} onClick={() => onThinking(!thinking)} title="Reason step by step before answering">
-              <Brain size={14} /> Think
-            </button>
-          )}
+          {thinkingLevels.length > 1 && !code && <ThinkingMenu levels={thinkingLevels} value={thinking} onChange={onThinking} disabled={busy} local={choice?.kind === 'local'} />}
           <span className="engine-note">
             {voice.state === 'recording' ? `Listening… ${Math.floor(voice.seconds / 60)}:${String(voice.seconds % 60).padStart(2, '0')}`
               : voice.state === 'transcribing' ? (voice.download !== null ? `Getting the speech model… ${Math.round(voice.download * 100)}%` : 'Turning speech into text…')

@@ -90,7 +90,7 @@ describe('what the server insists on', () => {
 });
 
 describe('what goes to the model', () => {
-  it('is led by the server’s own instructions, with the tools and no thinking mode', async () => {
+  it('is led by the server’s own instructions, with the tools, and leaves thinking to the model (the app cannot ask for more)', async () => {
     const token = await signIn('agent-upstream@example.com');
     const requests = stubUpstream([{ choices: [{ delta: { content: 'hi' }, finish_reason: 'stop' }], usage: { prompt_tokens: 100, completion_tokens: 5, cost: 0.0002 } }]);
     await (await step(token, { thinking: true, agent: { tools: ALL_TOOLS, project: '<b>My "Project"</b>; DROP', platform: 'win32' } })).text();
@@ -104,7 +104,7 @@ describe('what goes to the model', () => {
     expect(body.messages[0].content).not.toMatch(/<b>|"Project"|DROP;/); // the project name is cleaned before it reaches a prompt
     expect(body.tools).toHaveLength(8);
     expect(body.tool_choice).toBe('auto');
-    expect(body.reasoning).toEqual({ effort: 'minimal', exclude: true });
+    expect(body.reasoning).toBeUndefined();
     expect(body.provider).toEqual({ data_collection: 'deny', zdr: true });
   });
 

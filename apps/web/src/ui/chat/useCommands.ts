@@ -11,7 +11,8 @@ export interface CommandState {
   webAvailable: boolean;
   webOn: boolean;
   canThink: boolean;
-  thinking: boolean;
+  /** The level now, in words. */
+  thinking: string;
   canSummarize: boolean;
   canUndo: boolean;
 }
@@ -47,7 +48,7 @@ export function buildCommands(state: CommandState, actions: CommandActions): Com
     state.codeOn && !state.busy && { name: 'folder', hint: 'Choose another project folder', run: actions.chooseFolder },
     state.canUndo && { name: 'undo', hint: 'Put back the files the last reply changed', run: actions.undo },
     state.webAvailable && { name: 'web', hint: `Web search on or off (now ${on(state.webOn)})`, run: actions.toggleWeb },
-    state.canThink && { name: 'think', hint: `Thinking on or off (now ${on(state.thinking)})`, run: actions.toggleThinking },
+    state.canThink && { name: 'think', hint: `Change how much it thinks (now ${state.thinking})`, run: actions.toggleThinking },
     { name: 'model', hint: 'Choose a model', run: actions.models },
     { name: 'keys', hint: 'Your API keys', run: actions.keys },
   ];

@@ -36,7 +36,8 @@ export interface StreamUsage {
 
 export interface StreamOptions {
   maxTokens: number;
-  thinking: boolean;
+  /** What to send as `reasoning` (see shared/thinking.ts), or nothing to leave it to the model. */
+  reasoning?: Record<string, unknown>;
   signal: AbortSignal;
   onDelta: (delta: StreamDelta) => void;
   /** Code mode: the tools the model may call (OpenAI function format). */
@@ -77,7 +78,7 @@ export async function streamChat(
       max_tokens: options.maxTokens,
       usage: { include: true },
       provider: { data_collection: 'deny', zdr: true },
-      ...(model.supportsThinking ? { reasoning: options.thinking ? { effort: 'medium' } : { effort: 'minimal', exclude: true } } : {}),
+      ...(options.reasoning ? { reasoning: options.reasoning } : {}),
     }),
   });
   if (!response.ok || !response.body) {
@@ -151,7 +152,7 @@ async function standIn(model: CloudModel, messages: ChatMessage[], options: Stre
   if (options.tools?.length) return standInAgent(model, messages, options);
   const question = [...messages].reverse().find(m => m.role === 'user')?.content ?? '';
   const reply = `This is a **sandbox test reply** from the stand-in for ${model.name}. Add an OpenRouter API key to get real answers.${options.web ? ' (Web search was on.)' : ''}\n\nYou asked: “${question.slice(0, 120)}”`;
-  if (options.thinking) options.onDelta({ reasoning: 'Thinking about the question (sandbox stand-in).' });
+  if (options.reasoning && options.reasoning.effort !== 'none' && options.reasoning.enabled !== false) options.onDelta({ reasoning: 'Thinking about the question (sandbox stand-in).' });
   await streamWords(reply, options);
   const promptChars = messages.reduce((sum, m) => sum + m.content.length, 0);
   return { promptTokens: Math.ceil(promptChars / 3.5), completionTokens: reply.split(/(?<= )/).length, costUsd: null, toolCalls: [], finishReason: 'stop' };

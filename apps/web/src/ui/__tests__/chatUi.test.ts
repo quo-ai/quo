@@ -35,7 +35,7 @@ describe('slash commands', () => {
 });
 
 describe('which commands apply', () => {
-  const state: CommandState = { busy: false, hasUserMessage: false, hasReply: false, codeAvailable: false, codeOn: false, plan: false, webAvailable: false, webOn: false, canThink: false, thinking: false, canSummarize: false, canUndo: false };
+  const state: CommandState = { busy: false, hasUserMessage: false, hasReply: false, codeAvailable: false, codeOn: false, plan: false, webAvailable: false, webOn: false, canThink: false, thinking: 'Auto', canSummarize: false, canUndo: false };
   const actions = new Proxy({}, { get: () => run }) as CommandActions;
   const names = (patch: Partial<CommandState>) => buildCommands({ ...state, ...patch }, actions).map(c => c.name);
 

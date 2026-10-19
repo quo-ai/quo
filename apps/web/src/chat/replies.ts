@@ -4,6 +4,8 @@ import { agentContextChars, askLocalAgentModel, prepareLocalAgent } from '../age
 import { askOwnAgentModel } from '../agent/own';
 import { codeSettings } from '../codeSettings';
 import { askAgentModel } from '../agent/stream';
+import type { ThinkLevel } from '../../shared/thinking';
+import { wireThinking } from './thinking';
 import { openProjectTool, type FolderOpener } from '../agent/folder';
 import { runSubagent, TASK_TOOL } from '../agent/subagent';
 import type { CodeSession } from '../agent/session';
@@ -171,11 +173,11 @@ export async function replyWithWeb(choice: OwnChoice | LocalChoice, sessionId: s
 }
 
 /** Whether the web search that was asked for ran (see CloudResult.web). */
-export async function replyInCloud(choice: CloudChoice, thinking: boolean, { prior, update, setStatus }: ReplyTarget, options: { web?: boolean } = {}): Promise<CloudResult['web']> {
+export async function replyInCloud(choice: CloudChoice, thinking: ThinkLevel, { prior, update, setStatus }: ReplyTarget, options: { web?: boolean } = {}): Promise<CloudResult['web']> {
   setStatus('generating');
   const history = buildContext(CLOUD_PROMPT + noteFor(choice, options.web ? ['web'] : []), prior, CLOUD_CONTEXT.contextSize, CLOUD_CONTEXT.maxTokens);
   const result = await generateCloud(choice.model.id, history, {
-    thinking,
+    thinking: wireThinking(choice, thinking),
     web: options.web,
     onUpdate: ({ content, reasoning }) => update({ content, reasoning }, false),
   });

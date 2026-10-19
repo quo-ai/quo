@@ -188,3 +188,53 @@ describe('web search in a chat with no folder yet', () => {
     expect((await response.json()).error).toBe('free_code_turn_limit');
   });
 });
+
+describe('thinking, as each model really offers it', () => {
+  const chunk = [{ choices: [{ delta: { content: 'ok' }, finish_reason: 'stop' }] }];
+  const chat = (token: string | null, model: string, thinking?: unknown) =>
+    call(token, 'POST', 'chat', { model, messages: [{ role: 'user', content: 'hi' }], ...(thinking === undefined ? {} : { thinking }) });
+  const reasoningOf = async (model: string, thinking?: unknown) => {
+    const token = await signIn(`think-${randomUUID()}@example.com`);
+    const requests = stubUpstream(chunk);
+    expect((await chat(token, model, thinking)).status).toBe(200);
+    return requests[0].body.reasoning;
+  };
+
+  it('lists the levels each model has, with no Off for a model that always thinks', async () => {
+    const list = await (await call(null, 'GET', 'models')).json();
+    const levels = (id: string) => list.models.find((m: { id: string }) => m.id === id).thinking;
+    expect(levels('anthropic/claude-sonnet-5.5')).toEqual(['quick', 'auto']); // its default already is high
+    expect(levels('google/gemini-4-argon')).toEqual(['quick', 'auto', 'deep']);
+    expect(levels('anthropic/claude-haiku-5.5')).toEqual(['off', 'quick', 'auto', 'deep']);
+    expect(levels('mistralai/mistral-large-4-0')).toEqual(['off', 'auto']);
+    expect(levels('google/gemma-4-31b-it')).toEqual(['off', 'deep']);
+    expect(levels('openai/gpt-6-luna')).toEqual(['off', 'auto']); // the free model is held to a low effort
+    expect(list.models.every((m: { thinking: unknown[]; supportsThinking: boolean }) => m.supportsThinking === m.thinking.length > 0)).toBe(true);
+  });
+
+  it('sends nothing for Auto, so the model decides, and only efforts the model accepts otherwise', async () => {
+    expect(await reasoningOf('anthropic/claude-sonnet-5.5', 'auto')).toBeUndefined();
+    expect(await reasoningOf('google/gemini-4-argon', 'deep')).toEqual({ effort: 'high' });
+    expect(await reasoningOf('deepseek/deepseek-v4-pro-0813', 'quick')).toEqual({ effort: 'low' });
+    expect(await reasoningOf('anthropic/claude-haiku-5.5', 'off')).toEqual({ effort: 'none' });
+    expect(await reasoningOf('google/gemma-4-31b-it', 'off')).toEqual({ enabled: false });
+  });
+
+  it('cannot switch off a model that always thinks, or ask a model for an effort it lacks', async () => {
+    expect(await reasoningOf('anthropic/claude-sonnet-5.5', 'off')).toBeUndefined();
+    expect(await reasoningOf('mistralai/mistral-large-4-0', 'quick')).toBeUndefined();
+  });
+
+  it('holds the free model to low, however much is asked for', async () => {
+    expect(await reasoningOf('openai/gpt-6-luna', 'auto')).toEqual({ effort: 'low' });
+    expect(await reasoningOf('openai/gpt-6-luna', 'deep')).toEqual({ effort: 'low' });
+    expect(await reasoningOf('openai/gpt-6-luna', 'off')).toEqual({ effort: 'none' });
+  });
+
+  it('treats an older app’s yes and no the way it always did, and ignores nonsense', async () => {
+    expect(await reasoningOf('anthropic/claude-haiku-5.5', false)).toEqual({ effort: 'low' });
+    expect(await reasoningOf('anthropic/claude-haiku-5.5', true)).toBeUndefined();
+    expect(await reasoningOf('anthropic/claude-haiku-5.5', 'maximum overdrive')).toBeUndefined();
+    expect(await reasoningOf('anthropic/claude-haiku-5.5', { effort: 'max' })).toBeUndefined();
+  });
+});

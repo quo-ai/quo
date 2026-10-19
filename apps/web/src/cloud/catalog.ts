@@ -15,6 +15,8 @@ export interface CloudModel {
   agentLight?: boolean;
   /** When the model came out (ISO date). */
   released: string;
+  /** The thinking levels this model really has (off, quick, auto, deep); absent from a server that only knew yes or no. */
+  thinking?: ('off' | 'quick' | 'auto' | 'deep')[];
   supportsThinking: boolean;
   /** Credits for a typical message. */
   creditsPerMessage: number;

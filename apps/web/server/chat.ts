@@ -1,11 +1,12 @@
 import { randomUUID } from 'node:crypto';
-import { costToMillicredits, CREDIT_USD, estimateCost, getCloudModel, isFreeModel } from './cloudModels.js';
+import { costToMillicredits, CREDIT_USD, estimateCost, getCloudModel, isFreeModel, thinkingCap } from './cloudModels.js';
 import { MILLI, getBalance, reserveCredits, settleCredits } from './credits.js';
 import { getDb } from './db.js';
 import { config, features, SETUP_MESSAGES } from './env.js';
 import { freeRemaining, refundFreeMessage, takeFreeMessage } from './freeTier.js';
 import { HttpError, readJson } from './http.js';
 import { freeSubject, identify } from './identity.js';
+import { defaultLevel, isLevel, levelFromLegacy, reasoningParam, type ThinkLevel } from '../shared/thinking.js';
 import { FREE_CODE_CHARS, FREE_CODE_STEPS, WEB_TOOLS, isFolderless } from '../shared/agentTools.js';
 import { capabilitiesOfTools, validLanguage, validOffset, type Environment } from '../shared/environment.js';
 import { agentSystemPrompt, AGENT_TOOL_NAMES, parseNotes, READ_ONLY_TOOLS, toolDefinitions, type Platform } from '../shared/agentTools.js';
@@ -43,7 +44,8 @@ const RESERVE_MARGIN = 1.2;
 interface ChatRequest {
   model?: string;
   messages?: unknown;
-  thinking?: boolean;
+  /** A level (off, quick, auto, deep), or, from an older app, true or false. */
+  thinking?: unknown;
   web?: boolean;
   agent?: { tools?: unknown; project?: unknown; platform?: unknown; instructions?: unknown; role?: unknown; environment?: unknown };
 }
@@ -72,7 +74,10 @@ export async function handleChat(request: Request): Promise<Response> {
   const history = agent ? validateAgentMessages(body.messages) : validateMessages(body.messages);
   // Code mode: the server's own instructions go first; the app can't supply or drop them.
   const messages: ChatMessage[] = agent ? [{ role: 'system', content: agent.prompt }, ...history] : history;
-  const thinking = !agent && Boolean(body.thinking) && model.supportsThinking;
+  // Thinking: the level asked for, as far as this model has it (the app only offers real ones, and the server checks). Code
+  // mode leaves it to the model; the summariser asks for as little as it can.
+  const level: ThinkLevel = agent ? (agent.role === 'summarize' ? 'quick' : 'auto') : isLevel(body.thinking) ? body.thinking : typeof body.thinking === 'boolean' ? levelFromLegacy(body.thinking) : defaultLevel(model.thinking);
+  const reasoning = reasoningParam(model.thinking, level, thinkingCap(model));
 
   const db = await getDb();
   const identity = await identify(db, request);
@@ -152,7 +157,7 @@ export async function handleChat(request: Request): Promise<Response> {
       try {
         usage = await streamChat(model, messages, {
           maxTokens,
-          thinking,
+          reasoning,
           tools: agent?.tools,
           web: searching,
           signal: upstream.signal,
@@ -285,7 +290,7 @@ function parseAgent(input: NonNullable<ChatRequest['agent']>, model: NonNullable
   const project = (typeof input.project === 'string' ? input.project : '').replace(/[^\p{L}\p{N} ._-]/gu, '').trim().slice(0, 60) || 'project';
   const tools = toolDefinitions(names);
   const env = role === 'summarize' ? null : serverEnvironment(input.environment, model, names, platform, folderless ? '' : project, role, folderless);
-  return { light, folderless, tools, toolChars: JSON.stringify(tools).length, prompt: agentSystemPrompt(project, platform, names, parseNotes(input.instructions), 'cloud', role, env) };
+  return { role, light, folderless, tools, toolChars: JSON.stringify(tools).length, prompt: agentSystemPrompt(project, platform, names, parseNotes(input.instructions), 'cloud', role, env) };
 }
 
 /**
