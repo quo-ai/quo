@@ -329,3 +329,35 @@ describe('models you already have', () => {
     });
   });
 });
+
+describe('a model file from an earlier edition', () => {
+  const edition = (altSizes = undefined) => [{ name: 'model.gguf', sizeBytes: 2000, ...(altSizes ? { altSizes } : {}) }];
+
+  it('counts as downloaded at a size the catalog used to have, so nobody downloads it again', async () => {
+    const { store } = makeStore();
+    fs.mkdirSync(path.join(store.directory, 'm'), { recursive: true });
+    fs.writeFileSync(path.join(store.directory, 'm', 'model.gguf'), gguf(1500));
+    assert.equal((await store.state('m', edition([1500]))).installed, true);
+    assert.deepEqual(await store.state('m', edition([1500])), { installed: true, downloadedBytes: 2000, totalBytes: 2000 });
+  });
+
+  it('does not count a size nobody ever shipped, a cut-off file, or a file without the model signature', async () => {
+    const { store } = makeStore();
+    fs.mkdirSync(path.join(store.directory, 'm'), { recursive: true });
+    fs.writeFileSync(path.join(store.directory, 'm', 'model.gguf'), gguf(1234));
+    assert.equal((await store.state('m', edition([1500]))).installed, false);
+    assert.equal((await store.state('m', edition())).installed, false);
+    fs.writeFileSync(path.join(store.directory, 'm', 'model.gguf'), Buffer.alloc(1500, 7));
+    assert.equal((await store.state('m', edition([1500]))).installed, false, 'the signature is still checked');
+  });
+
+  it('still counts the current size, and ignores a malformed list of old sizes', async () => {
+    const { store } = makeStore();
+    fs.mkdirSync(path.join(store.directory, 'm'), { recursive: true });
+    fs.writeFileSync(path.join(store.directory, 'm', 'model.gguf'), gguf(2000));
+    assert.equal((await store.state('m', edition([1500]))).installed, true);
+    assert.equal((await store.state('m', [{ name: 'model.gguf', sizeBytes: 2000, altSizes: 'nope' }])).installed, true);
+    fs.writeFileSync(path.join(store.directory, 'm', 'model.gguf'), gguf(1500));
+    assert.equal((await store.state('m', [{ name: 'model.gguf', sizeBytes: 2000, altSizes: 'nope' }])).installed, false);
+  });
+});

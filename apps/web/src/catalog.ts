@@ -19,6 +19,8 @@ export interface ModelFile {
   /** Name inside the model's storage folder. */
   name: string;
   sizeBytes: number;
+  /** Sizes an earlier edition of this file had: someone who has one already has the model, and it keeps working. */
+  altSizes?: number[];
 }
 
 export interface Sampling {
@@ -67,8 +69,9 @@ const QWEN_THINKING: Partial<Sampling> = { temperature: 1.0, top_p: 0.95, top_k:
 // Qwen's own advice for the two smallest (0.8B, 2B; only the browser build still has them), without thinking, for text: a
 // freer set with a strong presence penalty (model cards, checked 19 Oct 2026).
 const QWEN_SMALL: Sampling = { temperature: 1.0, top_p: 1.0, top_k: 20, min_p: 0, penalty_present: 2.0, penalty_last_n: 256 };
-// What one token of window costs in memory, from each architecture (only full-attention layers keep a cache in Qwen3.5).
-const KV = { qwenMid: 32_768, qwenLarge: 65_536, gemmaE2B: 8_192, llama3b: 114_688, phi4mini: 131_072 };
+// What one token of window costs in memory, from each architecture (only full-attention layers keep a cache in Qwen3.5; the
+// MTP editions have one more, the prediction head's).
+const KV = { qwenMid: 36_864, qwenLarge: 69_632, gemmaE2B: 8_192, llama3b: 114_688, phi4mini: 131_072 };
 
 const WEB_MODELS: LocalModel[] = [
   {
@@ -138,18 +141,22 @@ function nativeModel(
   name: string,
   description: string,
   repo: string,
-  file: { name: string; bytes: number },
-  vision: { name?: string; bytes: number } | null,
+  file: { name: string; bytes: number; altSizes?: number[] },
+  vision: { name?: string; bytes: number; altSizes?: number[] } | null,
   minMemoryGB: number,
   extra: Partial<LocalModel>,
 ): LocalModel {
-  const files: ModelFile[] = [{ url: `${HF}/${repo}/resolve/main/${file.name}`, name: 'model.gguf', sizeBytes: file.bytes }];
-  if (vision) files.push({ url: `${HF}/${repo}/resolve/main/${vision.name ?? 'mmproj-F16.gguf'}`, name: 'mmproj.gguf', sizeBytes: vision.bytes });
+  const files: ModelFile[] = [{ url: `${HF}/${repo}/resolve/main/${file.name}`, name: 'model.gguf', sizeBytes: file.bytes, ...(file.altSizes ? { altSizes: file.altSizes } : {}) }];
+  if (vision) files.push({ url: `${HF}/${repo}/resolve/main/${vision.name ?? 'mmproj-F16.gguf'}`, name: 'mmproj.gguf', sizeBytes: vision.bytes, ...(vision.altSizes ? { altSizes: vision.altSizes } : {}) });
   return { id, name, description, files, ...NATIVE_LIMITS, sampling: QWEN, supportsThinking: false, minMemoryGB, native: true, vision: Boolean(vision), ...extra };
 }
 
-const qwen = (id: string, size: string, description: string, file: number, vision: number, minMemoryGB: number, kv: number, agent?: LocalModel['agent']) =>
-  nativeModel(id, `Qwen3.5 ${size}`, description, `unsloth/Qwen3.5-${size}-GGUF`, { name: `Qwen3.5-${size}-Q4_K_M.gguf`, bytes: file }, { bytes: vision }, minMemoryGB, {
+// The Qwen3.5 models come from Unsloth's "-MTP" editions: the same models with the multi-token-prediction head kept, which
+// the engine uses to write several tokens per step (about twice as fast on code edits, the same text; verified on the 4B).
+// The files are a little larger. `older` are the sizes of the plain editions Quo used to offer: someone who downloaded one
+// still has a working model, which runs as it always did (the engine reads from the file whether it has the head).
+const qwen = (id: string, size: string, description: string, file: number, vision: number, minMemoryGB: number, kv: number, older: { model: number; projector: number }, agent?: LocalModel['agent']) =>
+  nativeModel(id, `Qwen3.5 ${size}`, description, `unsloth/Qwen3.5-${size}-MTP-GGUF`, { name: `Qwen3.5-${size}-Q4_K_M.gguf`, bytes: file, altSizes: [older.model] }, { bytes: vision, altSizes: [older.projector] }, minMemoryGB, {
     contextSize: LONG_WINDOW,
     kvBytesPerToken: kv,
     thinkingSampling: QWEN_THINKING,
@@ -158,9 +165,9 @@ const qwen = (id: string, size: string, description: string, file: number, visio
   });
 
 export const DESKTOP_MODELS: LocalModel[] = [
-  qwen('qwen35-4b', '4B', 'Strong all-rounder with careful reasoning. Reads images. Best on a computer with a graphics card.', 2740937888, 672423616, 8, KV.qwenMid, 'limited'),
-  qwen('qwen35-9b', '9B', 'A big step up in quality and reasoning. Reads images. Wants a graphics card with 8 GB or more, or 16 GB of memory.', 5680522464, 918166080, 12, KV.qwenMid, 'good'),
-  qwen('qwen35-27b', '27B', 'The most capable model here. Reads images. For computers with 32 GB or more of memory, or a high-end graphics card.', 16740812704, 927607040, 32, KV.qwenLarge, 'good'),
+  qwen('qwen35-4b', '4B', 'Strong all-rounder with careful reasoning. Reads images. Best on a computer with a graphics card.', 2834975040, 672423488, 8, KV.qwenMid, { model: 2740937888, projector: 672423616 }, 'limited'),
+  qwen('qwen35-9b', '9B', 'A big step up in quality and reasoning. Reads images. Wants a graphics card with 8 GB or more, or 16 GB of memory.', 5868826976, 918165984, 12, KV.qwenMid, { model: 5680522464, projector: 918166080 }, 'good'),
+  qwen('qwen35-27b', '27B', 'The most capable model here. Reads images. For computers with 32 GB or more of memory, or a high-end graphics card.', 17106773056, 927607392, 32, KV.qwenLarge, { model: 16740812704, projector: 927607040 }, 'good'),
   nativeModel('gemma4-e2b', 'Gemma 4 E2B', 'Google’s small multilingual model. Reads images and speaks 140+ languages.', 'unsloth/gemma-4-E2B-it-GGUF',
     { name: 'gemma-4-E2B-it-Q4_K_M.gguf', bytes: 3106738272 }, { bytes: 985654080 }, 8, { sampling: GEMMA, contextSize: LONG_WINDOW, kvBytesPerToken: KV.gemmaE2B }),
   nativeModel('llama32-3b', 'Llama 3.2 3B', 'Dependable all-rounder for writing and summarising.', 'unsloth/Llama-3.2-3B-Instruct-GGUF',

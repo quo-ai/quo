@@ -143,3 +143,56 @@ describe('how llama-server is started', () => {
     assert.equal(withVision[withVision.indexOf('--mmproj') + 1], '/m/mmproj.gguf');
   });
 });
+
+describe('a model with images that does not fit: projector first, then window', () => {
+  it('keeps the image projector on the processor before it shrinks the window', async () => {
+    const calls = [];
+    const result = await startWithFallback(async (size, options) => {
+      calls.push([size, options.cpuProjector]);
+      if (!options.cpuProjector) throw oom();
+      return { contextSize: size, cpuProjector: options.cpuProjector };
+    }, 32768, { hasProjector: true });
+    assert.deepEqual(calls, [[32768, false], [32768, true]]);
+    assert.deepEqual(result, { contextSize: 32768, cpuProjector: true });
+  });
+
+  it('then halves the window with the projector on the processor, and says what it did each time', async () => {
+    const calls = [];
+    const retries = [];
+    await startWithFallback(async (size, options) => {
+      calls.push([size, options.cpuProjector]);
+      if (size > 16384) throw oom();
+      return {};
+    }, 65536, { hasProjector: true, onRetry: (from, to, what) => retries.push([from, to, what]) });
+    assert.deepEqual(calls, [[65536, false], [65536, true], [32768, true], [16384, true]]);
+    assert.deepEqual(retries, [[65536, 65536, 'projector'], [65536, 32768, 'window'], [32768, 16384, 'window']]);
+  });
+
+  it('never touches the projector for a model without one, and gives up at the minimum with the real error', async () => {
+    const calls = [];
+    await assert.rejects(startWithFallback(async (size, options) => (calls.push([size, options.cpuProjector]), Promise.reject(oom())), 16384, { hasProjector: false }), error => error.code === 'out_of_memory');
+    assert.deepEqual(calls, [[16384, false], [8192, false]]);
+    const withImages = [];
+    await assert.rejects(startWithFallback(async (size, options) => (withImages.push([size, options.cpuProjector]), Promise.reject(oom())), 8192, { hasProjector: true }));
+    assert.deepEqual(withImages, [[8192, false], [8192, true]]);
+  });
+});
+
+describe('the speed-up for models with a prediction head', () => {
+  const base = { modelPath: '/m/model.gguf', mmprojPath: null, port: 1, key: 'k', contextSize: 16384 };
+  const value = (args, flag) => args[args.indexOf(flag) + 1];
+
+  it('is asked for only when the file has the head, with three tokens drafted a step', () => {
+    const on = serverArgs({ ...base, mtp: true });
+    assert.equal(value(on, '--spec-type'), 'draft-mtp');
+    assert.equal(value(on, '--spec-draft-n-max'), '3');
+    for (const args of [serverArgs(base), serverArgs({ ...base, mtp: false })]) assert.ok(!args.includes('--spec-type'));
+  });
+
+  it('puts the projector on the processor only when there is one and it was asked for', () => {
+    assert.ok(!serverArgs({ ...base, cpuProjector: true }).includes('--no-mmproj-offload'), 'no projector, nothing to move');
+    const withImages = { ...base, mmprojPath: '/m/mmproj.gguf' };
+    assert.ok(!serverArgs(withImages).includes('--no-mmproj-offload'));
+    assert.ok(serverArgs({ ...withImages, cpuProjector: true }).includes('--no-mmproj-offload'));
+  });
+});

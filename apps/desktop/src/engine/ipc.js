@@ -107,7 +107,7 @@ function setupEngine() {
     }
     // Too big for this computer's memory with that window: try a smaller one (a model that fits is better than an error).
     const asked = clamp(contextSize, 2048, 131072, 8192);
-    const status = await startWithFallback(size => engine.start({ modelId, modelPath, mmprojPath, contextSize: size }), asked);
+    const status = await startWithFallback((size, options) => engine.start({ modelId, modelPath, mmprojPath, contextSize: size, cpuProjector: options.cpuProjector }), asked, { hasProjector: Boolean(mmprojPath) });
     return { ...status, requestedContextSize: asked };
   });
 

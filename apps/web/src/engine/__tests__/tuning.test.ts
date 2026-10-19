@@ -11,7 +11,7 @@ describe('the window a model gets', () => {
     expect(contextFor(model('qwen35-9b'), 32768, 16)).toBe(32768);
     expect(contextFor(model('qwen35-27b'), 32768, 24)).toBe(32768);
     expect(contextFor(model('qwen35-4b'), 32768, 16)).toBe(32768);
-    expect(contextFor(model('qwen35-4b'), 32768, 8)).toBe(30720); // 8 GB: its share of memory holds a little less
+    expect(contextFor(model('qwen35-4b'), 32768, 8)).toBe(27648); // 8 GB: its share of memory holds a little less
   });
 
   it('is held back for a model that is heavy on memory, on a small computer, never below a usable window', () => {
@@ -81,5 +81,29 @@ describe('the catalog', () => {
 
   it('never asks for more window than a model has', () => {
     for (const m of DESKTOP_MODELS) expect(m.contextSize).toBeLessThanOrEqual(131072);
+  });
+});
+
+describe('the Qwen3.5 models come as the editions that keep the prediction head', () => {
+  const urlOf = (id: string, name: string) => model(id).files.find(f => f.name === name)!.url;
+
+  it('are downloaded from Unsloth’s MTP repositories, with the exact sizes of those files', () => {
+    expect(urlOf('qwen35-4b', 'model.gguf')).toBe('https://huggingface.co/unsloth/Qwen3.5-4B-MTP-GGUF/resolve/main/Qwen3.5-4B-Q4_K_M.gguf');
+    expect(urlOf('qwen35-9b', 'mmproj.gguf')).toBe('https://huggingface.co/unsloth/Qwen3.5-9B-MTP-GGUF/resolve/main/mmproj-F16.gguf');
+    expect(model('qwen35-27b').files.map(f => f.sizeBytes)).toEqual([17106773056, 927607392]);
+    expect(model('qwen35-4b').files.map(f => f.sizeBytes)).toEqual([2834975040, 672423488]);
+    expect(model('qwen35-9b').files.map(f => f.sizeBytes)).toEqual([5868826976, 918165984]);
+  });
+
+  it('still count as installed for someone who downloaded the plain editions before', () => {
+    expect(model('qwen35-4b').files.map(f => f.altSizes)).toEqual([[2740937888], [672423616]]);
+    expect(model('qwen35-9b').files.map(f => f.altSizes)).toEqual([[5680522464], [918166080]]);
+    expect(model('qwen35-27b').files.map(f => f.altSizes)).toEqual([[16740812704], [927607040]]);
+    for (const id of ['gemma4-e2b', 'llama32-3b', 'phi4-mini']) expect(model(id).files.every(f => f.altSizes === undefined), id).toBe(true);
+  });
+
+  it('count the prediction head’s extra layer in the memory a token of window takes', () => {
+    expect(model('qwen35-4b').kvBytesPerToken).toBe(9 * 2 * 4 * 256 * 2);
+    expect(model('qwen35-27b').kvBytesPerToken).toBe(17 * 2 * 4 * 256 * 2);
   });
 });

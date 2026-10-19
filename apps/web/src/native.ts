@@ -65,6 +65,8 @@ export interface ModelFileRequest {
   url: string;
   name: string;
   sizeBytes: number;
+  /** Sizes an earlier edition had (state only): such a file counts as downloaded. */
+  altSizes?: number[];
 }
 
 export interface ModelDiskInfo {

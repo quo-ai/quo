@@ -88,9 +88,12 @@ class ModelStore {
       const target = this.filePath(modelId, file.name);
       const done = await sizeOf(target);
       const part = done ? 0 : await sizeOf(`${target}.part`);
+      // A file is whole at the size the catalog says now, or at a size it had before (an earlier edition of the same model
+      // that someone already downloaded: it still works, so it is not downloaded again).
+      const whole = done === file.sizeBytes || (Array.isArray(file.altSizes) && file.altSizes.includes(done));
       total += file.sizeBytes;
-      downloaded += Math.min(done || part, file.sizeBytes);
-      if (done !== file.sizeBytes) complete = false;
+      downloaded += whole ? file.sizeBytes : Math.min(done || part, file.sizeBytes);
+      if (!whole) complete = false;
     }
     if (complete && files.length) complete = await hasGgufHeader(this.filePath(modelId, files[0].name));
     return { installed: complete, downloadedBytes: complete ? total : downloaded, totalBytes: total };

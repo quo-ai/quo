@@ -17,6 +17,8 @@ export interface DownloadStore {
 }
 
 const filesOf = (model: LocalModel) => model.files.map(({ url, name, sizeBytes }) => ({ url, name, sizeBytes }));
+// What is on disk is judged against the sizes the files have now and the ones they used to have.
+const stateFilesOf = (model: LocalModel) => model.files.map(({ url, name, sizeBytes, altSizes }) => ({ url, name, sizeBytes, ...(altSizes ? { altSizes } : {}) }));
 
 let listening = false;
 
@@ -69,7 +71,7 @@ export async function refreshNative(store: DownloadStore): Promise<void> {
     }
     const current = store.get(model.id)?.status;
     if (current === 'downloading' || current === 'waiting' || current === 'verifying') return;
-    const disk = unwrap(await bridge.models.state(model.id, filesOf(model)));
+    const disk = unwrap(await bridge.models.state(model.id, stateFilesOf(model)));
     store.set(model.id, {
       status: disk.installed ? 'installed' : disk.downloadedBytes > 0 ? 'partial' : 'idle',
       loaded: disk.downloadedBytes,
