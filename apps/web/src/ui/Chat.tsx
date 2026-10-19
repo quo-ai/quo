@@ -134,7 +134,7 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
       const searching = web.on && web.how === 'tools';
       // Plain chats on the desktop go through the same loop when a folder could be wanted, so the model decides. Anything the loop
       // doesn't do (attachments, thinking, Quo's own web search) keeps its own route; the folder button is always there.
-      const folderless = !code && usesFolderLoop({ choice, available: codeMode.available, autoStart: codeSettings().autoStart, gated: Boolean(choice.kind === 'local' && codeMode.gate && !codeMode.gate.allowed), plainFeatures: searching || sent.length > 0 || thinking || (web.on && web.how === 'native') });
+      const folderless = !code && usesFolderLoop({ choice, available: codeMode.available, autoStart: codeSettings().autoStart, gated: Boolean(choice.kind === 'local' && codeMode.gate && !codeMode.gate.allowed), plainFeatures: sent.length > 0 || thinking || (web.on && web.how === 'native') });
       if (code && (choice.kind === 'local' || choice.model.agent || (choice.kind === 'cloud' && choice.model.agentLight))) {
         setStatus('generating');
         const controller = new AbortController();
@@ -155,15 +155,20 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
           const changes = await replyWithAgent(choice, null, controller.signal, target, {
             open: async (kind, name) => {
               const opened = await codeMode.openProject(kind, name);
-              if (opened.session) rememberChatProject(current.id, opened.session.project.id);
+              if (opened.session) {
+                rememberChatProject(current.id, opened.session.project.id);
+                opened.session.webOn = searching; // the settings say whether models may search; the model decides when
+              }
               return opened;
             },
+            web: searching,
+            webSessionId: current.id,
           });
           if (changes > 0) setUndo({ messageId: assistant.id, count: changes });
         } finally {
           agentRun.current = null;
         }
-      } else if (searching && (choice.kind === 'own' || choice.kind === 'local') && sent.length === 0) {
+      } else if (searching && !thinking && (choice.kind === 'own' || choice.kind === 'local') && sent.length === 0) {
         // Web search with a model that calls tools. (A message with photos or documents goes the ordinary way.)
         setStatus('generating');
         const controller = new AbortController();
@@ -271,9 +276,9 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
       codeAvailable: codeMode.available,
       codeOn: Boolean(code),
       plan: codeMode.plan,
-      webAvailable: web.usable,
+      webAvailable: web.usable && !web.modelDecides,
       webOn: web.on,
-      canThink: Boolean(choice && choice.kind !== 'own' && choice.model.supportsThinking && !code && !(web.on && web.how === 'tools')),
+      canThink: Boolean(choice && choice.kind !== 'own' && choice.model.supportsThinking && !code),
       thinking,
       canSummarize: Boolean(conversation) && modelMessages(messages).length >= 2,
       canUndo: Boolean(undo) && !busy,

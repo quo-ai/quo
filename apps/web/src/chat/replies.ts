@@ -51,11 +51,15 @@ export interface ReplyTarget {
 const contextChars = (model: OwnModel): number => Math.min(CONTEXT_CHARS, Math.round((model.contextTokens ?? 128_000) * 3 * 0.7));
 
 /** Code mode: the model works on the project with the desktop app's tools until it has nothing left to do. Returns how many files it changed. */
-export async function replyWithAgent(choice: CloudChoice | OwnChoice | LocalChoice, code: CodeSession | null, signal: AbortSignal, { prior, update, setStatus, onContext }: ReplyTarget, folder?: FolderOpener): Promise<number> {
+export async function replyWithAgent(choice: CloudChoice | OwnChoice | LocalChoice, code: CodeSession | null, signal: AbortSignal, { prior, update, setStatus, onContext }: ReplyTarget, folder?: (FolderOpener & { web?: boolean; webSessionId?: string })): Promise<number> {
   // Without a folder yet the model has one tool, open_project, and decides from the message whether it needs it; once a
   // folder is open (now or mid-reply) everything below follows the session.
   let session = code;
-  if (session) await allowUserUrls(session.info.sessionId, [...prior].reverse().find(m => m.role === 'user')?.content ?? '');
+  const lastUser = [...prior].reverse().find(m => m.role === 'user')?.content ?? '';
+  if (session) await allowUserUrls(session.info.sessionId, lastUser);
+  // Without a folder, search and page reading go straight to the desktop's web service under the chat's own web session.
+  const webBefore = Boolean(folder?.web && folder.webSessionId);
+  if (webBefore) await allowUserUrls(folder!.webSessionId!, lastUser);
   if (choice.kind === 'local') {
     // An offline model is loaded again with more room than a chat needs, which takes a moment.
     setStatus('loading');
@@ -67,7 +71,7 @@ export async function replyWithAgent(choice: CloudChoice | OwnChoice | LocalChoi
   // The free model's Code mode is small on purpose (few steps, a short conversation, no helpers or summaries).
   const light = choice.kind === 'cloud' && choice.model.free && !choice.model.agent;
   // Helpers (the task tool) are for models with room to spare: not offline ones, whose window is small, nor the free one.
-  const toolsNow = () => (!session ? [FOLDER_TOOL] : choice.kind === 'local' || light ? session.tools : [...session.tools, TASK_TOOL]);
+  const toolsNow = () => (!session ? [FOLDER_TOOL, ...(webBefore ? WEB_TOOLS : [])] : choice.kind === 'local' || light ? session.tools : [...session.tools, TASK_TOOL]);
   const platform = session?.info.platform ?? (typeof window !== 'undefined' ? window.quoDesktop?.platform : undefined) ?? 'linux';
   // Each request carries a fresh environment note (the clock moves, plan mode can be switched) for the models the app prompts;
   // Quo's own cloud models get the same from the server.
@@ -111,9 +115,11 @@ export async function replyWithAgent(choice: CloudChoice | OwnChoice | LocalChoi
       if (name === FOLDER_TOOL) {
         if (!folder) return { ok: false, text: 'A folder can’t be opened here.', display: { kind: 'error' } };
         const opened = await openProjectTool(args, session, folder);
+        if (opened.session && !session) await allowUserUrls(opened.session.info.sessionId, lastUser);
         session = opened.session;
         return opened.result;
       }
+      if (!session && webBefore && WEB_TOOLS.includes(name)) return runWebTool(folder!.webSessionId!, name, args, choice.kind === 'local');
       if (!session) return { ok: false, text: 'No folder is open yet. Call open_project first if the request needs the person’s files.', display: { kind: 'error' } };
       const active = session;
       return name === TASK_TOOL

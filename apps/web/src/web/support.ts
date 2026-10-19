@@ -8,15 +8,17 @@ import { webSettings } from './settings';
  *    tools: the user's own keys, offline models, and Quo's models while Code mode is on).
  *  - 'native': the provider searches itself (OpenRouter's web plugin, Anthropic's search tool), which is what works in
  *    a browser, where other sites can't be reached from the page.
- * Quo's own models use the second: the server asks OpenRouter to search once per message (a few a day on the free model,
- * credits on the others), except in Code mode on the desktop, where its own tools are used.
+ * Quo's own models use the second in a browser: the server asks OpenRouter to search once per message (a few a day on the
+ * free model, credits on the others), so there it is a switch. On the desktop every model that can use tools gets the
+ * first, and decides for itself when to search, with no switch (the settings say whether models may).
  */
 
 export type WebHow = 'tools' | 'native';
 
 export function webHow(choice: ModelChoice | null, codeOn: boolean): WebHow | null {
   if (!choice) return null;
-  if (choice.kind === 'cloud') return codeOn && choice.model.agent && webBridge() ? 'tools' : 'native';
+  // On the desktop a model that can use tools gets the search tools and decides for itself; the rest use Quo's own search.
+  if (choice.kind === 'cloud') return webBridge() && (choice.model.agent || choice.model.agentLight) && (codeOn || choice.model.agentLight !== undefined) ? 'tools' : 'native';
   if (webBridge()) {
     if (choice.kind === 'own') return choice.model.agent ? 'tools' : choice.provider.custom ? null : nativeProvider(choice.provider.id);
     return hasNativeEngine() ? 'tools' : null;

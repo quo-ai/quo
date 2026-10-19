@@ -6,7 +6,7 @@ import { config, features, SETUP_MESSAGES } from './env.js';
 import { freeRemaining, refundFreeMessage, takeFreeMessage } from './freeTier.js';
 import { HttpError, readJson } from './http.js';
 import { freeSubject, identify } from './identity.js';
-import { FREE_CODE_CHARS, FREE_CODE_STEPS, isFolderless } from '../shared/agentTools.js';
+import { FREE_CODE_CHARS, FREE_CODE_STEPS, WEB_TOOLS, isFolderless } from '../shared/agentTools.js';
 import { capabilitiesOfTools, validLanguage, validOffset, type Environment } from '../shared/environment.js';
 import { agentSystemPrompt, AGENT_TOOL_NAMES, parseNotes, READ_ONLY_TOOLS, toolDefinitions, type Platform } from '../shared/agentTools.js';
 import { streamChat, UpstreamError, type ChatMessage, type ToolCall } from './openrouter.js';
@@ -83,8 +83,10 @@ export async function handleChat(request: Request): Promise<Response> {
   const wantsWeb = !agent && body.web === true;
   // Free Code mode: a reply is a few steps, each with the conversation so far, so it has its own limits (steps in a
   // reply, the size of the conversation, and a daily allowance of steps) instead of one free message per request.
-  // A chat with no folder yet is an ordinary message to the free model (one free message), not coding.
-  const lightAgent = Boolean(agent?.light) && !agent?.folderless;
+  // A chat with no folder yet is an ordinary message to the free model (one free message), not coding. The steps that
+  // follow a tool (a search, say) are not free messages: they come from the small allowance of coding steps, with its caps.
+  const continuing = history[history.length - 1]?.role === 'tool';
+  const lightAgent = Boolean(agent?.light) && (!agent?.folderless || continuing);
   if (lightAgent) {
     const reply = history.slice(history.map(m => m.role).lastIndexOf('user') + 1);
     if (reply.filter(m => m.role === 'assistant').length >= FREE_CODE_STEPS) throw new HttpError(429, 'free_code_turn_limit', `The free model stops after ${FREE_CODE_STEPS} steps in a reply. Ask it to carry on, or choose a stronger model.`);
@@ -277,7 +279,7 @@ function parseAgent(input: NonNullable<ChatRequest['agent']>, model: NonNullable
   const wanted = role === 'summarize' ? [] : role === 'explore' ? [...READ_ONLY_TOOLS] : AGENT_TOOL_NAMES.filter(name => requested.includes(name) && !(light && name === 'task'));
   // A chat with no folder yet (the model can ask for one with open_project) has that tool and nothing else.
   const folderless = role === 'main' && isFolderless(wanted);
-  const names = folderless ? ['open_project'] : wanted;
+  const names = folderless ? ['open_project', ...WEB_TOOLS.filter(name => wanted.includes(name))] : wanted;
   if (role !== 'summarize' && !folderless && !READ_ONLY_TOOLS.every(name => names.includes(name))) throw new HttpError(400, 'bad_tools', 'Code mode needs at least the tools that read files.');
   const platform: Platform = input.platform === 'win32' || input.platform === 'darwin' ? input.platform : 'linux';
   const project = (typeof input.project === 'string' ? input.project : '').replace(/[^\p{L}\p{N} ._-]/gu, '').trim().slice(0, 60) || 'project';

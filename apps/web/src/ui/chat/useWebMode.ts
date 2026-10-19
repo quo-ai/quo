@@ -18,13 +18,17 @@ export function useWebMode(choice: ModelChoice | null, codeOn: boolean, conversa
   const [override, setOverride] = useState<boolean | null>(null);
   // A different chat or model starts from the settings again.
   useEffect(() => setOverride(null), [modelId, conversationId]);
-  const wanted = override ?? webDefault(choice, how);
+  // With search tools the model decides when to search, so there is nothing to switch: the settings say whether it may.
+  const modelDecides = how === 'tools';
+  const wanted = modelDecides ? webDefault(choice, how) : (override ?? webDefault(choice, how));
   return {
     how,
     online,
     /** Can be switched on now. */
     usable: how !== null && online,
     on: how !== null && online && wanted,
+    /** The model has the search tools and decides when to use them: no switch is shown. */
+    modelDecides,
     toggle: () => setOverride(!wanted),
   };
 }

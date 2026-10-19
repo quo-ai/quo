@@ -214,7 +214,7 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
               onRemove={codeMode.end}
             />
           )}
-          {web.how && (
+          {web.how && !web.modelDecides && (
             <button
               type="button"
               className="chip press"

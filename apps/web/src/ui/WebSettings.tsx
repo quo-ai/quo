@@ -18,13 +18,12 @@ export function WebSettings() {
   return (
     <>
       <p className="note keys-intro">
-        A model can search the web and read pages. What it searches for goes to the search service, and it can only open addresses a search found, you wrote, or a page it read links to.
-        {' With Quo’s cloud models, each message is searched for on the web first (a few a day on the free model, credits on the others), and your message goes to a search service.'}
-        {!bridge && ' In a browser, your own OpenRouter or Anthropic key can search too, using their built-in search. The desktop app adds more services and works with offline models.'}
+        A model can search the web and read pages whenever it decides it needs to: there is no switch in the chat. What it searches for goes to the search service, and it can only open addresses a search found, you wrote, or a page it read links to.
+        {bridge ? ' These settings say whether models may search at all.' : ' In a browser, Quo’s cloud models search once per message when you turn Web on under the message box (a few a day on the free model, credits on the others), and your own OpenRouter or Anthropic key can search with their built-in search. The desktop app lets every model decide for itself, and works with offline models.'}
       </p>
       <div className="toggle-list">
-        <Toggle label="On by default with your own keys" detail="Quo’s cloud models always start with it off, because each message would search. Switches itself off when you’re offline." on={settings.online} onChange={online => setWebSettings({ online })} />
-        <Toggle label="On by default with offline models" detail="Off keeps an offline chat fully offline, and keeps photos, documents and thinking." on={settings.offline} onChange={offline => setWebSettings({ offline })} />
+        <Toggle label="Let online models search the web" detail="Quo’s cloud models and your own keys. In the desktop app the model decides when; in a browser it is the Web button. Switches itself off when you’re offline." on={settings.online} onChange={online => setWebSettings({ online })} />
+        <Toggle label="Let offline models search the web" detail="Off keeps an offline chat fully offline, and keeps photos, documents and thinking." on={settings.offline} onChange={offline => setWebSettings({ offline })} />
       </div>
       {bridge && <SearchServices bridge={bridge} />}
       <div className="sheet-section-title">When a cloud model can’t be used</div>

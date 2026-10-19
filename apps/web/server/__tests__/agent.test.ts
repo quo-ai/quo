@@ -476,3 +476,49 @@ describe('a chat with no folder yet', () => {
     expect(response.status).toBe(400);
   });
 });
+
+describe('web search in a chat with no folder yet', () => {
+  const LUNA = 'openai/gpt-6-luna';
+  const chunk = [{ choices: [{ delta: { content: 'ok' }, finish_reason: 'stop' }] }];
+  const asLuna = (token: string | null, messages: unknown, tools: string[]) => step(token, { model: LUNA, messages, agent: { tools, project: '', platform: 'linux' } });
+  const toolTurn = [
+    { role: 'user', content: 'What is the latest version of Node?' },
+    { role: 'assistant', content: '', tool_calls: [{ id: 'c1', type: 'function', function: { name: 'web_search', arguments: '{"query":"node latest version"}' } }] },
+    { role: 'tool', tool_call_id: 'c1', content: 'Node 26.1' },
+  ];
+
+  it('gives the model the search tools next to open_project, and tells it it can browse', async () => {
+    const token = await signIn('folderless-web@example.com');
+    const requests = stubUpstream(chunk);
+    expect((await step(token, { agent: { tools: ['open_project', 'web_search', 'fetch_url', 'edit_file'], project: '', platform: 'linux', environment: { app: { name: 'Quo Desktop' } } } })).status).toBe(200);
+    expect((requests[0].body.tools as { function: { name: string } }[]).map(t => t.function.name).sort()).toEqual(['fetch_url', 'open_project', 'web_search']);
+    const system = (requests[0].body.messages as { content: string }[])[0].content;
+    expect(system).toMatch(/search the web and read pages \(web_search, fetch_url\)/);
+    expect(system).toMatch(/you can search the web and read pages/);
+    expect(system).not.toMatch(/You cannot browse the web/);
+  });
+
+  it('counts the first request as a free chat message and the step after a search as a coding step', async () => {
+    const token = await signIn('folderless-web2@example.com');
+    const tools = ['open_project', 'web_search', 'fetch_url'];
+    stubUpstream(chunk);
+    const first = await asLuna(token, toolTurn.slice(0, 1), tools);
+    expect((await events(first)).find(e => e.event === 'done')!.data.freeRemaining).toBe(config.freeDailyMessages - 1);
+    stubUpstream(chunk);
+    const second = await asLuna(token, toolTurn, tools);
+    expect(second.status).toBe(200);
+    const done = (await events(second)).find(e => e.event === 'done')!;
+    expect(done.data.freeRemaining).toBeNull(); // not a free chat message: it came from the coding steps
+  });
+
+  it('still caps the steps of a reply for the free model after searches', async () => {
+    const token = await signIn('folderless-web3@example.com');
+    stubUpstream(chunk);
+    const search = (i: number) => [{ role: 'assistant', content: '', tool_calls: [{ id: `c${i}`, type: 'function', function: { name: 'web_search', arguments: '{"query":"x"}' } }] }, { role: 'tool', tool_call_id: `c${i}`, content: 'r' }];
+    const long = [{ role: 'user', content: 'Look it up' }, ...Array.from({ length: 8 }, (_, i) => search(i)).flat()];
+    const response = await asLuna(token, long, ['open_project', 'web_search', 'fetch_url']);
+    expect(response.status).toBe(429);
+    expect((await response.json()).error).toBe('free_code_turn_limit');
+  });
+});
+
