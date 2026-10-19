@@ -1,4 +1,4 @@
-import { READ_ONLY_TOOLS, WEB_TOOLS, webSystemPrompt } from '../../shared/agentTools';
+import { FREE_CODE_CHARS, FREE_CODE_STEPS, READ_ONLY_TOOLS, WEB_TOOLS, webSystemPrompt } from '../../shared/agentTools';
 import { runAgent, countChanges, CONTEXT_CHARS } from '../agent/loop';
 import { agentContextChars, askLocalAgentModel, prepareLocalAgent } from '../agent/local';
 import { askOwnAgentModel } from '../agent/own';
@@ -58,8 +58,10 @@ export async function replyWithAgent(choice: CloudChoice | OwnChoice | LocalChoi
   setStatus('generating');
   const conversation: AgentMessage[] = prior.filter(m => m.content).map(m => ({ role: m.role, content: m.content }));
   const { useNotes, maxSteps } = codeSettings();
-  // Helpers (the task tool) are for models with room to spare: not offline ones, whose window is small.
-  const tools = choice.kind === 'local' ? code.tools : [...code.tools, TASK_TOOL];
+  // The free model's Code mode is small on purpose (few steps, a short conversation, no helpers or summaries).
+  const light = choice.kind === 'cloud' && choice.model.free && !choice.model.agent;
+  // Helpers (the task tool) are for models with room to spare: not offline ones, whose window is small, nor the free one.
+  const tools = choice.kind === 'local' || light ? code.tools : [...code.tools, TASK_TOOL];
   // Each request carries a fresh environment note (the clock moves, plan mode can be switched) for the models the app prompts;
   // Quo's own cloud models get the same from the server.
   const options = (onText: (text: string) => void, extra: { tools?: string[]; role?: 'explore' | 'summarize' } = {}) => ({
@@ -78,14 +80,14 @@ export async function replyWithAgent(choice: CloudChoice | OwnChoice | LocalChoi
       : choice.kind === 'local'
         ? (messages, onText) => askLocalAgentModel(choice.model, messages, options(onText, extra))
         : (messages, onText) => askAgentModel(choice.model.id, messages, options(onText, extra));
-  const windowChars = choice.kind === 'own' ? contextChars(choice.model) : choice.kind === 'local' ? agentContextChars() : undefined;
+  const windowChars = light ? FREE_CODE_CHARS * 0.85 : choice.kind === 'own' ? contextChars(choice.model) : choice.kind === 'local' ? agentContextChars() : undefined;
   let helperCost = 0;
   const outcome = await runAgent(conversation, {
     signal,
-    maxSteps,
+    maxSteps: light ? Math.min(maxSteps, FREE_CODE_STEPS) : maxSteps,
     askModel: ask(),
     // A long session is written up by the model rather than forgotten. Not for offline models: a small one writes a poor report.
-    ...(choice.kind === 'local'
+    ...(choice.kind === 'local' || light
       ? {}
       : {
           summarize: async (transcript: string) => {

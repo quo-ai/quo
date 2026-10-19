@@ -235,6 +235,10 @@ export interface ProjectNotes {
 }
 export const MAX_NOTES_CHARS = 8500;
 
+/** Code mode on the free model is deliberately small: steps in one reply, and how much conversation goes with each step. */
+export const FREE_CODE_STEPS = 8;
+export const FREE_CODE_CHARS = 100_000;
+
 /** Checks notes sent by the app. Anything that isn't exactly the right shape is dropped, never half-used. */
 export function parseNotes(input: unknown): ProjectNotes | null {
   if (!input || typeof input !== 'object') return null;

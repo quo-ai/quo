@@ -47,6 +47,9 @@ export const config = {
   defaultCloudModel: env.DEFAULT_CLOUD_MODEL || 'openai/gpt-6-luna',
   freeDailyMessages: int(env.FREE_DAILY_MESSAGES, 20),
   freeDailyMessagesPerIp: int(env.FREE_DAILY_MESSAGES_PER_IP, 60),
+  /** Steps of Code mode that come with the free model (each step is a request; a coding reply takes several). */
+  freeDailyCodeSteps: int(env.FREE_DAILY_CODE_STEPS, 60),
+  freeDailyCodeStepsPerIp: int(env.FREE_DAILY_CODE_STEPS_PER_IP, 150),
   /** Web searches that come with the free model (each costs us a search fee, so it has its own, smaller allowance). */
   freeDailySearches: int(env.FREE_DAILY_SEARCHES, 3),
   freeDailySearchesPerIp: int(env.FREE_DAILY_SEARCHES_PER_IP, 10),

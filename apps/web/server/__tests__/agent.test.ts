@@ -76,15 +76,13 @@ describe('which models can run Code mode', () => {
     expect(agent.map((m: { id: string }) => m.id)).toContain(AGENT_MODEL);
   });
 
-  it('turns away a model that isn’t marked, and the free one', async () => {
+  it('turns away a paid model that isn’t marked for tools (the free one has its own small form, below)', async () => {
     const token = await signIn('agent-models@example.com');
     const catalog = await (await call(null, 'GET', 'models')).json();
     const weak = catalog.models.find((m: { agent: boolean; free: boolean }) => !m.agent && !m.free).id;
-    for (const model of [weak, catalog.defaultModel]) {
-      const response = await step(token, { model });
-      expect(response.status, model).toBe(400);
-      expect((await response.json()).error).toBe('agent_unsupported');
-    }
+    const response = await step(token, { model: weak });
+    expect(response.status).toBe(400);
+    expect((await response.json()).error).toBe('agent_unsupported');
   });
 
   it('needs a signed-in person with credits', async () => {
@@ -347,5 +345,92 @@ describe('what the server tells a model about its surroundings', () => {
     requests = stubUpstream([{ choices: [{ delta: { content: 'ok' }, finish_reason: 'stop' }] }]);
     await (await step(token, { messages: [{ role: 'user', content: 'transcript' }], agent: { tools: ALL_TOOLS, project: 'demo', role: 'summarize' } })).text();
     expect(systemOf(requests)).not.toContain('About this chat');
+  });
+});
+
+describe('Code mode on the free model', () => {
+  const LUNA = 'openai/gpt-6-luna';
+  const light = (token: string | null, extra: Record<string, unknown> = {}) => step(token, { model: LUNA, agent: { tools: [...ALL_TOOLS, 'task'], project: 'demo', platform: 'linux' }, ...extra });
+  const chunk = [{ choices: [{ delta: { content: 'ok' }, finish_reason: 'stop' }] }];
+
+  it('works in a small form: no helpers, a capped reply, paid for by its own daily steps, not the free messages', async () => {
+    const token = await signIn('free-code@example.com');
+    const requests = stubUpstream(chunk);
+    const response = await light(token);
+    expect(response.status).toBe(200);
+    expect(response.headers.get('x-quo-billing')).toBe('free');
+    const done = (await events(response)).find(e => e.event === 'done')!;
+    expect(done.data.freeRemaining).toBeNull();
+    const names = (requests[0].body.tools as { function: { name: string } }[]).map(t => t.function.name);
+    expect(names).toContain('read_file');
+    expect(names).not.toContain('task');
+    expect(requests[0].body.max_tokens as number).toBeLessThanOrEqual(4096);
+  });
+
+  it('does not use up the free chat messages', async () => {
+    const token = await signIn('free-code2@example.com');
+    stubUpstream(chunk);
+    await (await light(token)).text();
+    stubUpstream(chunk);
+    const chat = await call(token, 'POST', 'chat', { model: LUNA, messages: [{ role: 'user', content: 'hi' }] });
+    const done = (await events(chat)).find(e => e.event === 'done')!;
+    expect(done.data.freeRemaining).toBe(config.freeDailyMessages - 1);
+  });
+
+  it('turns away helpers and summaries, which cost more', async () => {
+    const token = await signIn('free-code3@example.com');
+    stubUpstream(chunk);
+    for (const role of ['explore', 'summarize']) {
+      const response = await light(token, { agent: { tools: ALL_TOOLS, project: 'demo', role } });
+      expect(response.status).toBe(400);
+      expect((await response.json()).error).toBe('agent_unsupported');
+    }
+  });
+
+  it('stops a reply after its steps, and a conversation that has grown too large', async () => {
+    const token = await signIn('free-code4@example.com');
+    stubUpstream(chunk);
+    const call_ = (i: number) => ({ id: `c${i}`, type: 'function', function: { name: 'read_file', arguments: '{"path":"a.js"}' } });
+    const turn = (steps: number) => [
+      { role: 'user', content: 'Look' },
+      ...Array.from({ length: steps }, (_, i) => [{ role: 'assistant', content: '', tool_calls: [call_(i)] }, { role: 'tool', tool_call_id: `c${i}`, content: 'x' }]).flat(),
+    ];
+    expect((await light(token, { messages: turn(7) })).status).toBe(200);
+    const over = await light(token, { messages: turn(8) });
+    expect(over.status).toBe(429);
+    expect((await over.json()).error).toBe('free_code_turn_limit');
+    const big = await light(token, { messages: [{ role: 'user', content: 'x'.repeat(120_000) }] });
+    expect(big.status).toBe(413);
+  });
+
+  it('runs out of its daily steps with a clear message for someone not signed in, and leaves other models alone', async () => {
+    const before = config.freeDailyCodeStepsPerIp;
+    config.freeDailyCodeStepsPerIp = 2;
+    // Its own address, so what the other tests used today does not count.
+    const fromElsewhere = () => handleApi(new Request('http://localhost/api/chat', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-quo-device': randomUUID(), 'x-forwarded-for': '10.44.44.44' },
+      body: JSON.stringify({ model: LUNA, messages: [{ role: 'user', content: 'Look' }], agent: { tools: ALL_TOOLS, project: 'demo', platform: 'linux' } }),
+    }), 'chat');
+    try {
+      stubUpstream(chunk);
+      expect((await fromElsewhere()).status).toBe(200);
+      stubUpstream(chunk);
+      expect((await fromElsewhere()).status).toBe(200);
+      const out = await fromElsewhere();
+      expect(out.status).toBe(429);
+      const body = await out.json();
+      expect(body.error).toBe('free_code_limit');
+      expect(body.message).toMatch(/free coding steps/);
+    } finally {
+      config.freeDailyCodeStepsPerIp = before;
+    }
+  });
+
+  it('is listed as available only for the free model', async () => {
+    const list = await (await call(null, 'GET', 'models')).json();
+    const luna = list.models.find((m: { id: string }) => m.id === LUNA);
+    expect(luna).toMatchObject({ free: true, agent: false, agentLight: true });
+    expect(list.models.filter((m: { agentLight: boolean }) => m.agentLight)).toHaveLength(1);
   });
 });

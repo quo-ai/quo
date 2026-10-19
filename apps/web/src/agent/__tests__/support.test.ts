@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 vi.mock('../../native', () => ({ agentBridge: () => ({}), hasNativeEngine: () => true }));
 const { codeSupport } = await import('../support');
 
-const cloud = (agent: boolean, name = 'GPT-6 Luna') => ({ kind: 'cloud', model: { id: 'x', name, agent } }) as never;
+const cloud = (agent: boolean, name = 'GPT-6 Luna', extra: Record<string, unknown> = {}) => ({ kind: 'cloud', model: { id: 'x', name, agent, ...extra } }) as never;
 const own = (agent: boolean) => ({ kind: 'own', model: { id: 'y', name: 'Some Model', agent }, provider: {} }) as never;
 
 describe('when Code mode is possible', () => {
@@ -13,7 +13,11 @@ describe('when Code mode is possible', () => {
     expect(codeSupport(cloud(true, 'Claude Sonnet 5.5'))).toEqual({ available: true, compact: false, gate: null });
   });
 
-  it('is not possible with the free model, and says why in words that point to a fix', () => {
+  it('is possible, in a small form, with the free model', () => {
+    expect(codeSupport(cloud(false, 'GPT-6 Luna', { free: true, agentLight: true }))).toEqual({ available: true, compact: false, gate: null, light: true });
+  });
+
+  it('is not possible with a model that cannot use tools and has no small form, and says why in words that point to a fix', () => {
     const support = codeSupport(cloud(false));
     expect(support.available).toBe(false);
     expect(support.reason).toMatch(/GPT-6 Luna can’t work in a project folder/);

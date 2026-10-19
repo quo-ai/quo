@@ -11,6 +11,8 @@ export interface CloudModel {
   tier: 'frontier' | 'everyday';
   /** Can run Code mode (desktop app): reliable tool use and strong at code. */
   agent: boolean;
+  /** The free model only: a small, capped Code mode (see FREE_CODE_STEPS in shared/agentTools.ts). */
+  agentLight?: boolean;
   /** When the model came out (ISO date). */
   released: string;
   supportsThinking: boolean;

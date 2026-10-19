@@ -131,7 +131,7 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
     beginGeneration(); // Quo Sync waits until the reply is finished
     try {
       const searching = web.on && web.how === 'tools';
-      if (code && (choice.kind === 'local' || choice.model.agent)) {
+      if (code && (choice.kind === 'local' || choice.model.agent || (choice.kind === 'cloud' && choice.model.agentLight))) {
         setStatus('generating');
         const controller = new AbortController();
         agentRun.current = controller;

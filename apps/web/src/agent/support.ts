@@ -16,6 +16,8 @@ export interface CodeSupport {
   available: boolean;
   /** The model has a small context window: tool results are kept short. */
   compact: boolean;
+  /** The free model's small Code mode: a few steps a reply, no helpers or summaries. */
+  light?: boolean;
   /** Why Code mode can't be used with this model, in words, when the desktop app could otherwise do it. */
   reason?: string;
   gate: CodeGate | null;
@@ -28,13 +30,14 @@ export function codeSupport(choice: ModelChoice | null): CodeSupport {
   if (!choice || !agentBridge()) return NONE;
   if (choice.kind === 'cloud' || choice.kind === 'own') {
     if (choice.model.agent) return { available: true, compact: false, gate: null };
+    if (choice.kind === 'cloud' && choice.model.free && choice.model.agentLight) return { available: true, compact: false, gate: null, light: true };
     const name = choice.model.name;
     return {
       available: false,
       compact: false,
       gate: null,
       reason: choice.kind === 'cloud'
-        ? `${name} can’t work in a project folder: Code mode needs one of the stronger models (Claude, GPT-6 Astra and others), or an offline model. Choose one from the model menu.`
+        ? `${name} can’t work in a project folder. Code mode needs one of the stronger models (Claude, GPT-6 Astra and others), or an offline model. Choose one from the model menu.`
         : `${name} isn’t marked as able to use tools, so Code mode is off for it. Choose another model from the model menu.`,
     };
   }

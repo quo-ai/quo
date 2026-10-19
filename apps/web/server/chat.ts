@@ -6,6 +6,7 @@ import { config, features, SETUP_MESSAGES } from './env.js';
 import { freeRemaining, refundFreeMessage, takeFreeMessage } from './freeTier.js';
 import { HttpError, readJson } from './http.js';
 import { freeSubject, identify } from './identity.js';
+import { FREE_CODE_CHARS, FREE_CODE_STEPS } from '../shared/agentTools.js';
 import { capabilitiesOfTools, validLanguage, validOffset, type Environment } from '../shared/environment.js';
 import { agentSystemPrompt, AGENT_TOOL_NAMES, parseNotes, READ_ONLY_TOOLS, toolDefinitions, type Platform } from '../shared/agentTools.js';
 import { streamChat, UpstreamError, type ChatMessage, type ToolCall } from './openrouter.js';
@@ -58,6 +59,7 @@ const NAME_PATTERN = /^[A-Za-z0-9_-]{1,64}$/;
 const sse = (event: string, data: unknown) => `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
 const toCredits = (millicredits: number) => Math.round(millicredits / 100) / 10;
 // What one reply cost gets two decimals: the cheapest models cost a few hundredths of a credit, and "0.0" would read as free.
+const FREE_CODE_LIMIT_MESSAGE = 'You’ve used today’s free coding steps. They come back tomorrow; a stronger model with credits has no daily limit.';
 const toCharge = (millicredits: number) => Math.round(millicredits / 10) / 100;
 
 export async function handleChat(request: Request): Promise<Response> {
@@ -79,21 +81,31 @@ export async function handleChat(request: Request): Promise<Response> {
   const webKeys = { subject: `web:${freeKeys.subject}`, ip: `web:${freeKeys.ip}` };
   const webLimits = { perSubject: config.freeDailySearches, perIp: config.freeDailySearchesPerIp };
   const wantsWeb = !agent && body.web === true;
+  // Free Code mode: a reply is a few steps, each with the conversation so far, so it has its own limits (steps in a
+  // reply, the size of the conversation, and a daily allowance of steps) instead of one free message per request.
+  const lightAgent = Boolean(agent?.light);
+  if (lightAgent) {
+    const reply = history.slice(history.map(m => m.role).lastIndexOf('user') + 1);
+    if (reply.filter(m => m.role === 'assistant').length >= FREE_CODE_STEPS) throw new HttpError(429, 'free_code_turn_limit', `The free model stops after ${FREE_CODE_STEPS} steps in a reply. Ask it to carry on, or choose a stronger model.`);
+    if (history.reduce((sum, m) => sum + charsOf(m), 0) > FREE_CODE_CHARS) throw new HttpError(413, 'too_long', 'This conversation is too long for the free model’s Code mode. Start a new chat, or choose a stronger model.');
+  }
+  const codeKeys = { subject: `code:${freeKeys.subject}`, ip: `code:${freeKeys.ip}` };
+  const codeLimits = { perSubject: config.freeDailyCodeSteps, perIp: config.freeDailyCodeStepsPerIp };
   let inputTokens = Math.ceil((messages.reduce((sum, m) => sum + charsOf(m), 0) + (agent?.toolChars ?? 0)) / 3.5) + 8 * messages.length;
 
   // Decide how this request is paid for.
   let mode: 'free' | 'credits';
-  let maxTokens = model.maxOutput;
+  let maxTokens = lightAgent ? Math.min(model.maxOutput, 4096) : model.maxOutput;
   let holdId: string | null = null;
   let searching = false;
   let searchCost = 0;
-  if (isFreeModel(model) && (await takeFreeMessage(db, freeKeys, freeLimits))) {
+  if (isFreeModel(model) && (await takeFreeMessage(db, lightAgent ? codeKeys : freeKeys, lightAgent ? codeLimits : freeLimits))) {
     mode = 'free';
     searching = wantsWeb && (await takeFreeMessage(db, webKeys, webLimits));
   } else {
     if (!identity.userId) {
       throw isFreeModel(model)
-        ? new HttpError(429, 'free_limit', 'You’ve used today’s free cloud messages.')
+        ? lightAgent ? new HttpError(429, 'free_code_limit', FREE_CODE_LIMIT_MESSAGE) : new HttpError(429, 'free_limit', 'You’ve used today’s free cloud messages.')
         : new HttpError(401, 'sign_in_required', 'Sign in to use this model.');
     }
     if (wantsWeb) {
@@ -106,7 +118,7 @@ export async function handleChat(request: Request): Promise<Response> {
     const hold = await reserveCredits(db, identity.userId, want, min);
     if (!hold) {
       throw isFreeModel(model)
-        ? new HttpError(429, 'free_limit', 'You’ve used today’s free cloud messages.')
+        ? lightAgent ? new HttpError(429, 'free_code_limit', FREE_CODE_LIMIT_MESSAGE) : new HttpError(429, 'free_limit', 'You’ve used today’s free cloud messages.')
         : new HttpError(402, 'insufficient_credits', 'You don’t have enough credits for this model.');
     }
     holdId = hold.id;
@@ -168,7 +180,7 @@ export async function handleChat(request: Request): Promise<Response> {
           charged = result.charged;
           balance = result.balance;
         } else if (mode === 'free' && failure && outputChars === 0) {
-          await refundFreeMessage(db, freeKeys);
+          await refundFreeMessage(db, lightAgent ? codeKeys : freeKeys);
           if (searching) await refundFreeMessage(db, webKeys);
         }
         if (mode === 'free' && identity.userId) balance = await getBalance(db, identity.userId);
@@ -183,7 +195,7 @@ export async function handleChat(request: Request): Promise<Response> {
           finish: usage?.finishReason ?? null,
           charged: toCharge(charged),
           balance: balance === null ? null : toCredits(balance),
-          freeRemaining: isFreeModel(model) ? await freeRemaining(db, freeKeys, freeLimits).catch(() => null) : null,
+          freeRemaining: isFreeModel(model) && !lightAgent ? await freeRemaining(db, freeKeys, freeLimits).catch(() => null) : null,
           web: wantsWeb ? (searching ? 'searched' : 'limit') : null,
           webRemaining: mode === 'free' && wantsWeb ? await freeRemaining(db, webKeys, webLimits).catch(() => null) : null,
         });
@@ -252,18 +264,21 @@ function serverEnvironment(input: unknown, model: NonNullable<ReturnType<typeof 
 
 /** Code mode's setup, checked: an agent-capable paid model, and a known set of tools. */
 function parseAgent(input: NonNullable<ChatRequest['agent']>, model: NonNullable<ReturnType<typeof getCloudModel>>) {
-  if (!model.agent || isFreeModel(model)) throw new HttpError(400, 'agent_unsupported', 'This model can’t be used for Code mode. Choose one of the frontier models.');
+  // The free model gets a small, capped Code mode; every other model needs to be one that can really work with tools.
+  const light = isFreeModel(model) && Boolean(model.agentLight);
+  if (!light && (!model.agent || isFreeModel(model))) throw new HttpError(400, 'agent_unsupported', 'This model can’t be used for Code mode. Choose one of the frontier models.');
+  if (light && (input.role === 'explore' || input.role === 'summarize')) throw new HttpError(400, 'agent_unsupported', 'Helpers and summaries come with the stronger models.');
   const requested = Array.isArray(input.tools) ? input.tools.filter((name): name is string => typeof name === 'string') : [];
   // A helper (role "explore") only ever gets the reading tools, whatever the app asks for: it cannot be handed more.
   // The summariser (role "summarize") gets no tools at all.
   const role = input.role === 'explore' ? 'explore' : input.role === 'summarize' ? 'summarize' : 'main';
-  const names = role === 'summarize' ? [] : role === 'explore' ? [...READ_ONLY_TOOLS] : AGENT_TOOL_NAMES.filter(name => requested.includes(name));
+  const names = role === 'summarize' ? [] : role === 'explore' ? [...READ_ONLY_TOOLS] : AGENT_TOOL_NAMES.filter(name => requested.includes(name) && !(light && name === 'task'));
   if (role !== 'summarize' && !READ_ONLY_TOOLS.every(name => names.includes(name))) throw new HttpError(400, 'bad_tools', 'Code mode needs at least the tools that read files.');
   const platform: Platform = input.platform === 'win32' || input.platform === 'darwin' ? input.platform : 'linux';
   const project = (typeof input.project === 'string' ? input.project : '').replace(/[^\p{L}\p{N} ._-]/gu, '').trim().slice(0, 60) || 'project';
   const tools = toolDefinitions(names);
   const env = role === 'summarize' ? null : serverEnvironment(input.environment, model, names, platform, project, role);
-  return { tools, toolChars: JSON.stringify(tools).length, prompt: agentSystemPrompt(project, platform, names, parseNotes(input.instructions), 'cloud', role, env) };
+  return { light, tools, toolChars: JSON.stringify(tools).length, prompt: agentSystemPrompt(project, platform, names, parseNotes(input.instructions), 'cloud', role, env) };
 }
 
 /**

@@ -24,6 +24,8 @@ export interface CloudModel {
   tier: ModelTier;
   /** Can run Code mode: reliable tool use, and strong enough at code to be worth the credits. */
   agent: boolean;
+  /** Only for the free model: a small, capped Code mode (a few steps a reply, a daily step allowance, no helpers). */
+  agentLight?: boolean;
   /** When the model came out (ISO date), so the picker can mark new ones. */
   released: string;
   usdIn: number;
@@ -38,7 +40,7 @@ export interface CloudModel {
 // these figures reserve credits before a reply and tell people what a message costs. Too low a figure would
 // have Quo covering the difference.
 const CATALOG: CloudModel[] = [
-  { id: 'openai/gpt-6-luna', name: 'GPT-6 Luna', provider: 'OpenAI', description: 'Fast and capable for everyday questions.', agent: false, tier: 'everyday', released: '2026-09-22', usdIn: 0.1, usdOut: 0.5, supportsThinking: true, maxOutput: 4096 },
+  { id: 'openai/gpt-6-luna', name: 'GPT-6 Luna', provider: 'OpenAI', description: 'Fast and capable for everyday questions.', agent: false, agentLight: true, tier: 'everyday', released: '2026-09-22', usdIn: 0.1, usdOut: 0.5, supportsThinking: true, maxOutput: 4096 },
 
   // Frontier
   { id: 'anthropic/claude-fable-5.1', name: 'Claude Fable 5.1', provider: 'Anthropic', description: 'Frontier intelligence for the hardest problems.', agent: true, tier: 'frontier', released: '2026-09-01', usdIn: 10, usdOut: 50, supportsThinking: true, maxOutput: 8192 },
@@ -99,6 +101,7 @@ export function publicCatalog() {
       free: isFreeModel(model),
       tier: model.tier,
       agent: model.agent,
+      agentLight: Boolean(model.agentLight) && isFreeModel(model),
       released: model.released,
       supportsThinking: model.supportsThinking,
       // A typical message: ~1,500 tokens in (with history), ~500 out.
