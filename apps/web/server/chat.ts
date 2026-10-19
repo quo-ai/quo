@@ -8,7 +8,7 @@ import { HttpError, readJson } from './http.js';
 import { freeSubject, identify } from './identity.js';
 import { defaultLevel, isLevel, levelFromLegacy, reasoningParam, type ThinkLevel } from '../shared/thinking.js';
 import { FREE_CODE_CHARS, FREE_CODE_STEPS, WEB_TOOLS, isFolderless } from '../shared/agentTools.js';
-import { capabilitiesOfTools, validLanguage, validOffset, type Environment } from '../shared/environment.js';
+import { validOffset, type Environment } from '../shared/environment.js';
 import { agentSystemPrompt, AGENT_TOOL_NAMES, parseNotes, READ_ONLY_TOOLS, toolDefinitions, type Platform } from '../shared/agentTools.js';
 import { streamChat, UpstreamError, type ChatMessage, type ToolCall } from './openrouter.js';
 import { SEARCH_FEE_USD, SEARCH_INPUT_TOKENS } from './webSearch.js';
@@ -250,25 +250,12 @@ function validateMessages(input: unknown): ChatMessage[] {
 }
 
 /**
- * What the model is told about its surroundings. The clock, the model, the route and the capabilities are the server's
- * own; the app supplies only its clock's offset from UTC, its language and which Quo program it is, each checked here.
+ * What the model is told about the moment: the date (from the server's own clock), which model it is and that it runs in
+ * Quo's cloud. The app supplies only its clock's offset from UTC, checked here.
  */
-function serverEnvironment(input: unknown, model: NonNullable<ReturnType<typeof getCloudModel>>, tools: string[], platform: Platform, project: string, role: 'main' | 'explore', folderless = false): Environment {
-  const given = (input && typeof input === 'object' ? input : {}) as { utcOffset?: unknown; language?: unknown; app?: { name?: unknown; version?: unknown; platform?: unknown } };
-  const desktop = given.app?.name === 'Quo Desktop';
-  const version = typeof given.app?.version === 'string' && /^[0-9][0-9A-Za-z.+-]{0,15}$/.test(given.app.version) ? given.app.version : undefined;
-  return {
-    now: new Date(),
-    utcOffset: validOffset(given.utcOffset),
-    language: validLanguage(given.language),
-    app: desktop ? { name: 'Quo Desktop', version, platform } : { name: 'Quo Web' },
-    model: { name: model.name, provider: model.provider },
-    route: 'quo-cloud',
-    can: capabilitiesOfTools(tools),
-    project: project || undefined,
-    ...(folderless ? { files: 'folder' as const, folderTool: true } : {}),
-    brief: role === 'explore',
-  };
+function serverEnvironment(input: unknown, model: NonNullable<ReturnType<typeof getCloudModel>>): Environment {
+  const given = (input && typeof input === 'object' ? input : {}) as { utcOffset?: unknown };
+  return { now: new Date(), utcOffset: validOffset(given.utcOffset), model: { name: model.name, provider: model.provider }, route: 'quo-cloud' };
 }
 
 /** Code mode's setup, checked: an agent-capable paid model, and a known set of tools. */
@@ -289,7 +276,7 @@ function parseAgent(input: NonNullable<ChatRequest['agent']>, model: NonNullable
   const platform: Platform = input.platform === 'win32' || input.platform === 'darwin' ? input.platform : 'linux';
   const project = (typeof input.project === 'string' ? input.project : '').replace(/[^\p{L}\p{N} ._-]/gu, '').trim().slice(0, 60) || 'project';
   const tools = toolDefinitions(names);
-  const env = role === 'summarize' ? null : serverEnvironment(input.environment, model, names, platform, folderless ? '' : project, role, folderless);
+  const env = role === 'summarize' ? null : serverEnvironment(input.environment, model);
   return { role, light, folderless, tools, toolChars: JSON.stringify(tools).length, prompt: agentSystemPrompt(project, platform, names, parseNotes(input.instructions), 'cloud', role, env) };
 }
 

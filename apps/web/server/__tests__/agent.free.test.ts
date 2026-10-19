@@ -114,9 +114,8 @@ describe('a chat with no folder yet', () => {
     expect((requests[0].body.tools as { function: { name: string } }[]).map(t => t.function.name)).toEqual(['open_project']);
     const system = (requests[0].body.messages as { content: string }[])[0].content;
     expect(system).toMatch(/Most messages need no tool at all/);
-    expect(system).toContain('call open_project instead of saying you cannot');
-    expect(system).not.toMatch(/Project folder:/);
-    expect(system).toContain('inside Quo Desktop 1.3.0');
+    expect(system).toContain('You are Claude Haiku 5.5');
+    expect(system).not.toMatch(/Project folder:|instead of saying you cannot|inside Quo Desktop/);
   });
 
   it('never adds the project tools, whatever else is asked for alongside it', async () => {
@@ -161,8 +160,7 @@ describe('web search in a chat with no folder yet', () => {
     expect((requests[0].body.tools as { function: { name: string } }[]).map(t => t.function.name).sort()).toEqual(['fetch_url', 'open_project', 'web_search']);
     const system = (requests[0].body.messages as { content: string }[])[0].content;
     expect(system).toMatch(/search the web and read pages \(web_search, fetch_url\)/);
-    expect(system).toMatch(/you can search the web and read pages/);
-    expect(system).not.toMatch(/You cannot browse the web/);
+    expect(system).not.toMatch(/You cannot|you can search the web and read pages/);
   });
 
   it('counts the first request as a free chat message and the step after a search as a coding step', async () => {

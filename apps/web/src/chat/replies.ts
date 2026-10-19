@@ -18,7 +18,6 @@ import { generateOwn } from '../providers/generate';
 import type { OwnModel } from '../providers/ownModels';
 import { CLOUD_CONTEXT, type ModelChoice } from '../models';
 import { allowUserUrls, runWebTool } from '../web/run';
-import { capabilitiesOfTools } from '../../shared/environment';
 import { buildContext } from './context';
 import { environmentFor, noteFor } from './environment';
 import type { Message } from './types';
@@ -86,7 +85,7 @@ export async function replyWithAgent(choice: CloudChoice | OwnChoice | LocalChoi
       instructions: session && useNotes ? session.info.instructions : null,
       signal,
       onText,
-      ...(extra.role === 'summarize' ? {} : { environment: environmentFor(choice, capabilitiesOfTools(extra.tools ?? tools), { project: session?.project.name, plan: extra.role ? undefined : session?.plan, folderTool: !session && !extra.role }) }),
+      ...(extra.role === 'summarize' ? {} : { environment: environmentFor(choice) }),
       ...extra,
     };
   };
@@ -154,10 +153,10 @@ export async function replyWithWeb(choice: OwnChoice | LocalChoice, sessionId: s
     await localEngine.load(choice.model);
   }
   setStatus('generating');
-  let system = webSystemPrompt(compact ? 'local' : 'cloud', new Date().toISOString().slice(0, 10));
+  let system = webSystemPrompt(compact ? 'local' : 'cloud', new Date().toLocaleDateString('en-CA')); // today on the person's clock, as 2026-10-19
   // What the user asked Quo to remember goes to offline models only, as in a plain offline chat.
   if (choice.kind === 'local') system += memoryPrompt(await listMemories().catch(() => []), Math.min(1500, Math.floor(choice.model.contextSize * 0.35)));
-  const options = (onText: (text: string) => void) => ({ tools: WEB_TOOLS, project: 'web', platform: 'linux', system: system + noteFor(choice, choice.kind === 'local' ? ['web', 'memories'] : ['web']), signal, onText });
+  const options = (onText: (text: string) => void) => ({ tools: WEB_TOOLS, project: 'web', platform: 'linux', system, signal, onText });
   const outcome = await runAgent(prior.filter(m => m.content).map((m): AgentMessage => ({ role: m.role, content: m.content })), {
     signal,
     maxSteps: 8,
@@ -175,7 +174,7 @@ export async function replyWithWeb(choice: OwnChoice | LocalChoice, sessionId: s
 /** Whether the web search that was asked for ran (see CloudResult.web). */
 export async function replyInCloud(choice: CloudChoice, thinking: ThinkLevel, { prior, update, setStatus }: ReplyTarget, options: { web?: boolean } = {}): Promise<CloudResult['web']> {
   setStatus('generating');
-  const history = buildContext(CLOUD_PROMPT + noteFor(choice, options.web ? ['web'] : []), prior, CLOUD_CONTEXT.contextSize, CLOUD_CONTEXT.maxTokens);
+  const history = buildContext(CLOUD_PROMPT + noteFor(choice), prior, CLOUD_CONTEXT.contextSize, CLOUD_CONTEXT.maxTokens);
   const result = await generateCloud(choice.model.id, history, {
     thinking: wireThinking(choice, thinking),
     web: options.web,
@@ -189,7 +188,7 @@ export async function replyInCloud(choice: CloudChoice, thinking: ThinkLevel, { 
 /** A model at a provider the user reached with their own key: straight from this computer to the provider, nothing through Quo. */
 export async function replyOwn(choice: OwnChoice, { prior, update, setStatus }: ReplyTarget, options: { web?: boolean } = {}): Promise<void> {
   setStatus('generating');
-  const history = buildContext(CLOUD_PROMPT + noteFor(choice, options.web ? ['web'] : []), prior, Math.min(choice.model.contextTokens ?? CLOUD_CONTEXT.contextSize, 64_000), CLOUD_CONTEXT.maxTokens);
+  const history = buildContext(CLOUD_PROMPT + noteFor(choice), prior, Math.min(choice.model.contextTokens ?? CLOUD_CONTEXT.contextSize, 64_000), CLOUD_CONTEXT.maxTokens);
   const result = await generateOwn(choice.provider, choice.model, history, ({ content, reasoning }) => update({ content, reasoning }, false), options);
   update({ content: result.content, reasoning: result.reasoning || undefined, stopped: result.stopped || undefined, usage: result.usage ?? undefined }, true);
 }
@@ -198,7 +197,7 @@ export async function replyOffline(choice: LocalChoice, thinking: boolean, { pri
   const model = choice.model;
   // What the user asked Quo to remember goes to offline models only (never a cloud model), using up to ~10% of the context.
   const memories = await listMemories().catch(() => []);
-  const instructions = LOCAL_PROMPT + memoryPrompt(memories, Math.min(1500, Math.floor(model.contextSize * 0.35))) + noteFor(choice, model.vision ? ['attachments', 'images', 'memories'] : ['attachments', 'memories']);
+  const instructions = LOCAL_PROMPT + memoryPrompt(memories, Math.min(1500, Math.floor(model.contextSize * 0.35))) + noteFor(choice);
   const history = buildContext(instructions, prior, model.contextSize, model.maxTokens);
   if (localEngine.modelId !== model.id) setStatus('loading');
   await localEngine.load(model);
