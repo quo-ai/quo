@@ -13,6 +13,7 @@ const { MIN_SIZE, loadWindowState, trackWindowState } = require('./windowState')
 const { buildMenu } = require('./menu');
 const { initAutoUpdates } = require('./updater');
 const { runSmoke } = require('./smoke');
+const { windowIcon } = require('./appIcon');
 
 const isSmoke = process.argv.includes('--smoke') || process.env.QUO_SMOKE === '1';
 
@@ -48,11 +49,13 @@ let hasEngine = false;
 
 function createWindow({ hidden = false } = {}) {
   const state = loadWindowState();
+  const icon = windowIcon({ packaged: app.isPackaged });
   const win = new BrowserWindow({
     ...state.bounds,
     minWidth: MIN_SIZE.width,
     minHeight: MIN_SIZE.height,
     title: 'Quo',
+    ...(icon ? { icon } : {}),
     backgroundColor: '#ffffff',
     show: false,
     autoHideMenuBar: true,

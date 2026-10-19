@@ -99,6 +99,9 @@ linux:
   extraResources:
     - from: engine/linux-x64
       to: engine/linux-x64
+    # The window's own icon (src/appIcon.js), for an AppImage started without a .desktop file.
+    - from: build/icon.png
+      to: icon.png
   target:
     - target: AppImage
       arch: x64
