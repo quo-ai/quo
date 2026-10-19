@@ -3,6 +3,7 @@ import { Brain, Check, Copy, Layers, RotateCcw, Undo2, Volume2, VolumeX } from '
 import type { CodeSession } from '../../agent/session';
 import type { Message } from '../../chat/types';
 import type { ModelChoice } from '../../models';
+import { reliabilityNote } from '../../chat/reliability';
 import { greeting, pickStarters, type StarterMode } from '../../chat/starters';
 import { workingLabel } from '../../chat/working';
 import { canSpeak } from '../../voice/readAloud';
@@ -49,8 +50,10 @@ function replyMeta(message: Message): string {
     const steps = message.steps?.length ? ` · ${message.steps.length} step${message.steps.length === 1 ? '' : 's'}` : '';
     return `${message.modelName ?? 'Cloud'}${steps} · ${cost}`;
   }
-  if (message.steps?.length) return `${message.modelName ?? 'Offline model'} · ${message.steps.length} step${message.steps.length === 1 ? '' : 's'} · on this computer`;
-  return message.stats && message.stats.tokens > 1 ? `${message.stats.tokensPerSecond.toFixed(1)} tokens/s` : '';
+  const caution = reliabilityNote(message.modelId);
+  if (message.steps?.length) return `${message.modelName ?? 'Offline model'} · ${message.steps.length} step${message.steps.length === 1 ? '' : 's'} · on this computer${caution ? ` · ${caution}` : ''}`;
+  const speed = message.stats && message.stats.tokens > 1 ? `${message.stats.tokensPerSecond.toFixed(1)} tokens/s` : '';
+  return [speed, caution].filter(Boolean).join(' · ');
 }
 
 function intro(choice: ModelChoice | null, code: CodeSession | null): string {
