@@ -165,3 +165,19 @@ describe('questions about the date and about history', () => {
     }
   });
 });
+
+describe('exact dates are where models go wrong', () => {
+  it('asks for a few sure events, a plain warning that dates from memory may be wrong, and no guesses', () => {
+    for (const env of [base, { ...base, brief: true }]) {
+      const note = environmentNote(env);
+      expect(note).toMatch(/at most a few events you are truly sure of/);
+      expect(note).toMatch(/pair events with the wrong calendar date/);
+      expect(note).toMatch(/instead of listing guesses/);
+    }
+  });
+
+  it('sends a model that can search to the web for what happened on a date, and does not promise that to one that cannot', () => {
+    expect(environmentNote({ ...base, can: ['web'], project: undefined })).toMatch(/search the web instead of answering from memory/);
+    expect(environmentNote({ ...base, can: [], project: undefined })).not.toMatch(/search the web instead of answering from memory/);
+  });
+});
