@@ -4,6 +4,7 @@ import { agentContextChars, askLocalAgentModel, prepareLocalAgent } from '../age
 import { askOwnAgentModel } from '../agent/own';
 import { codeSettings } from '../codeSettings';
 import { askAgentModel } from '../agent/stream';
+import { openProjectTool, type FolderOpener } from '../agent/folder';
 import { runSubagent, TASK_TOOL } from '../agent/subagent';
 import type { CodeSession } from '../agent/session';
 import type { AgentMessage, StepReply } from '../agent/types';
@@ -30,6 +31,8 @@ import type { Message } from './types';
 const LOCAL_PROMPT = 'You are Quo, a helpful private AI assistant running entirely on the user’s device. Be clear and concise. Use markdown when it helps readability.';
 const CLOUD_PROMPT = 'You are Quo, a helpful AI assistant. Be clear and concise. Use markdown when it helps readability.';
 
+const FOLDER_TOOL = 'open_project';
+
 export type CloudChoice = Extract<ModelChoice, { kind: 'cloud' }>;
 export type LocalChoice = Extract<ModelChoice, { kind: 'local' }>;
 export type OwnChoice = Extract<ModelChoice, { kind: 'own' }>;
@@ -48,8 +51,11 @@ export interface ReplyTarget {
 const contextChars = (model: OwnModel): number => Math.min(CONTEXT_CHARS, Math.round((model.contextTokens ?? 128_000) * 3 * 0.7));
 
 /** Code mode: the model works on the project with the desktop app's tools until it has nothing left to do. Returns how many files it changed. */
-export async function replyWithAgent(choice: CloudChoice | OwnChoice | LocalChoice, code: CodeSession, signal: AbortSignal, { prior, update, setStatus, onContext }: ReplyTarget): Promise<number> {
-  await allowUserUrls(code.info.sessionId, [...prior].reverse().find(m => m.role === 'user')?.content ?? '');
+export async function replyWithAgent(choice: CloudChoice | OwnChoice | LocalChoice, code: CodeSession | null, signal: AbortSignal, { prior, update, setStatus, onContext }: ReplyTarget, folder?: FolderOpener): Promise<number> {
+  // Without a folder yet the model has one tool, open_project, and decides from the message whether it needs it; once a
+  // folder is open (now or mid-reply) everything below follows the session.
+  let session = code;
+  if (session) await allowUserUrls(session.info.sessionId, [...prior].reverse().find(m => m.role === 'user')?.content ?? '');
   if (choice.kind === 'local') {
     // An offline model is loaded again with more room than a chat needs, which takes a moment.
     setStatus('loading');
@@ -61,19 +67,23 @@ export async function replyWithAgent(choice: CloudChoice | OwnChoice | LocalChoi
   // The free model's Code mode is small on purpose (few steps, a short conversation, no helpers or summaries).
   const light = choice.kind === 'cloud' && choice.model.free && !choice.model.agent;
   // Helpers (the task tool) are for models with room to spare: not offline ones, whose window is small, nor the free one.
-  const tools = choice.kind === 'local' || light ? code.tools : [...code.tools, TASK_TOOL];
+  const toolsNow = () => (!session ? [FOLDER_TOOL] : choice.kind === 'local' || light ? session.tools : [...session.tools, TASK_TOOL]);
+  const platform = session?.info.platform ?? (typeof window !== 'undefined' ? window.quoDesktop?.platform : undefined) ?? 'linux';
   // Each request carries a fresh environment note (the clock moves, plan mode can be switched) for the models the app prompts;
   // Quo's own cloud models get the same from the server.
-  const options = (onText: (text: string) => void, extra: { tools?: string[]; role?: 'explore' | 'summarize' } = {}) => ({
-    tools,
-    project: code.project.name,
-    platform: code.info.platform,
-    instructions: useNotes ? code.info.instructions : null,
-    signal,
-    onText,
-    ...(extra.role === 'summarize' ? {} : { environment: environmentFor(choice, capabilitiesOfTools(extra.tools ?? tools), { project: code.project.name, plan: extra.role ? undefined : code.plan }) }),
-    ...extra,
-  });
+  const options = (onText: (text: string) => void, extra: { tools?: string[]; role?: 'explore' | 'summarize' } = {}) => {
+    const tools = toolsNow();
+    return {
+      tools,
+      project: session?.project.name ?? '',
+      platform,
+      instructions: session && useNotes ? session.info.instructions : null,
+      signal,
+      onText,
+      ...(extra.role === 'summarize' ? {} : { environment: environmentFor(choice, capabilitiesOfTools(extra.tools ?? tools), { project: session?.project.name, plan: extra.role ? undefined : session?.plan, folderTool: !session && !extra.role }) }),
+      ...extra,
+    };
+  };
   const ask = (extra: { tools?: string[]; role?: 'explore' | 'summarize' } = {}): ((messages: AgentMessage[], onText: (text: string) => void) => Promise<StepReply>) =>
     choice.kind === 'own'
       ? (messages, onText) => askOwnAgentModel(choice.provider, choice.model, messages, options(onText, extra))
@@ -97,10 +107,19 @@ export async function replyWithAgent(choice: CloudChoice | OwnChoice | LocalChoi
           },
         }),
     ...(windowChars ? { contextChars: windowChars } : {}),
-    runTool: (name, args) =>
-      name === TASK_TOOL
-        ? runSubagent(args, { askModel: ask({ tools: READ_ONLY_TOOLS, role: 'explore' }), runTool: (tool, toolArgs) => code.run(tool, toolArgs), signal, contextChars: windowChars, onCost: charged => (helperCost += charged) })
-        : code.run(name, args),
+    runTool: async (name, args) => {
+      if (name === FOLDER_TOOL) {
+        if (!folder) return { ok: false, text: 'A folder can’t be opened here.', display: { kind: 'error' } };
+        const opened = await openProjectTool(args, session, folder);
+        session = opened.session;
+        return opened.result;
+      }
+      if (!session) return { ok: false, text: 'No folder is open yet. Call open_project first if the request needs the person’s files.', display: { kind: 'error' } };
+      const active = session;
+      return name === TASK_TOOL
+        ? runSubagent(args, { askModel: ask({ tools: READ_ONLY_TOOLS, role: 'explore' }), runTool: (tool, toolArgs) => active.run(tool, toolArgs), signal, contextChars: windowChars, onCost: charged => (helperCost += charged) })
+        : active.run(name, args);
+    },
     onUpdate: ({ steps, text }) => update({ content: text, steps }, false),
     onContext,
   });

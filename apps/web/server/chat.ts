@@ -6,7 +6,7 @@ import { config, features, SETUP_MESSAGES } from './env.js';
 import { freeRemaining, refundFreeMessage, takeFreeMessage } from './freeTier.js';
 import { HttpError, readJson } from './http.js';
 import { freeSubject, identify } from './identity.js';
-import { FREE_CODE_CHARS, FREE_CODE_STEPS } from '../shared/agentTools.js';
+import { FREE_CODE_CHARS, FREE_CODE_STEPS, isFolderless } from '../shared/agentTools.js';
 import { capabilitiesOfTools, validLanguage, validOffset, type Environment } from '../shared/environment.js';
 import { agentSystemPrompt, AGENT_TOOL_NAMES, parseNotes, READ_ONLY_TOOLS, toolDefinitions, type Platform } from '../shared/agentTools.js';
 import { streamChat, UpstreamError, type ChatMessage, type ToolCall } from './openrouter.js';
@@ -83,7 +83,8 @@ export async function handleChat(request: Request): Promise<Response> {
   const wantsWeb = !agent && body.web === true;
   // Free Code mode: a reply is a few steps, each with the conversation so far, so it has its own limits (steps in a
   // reply, the size of the conversation, and a daily allowance of steps) instead of one free message per request.
-  const lightAgent = Boolean(agent?.light);
+  // A chat with no folder yet is an ordinary message to the free model (one free message), not coding.
+  const lightAgent = Boolean(agent?.light) && !agent?.folderless;
   if (lightAgent) {
     const reply = history.slice(history.map(m => m.role).lastIndexOf('user') + 1);
     if (reply.filter(m => m.role === 'assistant').length >= FREE_CODE_STEPS) throw new HttpError(429, 'free_code_turn_limit', `The free model stops after ${FREE_CODE_STEPS} steps in a reply. Ask it to carry on, or choose a stronger model.`);
@@ -245,7 +246,7 @@ function validateMessages(input: unknown): ChatMessage[] {
  * What the model is told about its surroundings. The clock, the model, the route and the capabilities are the server's
  * own; the app supplies only its clock's offset from UTC, its language and which Quo program it is, each checked here.
  */
-function serverEnvironment(input: unknown, model: NonNullable<ReturnType<typeof getCloudModel>>, tools: string[], platform: Platform, project: string, role: 'main' | 'explore'): Environment {
+function serverEnvironment(input: unknown, model: NonNullable<ReturnType<typeof getCloudModel>>, tools: string[], platform: Platform, project: string, role: 'main' | 'explore', folderless = false): Environment {
   const given = (input && typeof input === 'object' ? input : {}) as { utcOffset?: unknown; language?: unknown; app?: { name?: unknown; version?: unknown; platform?: unknown } };
   const desktop = given.app?.name === 'Quo Desktop';
   const version = typeof given.app?.version === 'string' && /^[0-9][0-9A-Za-z.+-]{0,15}$/.test(given.app.version) ? given.app.version : undefined;
@@ -258,6 +259,7 @@ function serverEnvironment(input: unknown, model: NonNullable<ReturnType<typeof 
     route: 'quo-cloud',
     can: capabilitiesOfTools(tools),
     project: project || undefined,
+    ...(folderless ? { files: 'folder' as const, folderTool: true } : {}),
     brief: role === 'explore',
   };
 }
@@ -272,13 +274,16 @@ function parseAgent(input: NonNullable<ChatRequest['agent']>, model: NonNullable
   // A helper (role "explore") only ever gets the reading tools, whatever the app asks for: it cannot be handed more.
   // The summariser (role "summarize") gets no tools at all.
   const role = input.role === 'explore' ? 'explore' : input.role === 'summarize' ? 'summarize' : 'main';
-  const names = role === 'summarize' ? [] : role === 'explore' ? [...READ_ONLY_TOOLS] : AGENT_TOOL_NAMES.filter(name => requested.includes(name) && !(light && name === 'task'));
-  if (role !== 'summarize' && !READ_ONLY_TOOLS.every(name => names.includes(name))) throw new HttpError(400, 'bad_tools', 'Code mode needs at least the tools that read files.');
+  const wanted = role === 'summarize' ? [] : role === 'explore' ? [...READ_ONLY_TOOLS] : AGENT_TOOL_NAMES.filter(name => requested.includes(name) && !(light && name === 'task'));
+  // A chat with no folder yet (the model can ask for one with open_project) has that tool and nothing else.
+  const folderless = role === 'main' && isFolderless(wanted);
+  const names = folderless ? ['open_project'] : wanted;
+  if (role !== 'summarize' && !folderless && !READ_ONLY_TOOLS.every(name => names.includes(name))) throw new HttpError(400, 'bad_tools', 'Code mode needs at least the tools that read files.');
   const platform: Platform = input.platform === 'win32' || input.platform === 'darwin' ? input.platform : 'linux';
   const project = (typeof input.project === 'string' ? input.project : '').replace(/[^\p{L}\p{N} ._-]/gu, '').trim().slice(0, 60) || 'project';
   const tools = toolDefinitions(names);
-  const env = role === 'summarize' ? null : serverEnvironment(input.environment, model, names, platform, project, role);
-  return { light, tools, toolChars: JSON.stringify(tools).length, prompt: agentSystemPrompt(project, platform, names, parseNotes(input.instructions), 'cloud', role, env) };
+  const env = role === 'summarize' ? null : serverEnvironment(input.environment, model, names, platform, folderless ? '' : project, role, folderless);
+  return { light, folderless, tools, toolChars: JSON.stringify(tools).length, prompt: agentSystemPrompt(project, platform, names, parseNotes(input.instructions), 'cloud', role, env) };
 }
 
 /**

@@ -73,3 +73,30 @@ describe('background commands and helpers in the prompt', () => {
     expect(describeDone('command_output', {}, { ok: true, text: '', display: { kind: 'background_output', id: 'bg1', state: 'still running', command: 'npm run dev', output: 'ready' } }).title).toBe('bg1 still running: npm run dev');
   });
 });
+
+describe('a chat with no folder yet', () => {
+  const prompt = agentSystemPrompt('', 'linux', ['open_project']);
+
+  it('is an ordinary assistant that decides for itself whether a request needs the person’s files', () => {
+    expect(prompt).toMatch(/You are Quo, a helpful AI assistant/);
+    expect(prompt).toMatch(/Most messages need no tool at all/);
+    expect(prompt).toMatch(/needs the person’s own files, folders or code on this computer/);
+    expect(prompt).toMatch(/Do not call it for general knowledge/);
+    expect(prompt).toMatch(/kind "new"/);
+    expect(prompt).toMatch(/carry on as an ordinary chat/);
+  });
+
+  it('has none of the project rules, because there is no project', () => {
+    expect(prompt).not.toMatch(/edit_file|run_command|Keep going until|Project notes/);
+  });
+
+  it('is replaced by the full rules once the project tools are there', () => {
+    expect(agentSystemPrompt('demo', 'linux', ['open_project', 'read_file', 'edit_file'])).toMatch(/You are Quo Code/);
+  });
+
+  it('offers the tool with a description that says when not to use it', () => {
+    const tool = toolDefinitions(['open_project'])[0].function;
+    expect(tool.description).toMatch(/Do not call it for general questions/);
+    expect(tool.parameters.required).toEqual(['kind']);
+  });
+});

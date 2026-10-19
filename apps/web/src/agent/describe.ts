@@ -28,6 +28,7 @@ export function describeRunning(tool: string, args: Args): string {
     case 'edit_file': return `Waiting for your OK to edit ${text(args.path)}…`;
     case 'write_file': return `Waiting for your OK to write ${text(args.path)}…`;
     case 'run_command': return `Running ${clip(text(args.command), 50)}…`;
+    case 'open_project': return args.kind === 'new' ? 'Making a folder for this…' : 'Looking for your project folder…';
     case 'command_output': return `Checking ${text(args.id, 'a background command')}…`;
     case 'stop_command': return `Stopping ${text(args.id, 'a background command')}…`;
     case 'task': return `Helper: ${clip(text(args.description, 'looking into it'), 60)}…`;
@@ -53,6 +54,8 @@ export function describeDone(tool: string, args: Args, result: ToolResult): Pick
     case 'search': return { status: 'done', title: `Searched for “${clip(text(display.pattern), 40)}”: ${plural(Number(display.matches ?? 0), 'match')} in ${plural(Number(display.files ?? 0), 'file')}` };
     case 'edit': return { status: 'done', title: `Edited ${text(display.path)}  +${display.added} −${display.removed}`, detail: diffOf(display) };
     case 'create': return { status: 'done', title: `Created ${text(display.path)}  +${display.added}`, detail: diffOf(display) };
+    case 'folder': return { status: 'done', title: display.created ? `Made the folder ${text(display.name)}` : `Working in ${text(display.name)}` };
+    case 'folder_none': return { status: 'done', title: 'No folder chosen' };
     case 'background': return { status: 'done', title: `Started ${clip(text(display.command), 50)} in the background (${text(display.id)})` };
     case 'background_output': return { status: 'done', title: `${text(display.id)} ${text(display.state)}: ${clip(text(display.command), 40)}`, detail: text(display.output) ? { kind: 'output', body: text(display.output) } : undefined };
     case 'background_stop': return { status: 'done', title: `Stopped ${text(display.id)}: ${clip(text(display.command), 50)}` };
@@ -93,6 +96,7 @@ function verb(tool: string, args: Args): string {
     case 'edit_file': return `Editing ${text(args.path)}`;
     case 'write_file': return `Writing ${text(args.path)}`;
     case 'run_command': return `Running ${clip(text(args.command), 50)}`;
+    case 'open_project': return args.kind === 'new' ? 'Making a folder' : 'Opening your project folder';
     case 'command_output': return `Checking ${text(args.id, 'a background command')}`;
     case 'stop_command': return `Stopping ${text(args.id, 'a background command')}`;
     case 'task': return `Helper: ${clip(text(args.description, 'looking into it'), 60)}`;

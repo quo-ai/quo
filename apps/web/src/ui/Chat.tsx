@@ -4,6 +4,7 @@ import { titleFrom } from '../chat/store';
 import { newId, type Attachment, type Conversation, type Message } from '../chat/types';
 import { AGENT_CONTEXT } from '../agent/local';
 import { chatProject, rememberChatProject } from '../agent/session';
+import { codeSettings } from '../codeSettings';
 import { modelMessages, summarize } from '../chat/summary';
 import { autoSummarize, MIN_MESSAGES, SUMMARIZE_AT } from '../context/settings';
 import { contextUsage, ratio, type ContextMode } from '../context/usage';
@@ -23,7 +24,6 @@ import { MessageList } from './chat/MessageList';
 import type { ChatAction, ChatStatus, Failure, Undoable } from './chat/types';
 import { buildCommands } from './chat/useCommands';
 import { useCodeMode } from './chat/useCodeMode';
-import { looksLikeNewProjectRequest, looksLikeProjectRequest } from '../agent/intent';
 import type { CodeSession } from '../agent/session';
 import { useWebMode } from './chat/useWebMode';
 import { toast } from './Toasts';
@@ -131,6 +131,9 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
     beginGeneration(); // Quo Sync waits until the reply is finished
     try {
       const searching = web.on && web.how === 'tools';
+      // Plain chats on the desktop go through the same loop when a folder could be wanted, so the model decides. Anything the loop
+      // doesn't do (attachments, thinking, Quo's own web search) keeps its own route; the folder button is always there.
+      const folderless = !code && codeMode.available && codeSettings().autoStart && !searching && sent.length === 0 && !thinking && !(web.on && web.how === 'native') && (choice.kind !== 'local' || !codeMode.gate || codeMode.gate.allowed);
       if (code && (choice.kind === 'local' || choice.model.agent || (choice.kind === 'cloud' && choice.model.agentLight))) {
         setStatus('generating');
         const controller = new AbortController();
@@ -138,6 +141,23 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
         code.webOn = searching;
         try {
           const changes = await replyWithAgent(choice, code, controller.signal, target);
+          if (changes > 0) setUndo({ messageId: assistant.id, count: changes });
+        } finally {
+          agentRun.current = null;
+        }
+      } else if (folderless) {
+        // No folder yet: the model answers, or asks for one with open_project if the request needs the person's files.
+        setStatus('generating');
+        const controller = new AbortController();
+        agentRun.current = controller;
+        try {
+          const changes = await replyWithAgent(choice, null, controller.signal, target, {
+            open: async (kind, name) => {
+              const opened = await codeMode.openProject(kind, name);
+              if (opened.session) rememberChatProject(current.id, opened.session.project.id);
+              return opened;
+            },
+          });
           if (changes > 0) setUndo({ messageId: assistant.id, count: changes });
         } finally {
           agentRun.current = null;
@@ -280,9 +300,8 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
     // Nearly full: make room first, as the person chose (it can be turned off in the memory menu).
     const full = usage ? ratio(usage) : null;
     if (base && autoSummarize() && full !== null && full >= SUMMARIZE_AT && modelMessages(base.messages).length >= MIN_MESSAGES) base = (await summarizeConversation(base, true)) ?? base;
-    // A message about the person's project starts Code mode by itself: nothing to turn on.
-    const wants = chatProject(conversation?.id) ? 'resume' : looksLikeProjectRequest(text) ? 'project' : looksLikeNewProjectRequest(text) ? 'new' : null;
-    const session = !code && wants && attachments.length === 0 && codeMode.available ? await codeMode.autoStart(wants, text) : null;
+    // A chat that worked in a folder before goes back to it. Otherwise the model decides whether a request needs one (open_project).
+    const session = !code && attachments.length === 0 && chatProject(conversation?.id) ? await codeMode.resume() : null;
     void run(base, text, !conversation, attachments, session);
   };
 

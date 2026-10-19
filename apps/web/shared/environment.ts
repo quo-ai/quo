@@ -39,6 +39,14 @@ export interface Environment {
   can: Capability[];
   /** The project folder's name, in Code mode. */
   project?: string;
+  /**
+   * With no folder yet, how the person could give this chat their files: 'folder' (Quo Desktop, with a model that can use
+   * one: they add a folder, or just ask about their project), 'model' (Quo Desktop, but this model can't: a stronger or
+   * offline one can), 'browser' (the web app has no files; the desktop app does).
+   */
+  files?: 'folder' | 'model' | 'browser';
+  /** This chat has the open_project tool, so the model can start a folder itself (rather than only telling the person how). */
+  folderTool?: boolean;
   /** Plan mode: reading only for now. */
   plan?: boolean;
   /** Fewer words, for a model with a small window. */
@@ -105,7 +113,15 @@ export function environmentNote(env: Environment): string {
     `- You are ${model}, ${where}, inside ${program}, a private AI app. Replies are shown as markdown.`,
   ];
   if (env.project) lines.push(`- Project folder: ${env.project}.${env.plan ? ' Plan mode is on: reading only until the person turns it off.' : ''}`);
-  lines.push(`- In this chat you can ${can.length ? `${can.join('; ')}` : 'only talk: you have no tools'}.`);
+  lines.push(`- In this chat you can ${can.length ? `${can.join('; ')}` : env.files === 'folder' && env.folderTool ? 'answer directly, and call open_project to work in a folder on their computer when a request needs it' : 'only talk: you have no tools'}.`);
+  if (!env.project && env.files && !can.some(text => text.startsWith('read files'))) {
+    lines.push(
+      env.files === 'folder' && env.folderTool ? '- Files: you cannot see them yet. When a request needs the person’s own files, folders or code, or asks you to create files, call open_project instead of saying you cannot.'
+      : env.files === 'folder' ? '- Files: you cannot see them yet, but Quo Desktop can give you a project folder. If the person asks about their files or folders, or wants a file made, say that and tell them to ask about their project (Quo then offers a folder) or add one with the folder button next to the message box. Never say you can never work with their files.'
+      : env.files === 'model' ? '- Files: Quo Desktop can work in a project folder, but not with this model. If the person wants that, tell them to choose a stronger model (such as Claude or GPT-6 Astra) or an offline model from the model menu.'
+      : '- Files: the web app cannot reach the person’s files. The Quo desktop app can work in a project folder; if they want that, point them to it.',
+    );
+  }
   if (!env.brief && cannot.length) lines.push(`- You cannot ${cannot.join(', ')} here. If asked for something you cannot do, say so plainly instead of pretending, and say what the person could do instead.`);
   return lines.join('\n');
 }

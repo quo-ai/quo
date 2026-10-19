@@ -104,47 +104,55 @@ export function useCodeMode({ support, conversationId, modelId }: { support: Cod
       }
     });
 
-  /**
-   * Starts Code mode for a message without the person turning anything on. `kind` says why:
-   *  - 'resume': this chat worked in a folder before, so it goes on there.
-   *  - 'project': the message is about their project, so the folder used last (or, the first time, one they choose in the
-   *    system dialog; saying no is remembered for this chat).
-   *  - 'new': they asked for something to be built, so it gets a new empty folder of its own under Documents/Quo Projects
-   *    (never the folder of an existing project).
-   * The folder is always visible next to the message box and one click to remove. Returns the session to use for this
-   * message, or null to answer as an ordinary chat.
-   */
-  async function autoStart(kind: 'resume' | 'project' | 'new', request = ''): Promise<CodeSession | null> {
+  /** A chat that worked in a folder before goes back to it, with no question to anyone: the person already chose it here. */
+  async function resume(): Promise<CodeSession | null> {
     if (code) return code;
     if (!available || starting || !codeSettings().autoStart || (gate && !gate.allowed)) return null;
+    try {
+      const ofThisChat = (await recentProjects()).find(project => project.id === chatProject(conversationId));
+      return ofThisChat ? await start(ofThisChat) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * The model asked for a folder (open_project): it decided, from the whole message, that the request needs the person's
+   * files. 'existing' is their project: the folder used last, or, the first time, one they choose in the system dialog
+   * (no is remembered for this chat). 'new' is for something built from scratch: a new empty folder under
+   * Documents/Quo Projects. Always visible next to the message box and one click to remove. The note is what the model reads.
+   */
+  async function openProject(kind: 'existing' | 'new', name = ''): Promise<{ session: CodeSession | null; note: string }> {
+    if (code) return { session: code, note: '' };
+    if (!available || !codeSettings().autoStart || (gate && !gate.allowed)) {
+      return { session: null, note: 'Working in a folder is off for this chat. If the person wants it, they can add a folder with the button next to the message box, or turn it on in Settings (Code).' };
+    }
     setStarting(true);
     try {
       const recent = await recentProjects();
       const ofThisChat = recent.find(project => project.id === chatProject(conversationId));
-      if (kind === 'resume') return ofThisChat ? await start(ofThisChat) : null;
       if (kind === 'new') {
-        if (ofThisChat) return await start(ofThisChat);
-        const made = await createWorkspace(request);
+        if (ofThisChat) return { session: await start(ofThisChat), note: '' };
+        const made = await createWorkspace(name || 'project');
         const session = await start(made);
         toast(`Made a folder for this: Documents/Quo Projects/${made.name}.`);
-        return session;
+        return { session, note: '' };
       }
       const known = ofThisChat ?? recent.find(project => project.id === lastProjectId());
       if (known) {
         const session = await start(known);
         toast(`Working in ${known.name}. You can change the folder next to the message box.`);
-        return session;
+        return { session, note: '' };
       }
-      if (declinedFolder.current === (conversationId ?? '')) return null;
+      if (declinedFolder.current === (conversationId ?? '')) return { session: null, note: 'The person already chose no folder in this chat. Carry on without their files.' };
       const picked = await pickProject();
       if (!picked) {
         declinedFolder.current = conversationId ?? '';
-        return null;
+        return { session: null, note: 'The person chose no folder, so you can’t use their files. Carry on without, and say what you can still do.' };
       }
-      return await start(picked);
+      return { session: await start(picked), note: '' };
     } catch (error) {
-      toast(error instanceof NativeError ? error.message : 'Couldn’t use that folder.');
-      return null;
+      return { session: null, note: error instanceof NativeError ? error.message : 'Couldn’t open a folder.' };
     } finally {
       setStarting(false);
     }
@@ -169,7 +177,7 @@ export function useCodeMode({ support, conversationId, modelId }: { support: Cod
     await action?.();
   }
 
-  return { code, available, unavailableReason: reason ?? null, gate, caution, dismissCaution: () => { afterCaution.current = null; setCaution(false); }, confirmCaution, starting, plan, toggle, autoStart, changeFolder, switchProject, togglePlan, end };
+  return { code, available, unavailableReason: reason ?? null, gate, caution, dismissCaution: () => { afterCaution.current = null; setCaution(false); }, confirmCaution, starting, plan, toggle, resume, openProject, changeFolder, switchProject, togglePlan, end };
 }
 
 export type CodeMode = ReturnType<typeof useCodeMode>;

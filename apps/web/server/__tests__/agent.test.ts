@@ -434,3 +434,45 @@ describe('Code mode on the free model', () => {
     expect(list.models.filter((m: { agentLight: boolean }) => m.agentLight)).toHaveLength(1);
   });
 });
+
+describe('a chat with no folder yet', () => {
+  const chunk = [{ choices: [{ delta: { content: 'ok' }, finish_reason: 'stop' }] }];
+  const folderless = (token: string | null, model = AGENT_MODEL, extra: Record<string, unknown> = {}) =>
+    step(token, { model, agent: { tools: ['open_project', 'read_file', 'edit_file'].slice(0, 1), project: '', platform: 'linux', environment: { app: { name: 'Quo Desktop', version: '1.3.0' } } }, ...extra });
+
+  it('gets one tool, a prompt that lets it decide, and no pretend project', async () => {
+    const token = await signIn('folderless@example.com');
+    const requests = stubUpstream(chunk);
+    expect((await folderless(token)).status).toBe(200);
+    expect((requests[0].body.tools as { function: { name: string } }[]).map(t => t.function.name)).toEqual(['open_project']);
+    const system = (requests[0].body.messages as { content: string }[])[0].content;
+    expect(system).toMatch(/Most messages need no tool at all/);
+    expect(system).toContain('call open_project instead of saying you cannot');
+    expect(system).not.toMatch(/Project folder:/);
+    expect(system).toContain('inside Quo Desktop 1.3.0');
+  });
+
+  it('never adds the project tools, whatever else is asked for alongside it', async () => {
+    const token = await signIn('folderless2@example.com');
+    const requests = stubUpstream(chunk);
+    await (await step(token, { agent: { tools: ['open_project', 'edit_file', 'run_command'], project: 'x' } })).text();
+    expect((requests[0].body.tools as { function: { name: string } }[]).map(t => t.function.name)).toEqual(['open_project']);
+  });
+
+  it('is an ordinary free message for the free model, not a coding step', async () => {
+    const token = await signIn('folderless3@example.com');
+    stubUpstream(chunk);
+    const response = await folderless(token, 'openai/gpt-6-luna');
+    expect(response.status).toBe(200);
+    const done = (await events(response)).find(e => e.event === 'done')!;
+    expect(done.data.freeRemaining).toBe(config.freeDailyMessages - 1);
+  });
+
+  it('still turns away a paid model that cannot use tools', async () => {
+    const token = await signIn('folderless4@example.com');
+    const catalog = await (await call(null, 'GET', 'models')).json();
+    const weak = catalog.models.find((m: { agent: boolean; free: boolean }) => !m.agent && !m.free).id;
+    const response = await folderless(token, weak);
+    expect(response.status).toBe(400);
+  });
+});

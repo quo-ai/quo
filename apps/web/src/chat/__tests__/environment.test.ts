@@ -96,3 +96,35 @@ describe('the note about where a model is', () => {
     expect(agentSystemPrompt('demo', 'linux', ['read_file'])).not.toContain('About this chat');
   });
 });
+
+describe('when there is no folder yet', () => {
+  const none = { ...base, project: undefined, can: [] as Environment['can'] };
+
+  it('tells a model that can work in a folder how the person gets one, instead of "I can’t"', () => {
+    const note = environmentNote({ ...none, files: 'folder' });
+    expect(note).toContain('Quo Desktop can give you a project folder');
+    expect(note).toContain('folder button next to the message box');
+    expect(note).toContain('Never say you can never work with their files');
+  });
+
+  it('points to a stronger or offline model when this one cannot, and to the desktop app from the web', () => {
+    expect(environmentNote({ ...none, files: 'model' })).toMatch(/choose a stronger model .* or an offline model/);
+    expect(environmentNote({ ...none, files: 'browser', app: { name: 'Quo Web' } })).toContain('The Quo desktop app can work in a project folder');
+  });
+
+  it('says nothing about it once there is a folder, or when the chat can already read files', () => {
+    expect(environmentNote({ ...base, files: 'folder' })).not.toContain('Files:');
+    expect(environmentNote({ ...none, can: ['read-files'], files: 'folder' })).not.toContain('Files:');
+    expect(environmentNote(none)).not.toContain('Files:');
+  });
+});
+
+describe('a model that can ask for a folder itself', () => {
+  it('is told to call open_project instead of saying it cannot', () => {
+    const note = environmentNote({ ...base, project: undefined, can: [], files: 'folder', folderTool: true });
+    expect(note).toContain('call open_project to work in a folder on their computer when a request needs it');
+    expect(note).toMatch(/call open_project instead of saying you cannot/);
+    expect(note).not.toContain('only talk');
+    expect(note).not.toContain('ask about their project');
+  });
+});
