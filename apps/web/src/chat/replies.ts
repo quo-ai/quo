@@ -15,7 +15,9 @@ import { generateOwn } from '../providers/generate';
 import type { OwnModel } from '../providers/ownModels';
 import { CLOUD_CONTEXT, type ModelChoice } from '../models';
 import { allowUserUrls, runWebTool } from '../web/run';
+import { capabilitiesOfTools } from '../../shared/environment';
 import { buildContext } from './context';
+import { environmentFor, noteFor } from './environment';
 import type { Message } from './types';
 
 /**
@@ -58,7 +60,18 @@ export async function replyWithAgent(choice: CloudChoice | OwnChoice | LocalChoi
   const { useNotes, maxSteps } = codeSettings();
   // Helpers (the task tool) are for models with room to spare: not offline ones, whose window is small.
   const tools = choice.kind === 'local' ? code.tools : [...code.tools, TASK_TOOL];
-  const options = (onText: (text: string) => void, extra: { tools?: string[]; role?: 'explore' | 'summarize' } = {}) => ({ tools, project: code.project.name, platform: code.info.platform, instructions: useNotes ? code.info.instructions : null, signal, onText, ...extra });
+  // Each request carries a fresh environment note (the clock moves, plan mode can be switched) for the models the app prompts;
+  // Quo's own cloud models get the same from the server.
+  const options = (onText: (text: string) => void, extra: { tools?: string[]; role?: 'explore' | 'summarize' } = {}) => ({
+    tools,
+    project: code.project.name,
+    platform: code.info.platform,
+    instructions: useNotes ? code.info.instructions : null,
+    signal,
+    onText,
+    ...(extra.role === 'summarize' ? {} : { environment: environmentFor(choice, capabilitiesOfTools(extra.tools ?? tools), { project: code.project.name, plan: extra.role ? undefined : code.plan }) }),
+    ...extra,
+  });
   const ask = (extra: { tools?: string[]; role?: 'explore' | 'summarize' } = {}): ((messages: AgentMessage[], onText: (text: string) => void) => Promise<StepReply>) =>
     choice.kind === 'own'
       ? (messages, onText) => askOwnAgentModel(choice.provider, choice.model, messages, options(onText, extra))
@@ -115,7 +128,7 @@ export async function replyWithWeb(choice: OwnChoice | LocalChoice, sessionId: s
   let system = webSystemPrompt(compact ? 'local' : 'cloud', new Date().toISOString().slice(0, 10));
   // What the user asked Quo to remember goes to offline models only, as in a plain offline chat.
   if (choice.kind === 'local') system += memoryPrompt(await listMemories().catch(() => []), Math.min(1500, Math.floor(choice.model.contextSize * 0.35)));
-  const options = (onText: (text: string) => void) => ({ tools: WEB_TOOLS, project: 'web', platform: 'linux', system, signal, onText });
+  const options = (onText: (text: string) => void) => ({ tools: WEB_TOOLS, project: 'web', platform: 'linux', system: system + noteFor(choice, choice.kind === 'local' ? ['web', 'memories'] : ['web']), signal, onText });
   const outcome = await runAgent(prior.filter(m => m.content).map((m): AgentMessage => ({ role: m.role, content: m.content })), {
     signal,
     maxSteps: 8,
@@ -133,7 +146,7 @@ export async function replyWithWeb(choice: OwnChoice | LocalChoice, sessionId: s
 /** Whether the web search that was asked for ran (see CloudResult.web). */
 export async function replyInCloud(choice: CloudChoice, thinking: boolean, { prior, update, setStatus }: ReplyTarget, options: { web?: boolean } = {}): Promise<CloudResult['web']> {
   setStatus('generating');
-  const history = buildContext(CLOUD_PROMPT, prior, CLOUD_CONTEXT.contextSize, CLOUD_CONTEXT.maxTokens);
+  const history = buildContext(CLOUD_PROMPT + noteFor(choice, options.web ? ['web'] : []), prior, CLOUD_CONTEXT.contextSize, CLOUD_CONTEXT.maxTokens);
   const result = await generateCloud(choice.model.id, history, {
     thinking,
     web: options.web,
@@ -147,7 +160,7 @@ export async function replyInCloud(choice: CloudChoice, thinking: boolean, { pri
 /** A model at a provider the user reached with their own key: straight from this computer to the provider, nothing through Quo. */
 export async function replyOwn(choice: OwnChoice, { prior, update, setStatus }: ReplyTarget, options: { web?: boolean } = {}): Promise<void> {
   setStatus('generating');
-  const history = buildContext(CLOUD_PROMPT, prior, Math.min(choice.model.contextTokens ?? CLOUD_CONTEXT.contextSize, 64_000), CLOUD_CONTEXT.maxTokens);
+  const history = buildContext(CLOUD_PROMPT + noteFor(choice, options.web ? ['web'] : []), prior, Math.min(choice.model.contextTokens ?? CLOUD_CONTEXT.contextSize, 64_000), CLOUD_CONTEXT.maxTokens);
   const result = await generateOwn(choice.provider, choice.model, history, ({ content, reasoning }) => update({ content, reasoning }, false), options);
   update({ content: result.content, reasoning: result.reasoning || undefined, stopped: result.stopped || undefined, usage: result.usage ?? undefined }, true);
 }
@@ -156,7 +169,7 @@ export async function replyOffline(choice: LocalChoice, thinking: boolean, { pri
   const model = choice.model;
   // What the user asked Quo to remember goes to offline models only (never a cloud model), using up to ~10% of the context.
   const memories = await listMemories().catch(() => []);
-  const instructions = LOCAL_PROMPT + memoryPrompt(memories, Math.min(1500, Math.floor(model.contextSize * 0.35)));
+  const instructions = LOCAL_PROMPT + memoryPrompt(memories, Math.min(1500, Math.floor(model.contextSize * 0.35))) + noteFor(choice, model.vision ? ['attachments', 'images', 'memories'] : ['attachments', 'memories']);
   const history = buildContext(instructions, prior, model.contextSize, model.maxTokens);
   if (localEngine.modelId !== model.id) setStatus('loading');
   await localEngine.load(model);

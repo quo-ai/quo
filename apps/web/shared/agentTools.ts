@@ -7,6 +7,8 @@
  * it has.
  */
 
+import { environmentNote, type Environment } from './environment.js';
+
 export interface AgentTool {
   name: string;
   description: string;
@@ -250,10 +252,10 @@ export function parseNotes(input: unknown): ProjectNotes | null {
  * `where` says who reads the files: a provider in the cloud (Quo's own models, or the user's own key), or a model on
  * this computer, which has a small memory and so is asked to read a little at a time.
  */
-export function agentSystemPrompt(project: string, platform: Platform, tools: string[], notes: ProjectNotes | null = null, where: 'cloud' | 'local' = 'cloud', role: 'main' | 'explore' | 'summarize' = 'main'): string {
+export function agentSystemPrompt(project: string, platform: Platform, tools: string[], notes: ProjectNotes | null = null, where: 'cloud' | 'local' = 'cloud', role: 'main' | 'explore' | 'summarize' = 'main', env: Environment | null = null): string {
   const shell = platform === 'win32' ? 'Windows (commands run in cmd.exe)' : platform === 'darwin' ? 'macOS (commands run in a POSIX shell)' : 'Linux (commands run in a POSIX shell)';
   const can = tools.includes('edit_file') || tools.includes('write_file') || tools.includes('run_command');
-  if (role === 'explore') return explorerPrompt(project, shell, notes);
+  if (role === 'explore') return explorerPrompt(project, shell, notes) + (env ? environmentNote(env) : '');
   if (role === 'summarize') return summarizerPrompt(project);
   return [
     `You are Quo Code, a coding agent working in the user's project folder "${project}" on ${shell}. You help with software work: understanding code, finding bugs, adding features, refactoring, writing tests and explaining how things work.`,
@@ -301,6 +303,7 @@ export function agentSystemPrompt(project: string, platform: Platform, tools: st
           '</project-notes>',
         ]
       : []),
+    ...(env ? [environmentNote(env)] : []),
   ].join('\n');
 }
 
