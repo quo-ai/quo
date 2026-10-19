@@ -71,7 +71,7 @@ describe('desktop app (native engine)', () => {
   });
 
   it('marks big models slow on a processor and refuses ones that do not fit in memory', () => {
-    expect(modelFit(model('qwen35-0.8b'), machine(null, 8))).toBe('good');
+    expect(modelFit(model('llama32-3b'), machine(null, 8))).toBe('good');
     expect(modelFit(model('qwen35-9b'), machine(null, 16))).toBe('slow');
     expect(modelFit(model('qwen35-9b'), machine(null, 8))).toBe('too-big');
   });
@@ -85,12 +85,24 @@ describe('desktop app (native engine)', () => {
   it('recommends the biggest model that runs well', () => {
     expect(recommendedModelId(machine(24, 64), DESKTOP_MODELS)).toBe('qwen35-9b');
     expect(recommendedModelId(machine(6, 16), DESKTOP_MODELS)).toBe('qwen35-4b');
-    expect(recommendedModelId(machine(4, 8), DESKTOP_MODELS)).toBe('qwen35-2b');
-    expect(recommendedModelId(machine(2, 8), DESKTOP_MODELS)).toBe('qwen35-0.8b');
+    expect(recommendedModelId(machine(4, 8), DESKTOP_MODELS)).toBe('llama32-3b'); // the 4B no longer fits well, the 3B does
+    expect(recommendedModelId(machine(2, 8), DESKTOP_MODELS)).toBe('qwen35-4b'); // nothing fits well: the default, which the app will mark as slow
   });
 
   it('keeps a processor-only computer to small models', () => {
-    expect(['qwen35-0.8b', 'qwen35-2b']).toContain(recommendedModelId(machine(null, 64), DESKTOP_MODELS));
-    expect(recommendedModelId(machine(null, 4), DESKTOP_MODELS)).toBe('qwen35-0.8b');
+    expect(recommendedModelId(machine(null, 64), DESKTOP_MODELS)).toBe('llama32-3b');
+    expect(['llama32-3b', 'qwen35-4b']).toContain(recommendedModelId(machine(null, 4), DESKTOP_MODELS));
+  });
+  it('(after the two smallest Qwens were taken out) no longer offers Qwen3.5 0.8B or 2B, and starts people on the 4B', async () => {
+    expect(DESKTOP_MODELS.map(m => m.id)).toEqual(['qwen35-4b', 'qwen35-9b', 'qwen35-27b', 'gemma4-e2b', 'llama32-3b', 'phi4-mini']);
+    const { DEFAULT_NATIVE_MODEL_ID } = await import('../catalog');
+    expect(DEFAULT_NATIVE_MODEL_ID).toBe('qwen35-4b');
+    expect(DESKTOP_MODELS.some(m => m.id === DEFAULT_NATIVE_MODEL_ID)).toBe(true); // the desktop app's default is a model it offers
+  });
+
+  it('(after that) never recommends a model that is not offered', () => {
+    for (const [gpu, ram] of [[24, 64], [8, 16], [4, 8], [2, 8], [null, 64], [null, 8], [null, 4]] as const) {
+      expect(DESKTOP_MODELS.map(m => m.id)).toContain(recommendedModelId(machine(gpu, ram), DESKTOP_MODELS));
+    }
   });
 });

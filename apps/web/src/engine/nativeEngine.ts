@@ -1,7 +1,7 @@
 import type { LocalModel } from '../catalog';
 import { engineMemoryGB, getDeviceProfile } from '../device';
 import { nativeBridge, NativeError, unwrap, type NativeStatus } from '../native';
-import { contextFor, hasImages, maxTokensFor, samplingFor } from './tuning';
+import { contextFor, maxTokensFor, samplingFor } from './tuning';
 import type { ChatTurn, EngineInfo, GenerationResult, GenerationUpdate, InferenceEngine } from './localEngine';
 
 /**
@@ -98,7 +98,7 @@ export class NativeEngine implements InferenceEngine {
 
     const controller = new AbortController();
     const thinking = options.thinking && model.supportsThinking;
-    const sampling: Sampling = samplingFor(model, { thinking, images: hasImages(messages) });
+    const sampling: Sampling = samplingFor(model, { thinking });
     const maxTokens = maxTokensFor(model, thinking, this.status?.contextSize ?? model.contextSize);
 
     const run = (async (): Promise<GenerationResult> => {

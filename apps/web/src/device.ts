@@ -1,4 +1,4 @@
-import { DEFAULT_LOCAL_MODEL_ID, LOCAL_MODELS, modelSizeBytes, type LocalModel } from './catalog';
+import { DEFAULT_LOCAL_MODEL_ID, DEFAULT_NATIVE_MODEL_ID, LOCAL_MODELS, modelSizeBytes, type LocalModel } from './catalog';
 import { nativeBridge, unwrap, type NativeInfo } from './native';
 import { isDesktopApp } from './platform';
 
@@ -189,7 +189,7 @@ export function modelFit(model: LocalModel, device: DeviceProfile): ModelFit {
 }
 
 // Largest first; the biggest one that runs well here is suggested.
-const NATIVE_PREFERENCE = ['qwen35-9b', 'qwen35-4b', 'qwen35-2b', 'qwen35-0.8b'];
+const NATIVE_PREFERENCE = ['qwen35-9b', 'qwen35-4b', 'llama32-3b'];
 
 export function recommendedModelId(device: DeviceProfile, models: LocalModel[] = LOCAL_MODELS): string {
   if (device.native) {
@@ -198,7 +198,8 @@ export function recommendedModelId(device: DeviceProfile, models: LocalModel[] =
       const model = models.find(candidate => candidate.id === id);
       return available.has(id) && model && modelFit(model, device) === 'good' && (device.gpu || modelSizeBytes(model) < 3e9);
     });
-    return pick ?? DEFAULT_LOCAL_MODEL_ID;
+    // Nothing fits well: the default for the desktop app (the app will mark it as slow or too big).
+    return pick ?? (available.has(DEFAULT_NATIVE_MODEL_ID) ? DEFAULT_NATIVE_MODEL_ID : DEFAULT_LOCAL_MODEL_ID);
   }
   const memory = device.memoryGB ?? 8;
   return device.gpu && memory >= 8 ? 'qwen35-2b' : DEFAULT_LOCAL_MODEL_ID;

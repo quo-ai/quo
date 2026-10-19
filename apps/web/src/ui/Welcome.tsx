@@ -1,5 +1,5 @@
 import { Cloud, Download, Lock, Pause, WifiOff, Zap } from 'lucide-react';
-import { getLocalModel, modelSizeBytes } from '../catalog';
+import { DEFAULT_LOCAL_MODEL_ID, getLocalModel, modelSizeBytes } from '../catalog';
 import type { CloudModel } from '../cloud/catalog';
 import { recommendedModelId, type DeviceProfile } from '../device';
 import { isDesktopApp } from '../platform';
@@ -22,7 +22,7 @@ export function Welcome({ device, downloads, onBrowseModels, onOpenKeys, cloudMo
   cloudModel: CloudModel | null;
   onUseCloud: () => void;
 }) {
-  const model = getLocalModel(device ? recommendedModelId(device) : 'qwen35-0.8b')!;
+  const model = getLocalModel(device ? recommendedModelId(device) : DEFAULT_LOCAL_MODEL_ID)!;
   // A download already running for any model takes precedence.
   const running = Object.entries(downloads).find(([, s]) => ['downloading', 'waiting', 'verifying', 'moving'].includes(s.status));
   const target = running ? getLocalModel(running[0]) ?? model : model;

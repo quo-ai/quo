@@ -3,8 +3,7 @@ import type { LocalModel, Sampling } from '../catalog';
 /**
  * How an offline model is run, chosen from what the model's makers recommend and what this computer can hold.
  *
- *  - Sampling follows each family's own guidance (the catalog says which set); a photo in the message uses the family's
- *    vision set where it has one.
+ *  - Sampling follows each family's own guidance (the catalog says which set).
  *  - Context size is what the model is tuned for, held back when the computer is short of memory: the cost of the
  *    window is real (each token of it takes `kvBytesPerToken` bytes of memory), so a small computer gets a smaller window
  *    for a model that is heavy on it, and a big one gets the full window.
@@ -31,10 +30,6 @@ export function maxTokensFor(model: Pick<LocalModel, 'maxTokens'>, thinking: boo
 }
 
 /** The sampling for one reply. */
-export function samplingFor(model: Pick<LocalModel, 'sampling' | 'thinkingSampling' | 'visionSampling'>, { thinking, images }: { thinking: boolean; images: boolean }): Sampling {
-  const base = images && model.visionSampling ? { ...model.sampling, ...model.visionSampling } : model.sampling;
-  return { ...base, ...(thinking ? model.thinkingSampling : undefined) };
+export function samplingFor(model: Pick<LocalModel, 'sampling' | 'thinkingSampling'>, { thinking }: { thinking: boolean }): Sampling {
+  return { ...model.sampling, ...(thinking ? model.thinkingSampling : undefined) };
 }
-
-/** Whether any message carries a picture. */
-export const hasImages = (messages: { content: string | { type: string }[] }[]): boolean => messages.some(message => Array.isArray(message.content) && message.content.some(part => part.type === 'image_url'));

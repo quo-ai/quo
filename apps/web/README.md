@@ -77,13 +77,13 @@ Sampling follows each maker's own model card; the catalog (`src/catalog.ts`) hol
 
 | Model | Window here | Memory per token | Without thinking (temp / top_p / top_k / presence) | With thinking | Source |
 |---|---|---|---|---|---|
-| Qwen3.5 0.8B, 2B | 32,768 | 12 KB | text 1.0 / 1.0 / 20 / 2.0; pictures 0.7 / 0.8 / 20 / 1.5 | 1.0 / 0.95 / 20 / 1.5 | Qwen model card |
 | Qwen3.5 4B, 9B | 32,768 | 32 KB | 0.7 / 0.8 / 20 / 1.5 | 1.0 / 0.95 / 20 / 1.5 | Qwen model card |
 | Qwen3.5 27B | 32,768 | 64 KB | 0.7 / 0.8 / 20 / 1.5 | 1.0 / 0.95 / 20 / 1.5 | Qwen model card |
 | Gemma 4 E2B | 32,768 | 8 KB | 1.0 / 0.95 / 64 | (not offered) | Gemma model card |
 | Llama 3.2 3B | 16,384 | 112 KB | 0.6 / 0.9 / 40 / min_p 0.05 | not a thinking model | Meta's generation config |
 | Phi-4 mini | 16,384 | 128 KB | 0.3 / 0.95 / 40 / min_p 0.05 | not a thinking model | no vendor advice; Microsoft's examples use 0 |
 
+- **Taken out of the desktop app:** Qwen3.5 0.8B and 2B (too small: they answer factual questions confidently and wrongly). Qwen3.5 4B is now the desktop default. The browser build still has them, with Qwen's text set for the small ones (1.0 / 1.0 / 20, presence 2.0; thinking 1.0 / 0.95 / 20 / 1.5), because nothing larger runs there. Someone who downloaded them in the desktop app is offered removal of the files in Models & storage.
 - **Output length:** 4,096 tokens, or, with thinking on, as much as half the window up to 16,384, because the thinking comes out of the same budget (a reply could otherwise run out before its answer began).
 - **Code mode** loads a 32,768 window (held back like any other) and uses its own careful sampling for tool calls: temperature at most 0.4, no repetition penalties (they damage code and JSON), thinking off.
 - **Qwen's own coding advice** (thinking, precise tasks: 0.6 / 0.95 / 20 / presence 0) is not used: the agent runs with thinking off to keep each step quick.

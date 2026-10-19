@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('../../native', () => ({ hasNativeEngine: () => true, nativeBridge: () => null }));
 const { DESKTOP_MODELS } = await import('../../catalog');
-const { contextFor, hasImages, maxTokensFor, samplingFor, KV_SHARE, MIN_CONTEXT, THINKING_TOKENS } = await import('../tuning');
+const { contextFor, maxTokensFor, samplingFor, KV_SHARE, MIN_CONTEXT, THINKING_TOKENS } = await import('../tuning');
 
 const model = (id: string) => DESKTOP_MODELS.find(m => m.id === id)!;
 
@@ -10,7 +10,8 @@ describe('the window a model gets', () => {
   it('is the one asked for when the computer can hold it', () => {
     expect(contextFor(model('qwen35-9b'), 32768, 16)).toBe(32768);
     expect(contextFor(model('qwen35-27b'), 32768, 24)).toBe(32768);
-    expect(contextFor(model('qwen35-2b'), 32768, 8)).toBe(32768);
+    expect(contextFor(model('qwen35-4b'), 32768, 16)).toBe(32768);
+    expect(contextFor(model('qwen35-4b'), 32768, 8)).toBe(30720); // 8 GB: its share of memory holds a little less
   });
 
   it('is held back for a model that is heavy on memory, on a small computer, never below a usable window', () => {
@@ -56,38 +57,24 @@ describe('how long a reply may be', () => {
 describe('sampling, the way each family recommends', () => {
   const pick = (s: ReturnType<typeof samplingFor>) => [s.temperature, s.top_p, s.top_k, s.min_p, s.penalty_present];
 
-  it('uses Qwen’s own sets for the two smallest: text freer, pictures gentler, thinking in between', () => {
-    const small = model('qwen35-2b');
-    expect(pick(samplingFor(small, { thinking: false, images: false }))).toEqual([1.0, 1.0, 20, 0, 2.0]);
-    expect(pick(samplingFor(small, { thinking: false, images: true }))).toEqual([0.7, 0.8, 20, 0, 1.5]);
-    expect(pick(samplingFor(small, { thinking: true, images: false }))).toEqual([1.0, 0.95, 20, 0, 1.5]);
-    expect(pick(samplingFor(model('qwen35-0.8b'), { thinking: false, images: false }))).toEqual([1.0, 1.0, 20, 0, 2.0]);
-  });
-
-  it('keeps the set for the bigger Qwens the same for text and pictures', () => {
+  it('uses Qwen’s own sets for the Qwen3.5 models that are left: without thinking, and with it', () => {
     for (const id of ['qwen35-4b', 'qwen35-9b', 'qwen35-27b']) {
-      expect(pick(samplingFor(model(id), { thinking: false, images: true }))).toEqual([0.7, 0.8, 20, 0, 1.5]);
-      expect(pick(samplingFor(model(id), { thinking: true, images: false }))).toEqual([1.0, 0.95, 20, 0, 1.5]);
+      expect(pick(samplingFor(model(id), { thinking: false })), id).toEqual([0.7, 0.8, 20, 0, 1.5]);
+      expect(pick(samplingFor(model(id), { thinking: true })), id).toEqual([1.0, 0.95, 20, 0, 1.5]);
     }
   });
 
   it('keeps the other families’ own recommendations', () => {
-    expect(pick(samplingFor(model('gemma4-e2b'), { thinking: false, images: false }))).toEqual([1.0, 0.95, 64, 0, undefined]);
-    expect(samplingFor(model('llama32-3b'), { thinking: false, images: false })).toMatchObject({ temperature: 0.6, top_p: 0.9 });
-    expect(samplingFor(model('phi4-mini'), { thinking: false, images: false }).temperature).toBeLessThanOrEqual(0.3);
-  });
-
-  it('finds pictures in a message', () => {
-    expect(hasImages([{ content: 'hi' }])).toBe(false);
-    expect(hasImages([{ content: [{ type: 'text' }] }])).toBe(false);
-    expect(hasImages([{ content: 'x' }, { content: [{ type: 'text' }, { type: 'image_url' }] }])).toBe(true);
+    expect(pick(samplingFor(model('gemma4-e2b'), { thinking: false }))).toEqual([1.0, 0.95, 64, 0, undefined]);
+    expect(samplingFor(model('llama32-3b'), { thinking: false })).toMatchObject({ temperature: 0.6, top_p: 0.9 });
+    expect(samplingFor(model('phi4-mini'), { thinking: false }).temperature).toBeLessThanOrEqual(0.3);
   });
 });
 
 describe('the catalog', () => {
   it('knows what a token of window costs for every model, and gives the light models the longer window', () => {
     for (const m of DESKTOP_MODELS) expect(m.kvBytesPerToken, m.id).toBeGreaterThan(0);
-    for (const id of ['qwen35-0.8b', 'qwen35-2b', 'qwen35-4b', 'qwen35-9b', 'qwen35-27b', 'gemma4-e2b']) expect(model(id).contextSize, id).toBe(32768);
+    for (const id of ['qwen35-4b', 'qwen35-9b', 'qwen35-27b', 'gemma4-e2b']) expect(model(id).contextSize, id).toBe(32768);
     expect(model('llama32-3b').contextSize).toBe(16384);
     expect(model('phi4-mini').contextSize).toBe(16384);
   });
