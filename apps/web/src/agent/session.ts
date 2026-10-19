@@ -47,7 +47,7 @@ const remember = (id: string) => {
 export class CodeSession {
   /** Plan mode: only reading. The desktop app enforces it too, so this is what the model is offered, not the rule. */
   plan = false;
-  /** Web search is on for this chat (the Web chip): the web tools are offered to the model only then. */
+  /** The settings let models search (and the computer is online): the web tools are offered to the model only then. */
   webOn = true;
 
   private constructor(private bridge: DesktopAgent, readonly info: CodeSessionInfo, readonly project: CodeProject) {}

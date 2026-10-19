@@ -11,7 +11,7 @@ import { FREE_CODE_CHARS, FREE_CODE_STEPS, WEB_TOOLS, isFolderless } from '../sh
 import { validOffset, type Environment } from '../shared/environment.js';
 import { agentSystemPrompt, AGENT_TOOL_NAMES, parseNotes, READ_ONLY_TOOLS, toolDefinitions, type Platform } from '../shared/agentTools.js';
 import { streamChat, UpstreamError, type ChatMessage, type ToolCall } from './openrouter.js';
-import { SEARCH_FEE_USD, SEARCH_INPUT_TOKENS } from './webSearch.js';
+import { FREE_SEARCHES_PER_REPLY, PAID_SEARCHES_PER_REPLY, SEARCH_FEE_USD, SEARCH_INPUT_TOKENS } from './webSearch.js';
 
 /**
  * POST /api/chat — cloud chat, streamed as server-sent events:
@@ -26,9 +26,11 @@ import { SEARCH_FEE_USD, SEARCH_INPUT_TOKENS } from './webSearch.js';
  *   event: tool_calls  data: {"calls": [{"id", "name", "arguments"}], "finish": "tool_calls"}
  * Only paid agent-capable models can be used, and each step is billed like a message.
  *
- * With `web` set (an ordinary chat) the model's reply is grounded by one web search (webSearch.ts). On the free
- * model that draws on a small daily search allowance of its own; once it is used the message is answered without
- * a search and `done` says so (`web: "limit"`). On credits, the search is paid for with them.
+ * With `web` set (an ordinary chat, where the person lets models search) the model is offered web search and decides
+ * itself whether the message needs it (webSearch.ts); `done` says what happened (`web: "searched"`, `"not_needed"`, or
+ * `"limit"` when the free model's daily searches are used up and it could not search). On the free model a search draws
+ * on a small daily allowance of its own (one is held for the reply and given back if the model doesn't search); on
+ * credits, searches are paid for with them.
  *
  * The free default model uses the daily allowance first; everything else
  * (and the default model beyond the allowance) draws credits: reserved
@@ -105,11 +107,11 @@ export async function handleChat(request: Request): Promise<Response> {
   let mode: 'free' | 'credits';
   let maxTokens = lightAgent ? Math.min(model.maxOutput, 4096) : model.maxOutput;
   let holdId: string | null = null;
-  let searching = false;
+  let searchesAllowed = 0;
   let searchCost = 0;
   if (isFreeModel(model) && (await takeFreeMessage(db, lightAgent ? codeKeys : freeKeys, lightAgent ? codeLimits : freeLimits))) {
     mode = 'free';
-    searching = wantsWeb && (await takeFreeMessage(db, webKeys, webLimits));
+    if (wantsWeb && (await takeFreeMessage(db, webKeys, webLimits))) searchesAllowed = FREE_SEARCHES_PER_REPLY;
   } else {
     if (!identity.userId) {
       throw isFreeModel(model)
@@ -117,9 +119,10 @@ export async function handleChat(request: Request): Promise<Response> {
         : new HttpError(401, 'sign_in_required', 'Sign in to use this model.');
     }
     if (wantsWeb) {
-      searching = true;
-      searchCost = costToMillicredits(SEARCH_FEE_USD);
-      inputTokens += SEARCH_INPUT_TOKENS;
+      // Held for every search the model may make; settled at what it really made.
+      searchesAllowed = PAID_SEARCHES_PER_REPLY;
+      searchCost = costToMillicredits(SEARCH_FEE_USD) * searchesAllowed;
+      inputTokens += SEARCH_INPUT_TOKENS * searchesAllowed;
     }
     const want = Math.ceil((estimateCost(model, inputTokens, model.maxOutput) + searchCost) * RESERVE_MARGIN);
     const min = Math.ceil((estimateCost(model, inputTokens, MIN_OUTPUT_TOKENS) + searchCost) * RESERVE_MARGIN);
@@ -155,17 +158,25 @@ export async function handleChat(request: Request): Promise<Response> {
       let usage = null as Awaited<ReturnType<typeof streamChat>> | null;
       let failure: { code: string; message: string } | null = null;
       try {
-        usage = await streamChat(model, messages, {
+        const ask = (web: boolean) => streamChat(model, messages, {
           maxTokens,
           reasoning,
           tools: agent?.tools,
-          web: searching,
+          ...(web ? { web: { maxUses: searchesAllowed } } : {}),
           signal: upstream.signal,
           onDelta: delta => {
             outputChars += (delta.content?.length ?? 0) + (delta.reasoning?.length ?? 0);
             send('delta', { c: delta.content, r: delta.reasoning });
           },
         });
+        try {
+          usage = await ask(searchesAllowed > 0);
+        } catch (error) {
+          // A model or provider that won't take the search tool still answers, without it.
+          if (!searchesAllowed || outputChars > 0 || upstream.signal.aborted || !(error instanceof UpstreamError) || error.status !== 400) throw error;
+          console.error('[chat] search tool refused, answering without it', error.message);
+          usage = await ask(false);
+        }
         outputChars += usage.toolCalls.reduce((sum, call) => sum + call.function.arguments.length, 0);
       } catch (error) {
         if (!upstream.signal.aborted) {
@@ -183,13 +194,15 @@ export async function handleChat(request: Request): Promise<Response> {
         if (mode === 'credits' && holdId && identity.userId) {
           const actual = usage?.costUsd != null
             ? costToMillicredits(usage.costUsd)
-            : estimateCost(model, usage?.promptTokens || inputTokens, usage?.completionTokens || Math.ceil(outputChars / 3.5)) + searchCost;
+            : estimateCost(model, usage?.promptTokens || inputTokens, usage?.completionTokens || Math.ceil(outputChars / 3.5)) + costToMillicredits(SEARCH_FEE_USD) * Math.min(usage?.searches ?? 0, searchesAllowed);
           const result = await settleCredits(db, identity.userId, holdId, outputChars === 0 && failure ? 0 : actual, `chat:${model.id}`, randomUUID());
           charged = result.charged;
           balance = result.balance;
         } else if (mode === 'free' && failure && outputChars === 0) {
           await refundFreeMessage(db, lightAgent ? codeKeys : freeKeys);
-          if (searching) await refundFreeMessage(db, webKeys);
+          if (searchesAllowed) await refundFreeMessage(db, webKeys);
+        } else if (mode === 'free' && searchesAllowed && !usage?.searches) {
+          await refundFreeMessage(db, webKeys); // offered a search, didn't need one: it stays in the allowance
         }
         if (mode === 'free' && identity.userId) balance = await getBalance(db, identity.userId);
       } catch (error) {
@@ -204,7 +217,7 @@ export async function handleChat(request: Request): Promise<Response> {
           charged: toCharge(charged),
           balance: balance === null ? null : toCredits(balance),
           freeRemaining: isFreeModel(model) && !lightAgent ? await freeRemaining(db, freeKeys, freeLimits).catch(() => null) : null,
-          web: wantsWeb ? (searching ? 'searched' : 'limit') : null,
+          web: wantsWeb ? (!searchesAllowed ? 'limit' : usage?.searches ? 'searched' : 'not_needed') : null,
           webRemaining: mode === 'free' && wantsWeb ? await freeRemaining(db, webKeys, webLimits).catch(() => null) : null,
         });
       }

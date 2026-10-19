@@ -8,8 +8,6 @@ export interface CommandState {
   codeAvailable: boolean;
   codeOn: boolean;
   plan: boolean;
-  webAvailable: boolean;
-  webOn: boolean;
   canThink: boolean;
   /** The level now, in words. */
   thinking: string;
@@ -25,7 +23,6 @@ export interface CommandActions {
   summarize: () => void;
   toggleCode: () => void;
   togglePlan: () => void;
-  toggleWeb: () => void;
   toggleThinking: () => void;
   undo: () => void;
   chooseFolder: () => void;
@@ -47,7 +44,6 @@ export function buildCommands(state: CommandState, actions: CommandActions): Com
     state.codeOn && { name: 'plan', hint: `Plan mode: Quo only reads (now ${on(state.plan)})`, run: actions.togglePlan },
     state.codeOn && !state.busy && { name: 'folder', hint: 'Choose another project folder', run: actions.chooseFolder },
     state.canUndo && { name: 'undo', hint: 'Put back the files the last reply changed', run: actions.undo },
-    state.webAvailable && { name: 'web', hint: `Web search on or off (now ${on(state.webOn)})`, run: actions.toggleWeb },
     state.canThink && { name: 'think', hint: `Change how much it thinks (now ${state.thinking})`, run: actions.toggleThinking },
     { name: 'model', hint: 'Choose a model', run: actions.models },
     { name: 'keys', hint: 'Your API keys', run: actions.keys },

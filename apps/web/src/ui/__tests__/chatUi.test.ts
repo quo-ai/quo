@@ -35,7 +35,7 @@ describe('slash commands', () => {
 });
 
 describe('which commands apply', () => {
-  const state: CommandState = { busy: false, hasUserMessage: false, hasReply: false, codeAvailable: false, codeOn: false, plan: false, webAvailable: false, webOn: false, canThink: false, thinking: 'Auto', canSummarize: false, canUndo: false };
+  const state: CommandState = { busy: false, hasUserMessage: false, hasReply: false, codeAvailable: false, codeOn: false, plan: false, canThink: false, thinking: 'Auto', canSummarize: false, canUndo: false };
   const actions = new Proxy({}, { get: () => run }) as CommandActions;
   const names = (patch: Partial<CommandState>) => buildCommands({ ...state, ...patch }, actions).map(c => c.name);
 
@@ -49,8 +49,11 @@ describe('which commands apply', () => {
     expect(names({ codeAvailable: true })).toContain('code');
     expect(names({ codeAvailable: true, codeOn: true })).toEqual(['new', 'code', 'plan', 'folder', 'model', 'keys']);
     expect(names({ canUndo: true })).toContain('undo');
-    expect(names({ webAvailable: true })).toContain('web');
     expect(names({ canThink: true })).toContain('think');
+  });
+
+  it('has no web switch: models decide when to search, and the settings say whether they may', () => {
+    expect(names({ hasUserMessage: true, hasReply: true, canSummarize: true, codeAvailable: true, codeOn: true, canUndo: true, canThink: true })).not.toContain('web');
   });
 
   it('while a reply is being written, offers to stop it, and nothing that would start something', () => {
@@ -62,7 +65,6 @@ describe('which commands apply', () => {
   it('says what a toggle is now', () => {
     const hint = (patch: Partial<CommandState>, name: string) => buildCommands({ ...state, ...patch }, actions).find(c => c.name === name)?.hint;
     expect(hint({ codeOn: true, plan: true }, 'plan')).toMatch(/now on/);
-    expect(hint({ webAvailable: true, webOn: false }, 'web')).toMatch(/now off/);
   });
 });
 

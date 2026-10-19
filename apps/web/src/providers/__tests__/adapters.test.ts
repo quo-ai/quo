@@ -43,6 +43,15 @@ describe('the OpenAI wire format', () => {
     expect(body.tools).toBeUndefined();
   });
 
+  it('offers a provider’s own search tool next to ours, and only the one asked for', () => {
+    const search = { type: 'openrouter:web_search', parameters: { max_results: 5, max_uses: 3 } };
+    const tool = { type: 'function' as const, function: { name: 'read_file', description: 'Read', parameters: {} } };
+    const messages = [{ role: 'user' as const, content: 'hi' }];
+    expect(openai.body({ model: 'm', messages, maxTokens: 1, serverTools: [search] }, false)).toMatchObject({ tools: [search], tool_choice: 'auto' });
+    expect((openai.body({ model: 'm', messages, maxTokens: 1, tools: [tool], serverTools: [search] }, false) as { tools: unknown[] }).tools).toEqual([tool, search]);
+    expect((openai.body({ model: 'm', messages, maxTokens: 1, extra: { plugins: [{ id: 'web' }] } }, false) as { tools?: unknown }).tools).toBeUndefined();
+  });
+
   it('sends null, not an empty string, for an assistant turn that only called tools', () => {
     const messages: WireMessage[] = [{ role: 'assistant', content: '', tool_calls: [{ id: 'c1', type: 'function', function: { name: 'read_file', arguments: '{}' } }] }, { role: 'tool', tool_call_id: 'c1', content: 'ok' }];
     const body = openai.body({ model: 'm', messages, maxTokens: 1 }, false) as { messages: { content: unknown }[] };

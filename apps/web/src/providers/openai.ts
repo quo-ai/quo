@@ -24,7 +24,7 @@ export const openai: Adapter = {
       messages: request.messages.map(toApi),
       stream: true,
       ...(usage ? { stream_options: { include_usage: true } } : {}),
-      ...(request.tools?.length ? { tools: request.tools, tool_choice: 'auto' } : {}),
+      ...(request.tools?.length || request.serverTools?.length ? { tools: [...(request.tools ?? []), ...(request.serverTools ?? [])], tool_choice: 'auto' } : {}),
     };
   },
 

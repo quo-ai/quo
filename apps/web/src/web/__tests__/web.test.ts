@@ -6,7 +6,7 @@ import { anthropic } from '../../providers/anthropic';
 import { installLocalStorage } from '../../providers/__tests__/helpers';
 import { runWebTool, urlsIn } from '../run';
 import { webSettings, setWebSettings } from '../settings';
-import { webDefault, webHow } from '../support';
+import { webAllowed, webHow } from '../support';
 
 installLocalStorage();
 beforeEach(() => localStorage.clear());
@@ -49,15 +49,15 @@ describe('which chats can search the web, and how', () => {
     expect(webHow(cloud(true), true)).toBe('native');
   });
 
-  it('starts on for the user’s own keys and Code mode, off for offline models, as set; never for Quo’s chat models', () => {
-    expect(webDefault(own('openai', true), 'tools')).toBe(true);
-    expect(webDefault(cloud(true), 'tools')).toBe(true);
-    expect(webDefault(cloud(false), 'native')).toBe(false);
-    expect(webDefault(local, 'tools')).toBe(false);
+  it('is allowed for every online model, Quo’s free and paid ones too, and not for offline models, as set (the model decides when)', () => {
+    expect(webAllowed(own('openai', true))).toBe(true);
+    expect(webAllowed(cloud(true))).toBe(true);
+    expect(webAllowed(cloud(false))).toBe(true);
+    expect(webAllowed(local)).toBe(false);
     setWebSettings({ offline: true, online: false });
-    expect(webDefault(local, 'tools')).toBe(true);
-    expect(webDefault(own('openai', true), 'tools')).toBe(false);
-    expect(webDefault(cloud(false), 'native')).toBe(false);
+    expect(webAllowed(local)).toBe(true);
+    expect(webAllowed(own('openai', true))).toBe(false);
+    expect(webAllowed(cloud(false))).toBe(false);
     expect(webSettings()).toEqual({ online: false, offline: true });
   });
 });
@@ -120,7 +120,7 @@ describe('what the model is told', () => {
 });
 
 describe('letting a provider search for itself', () => {
-  it('adds OpenRouter’s web plugin, or Anthropic’s search tool, only when asked and only for those providers', async () => {
+  it('offers OpenRouter’s search tool (the model decides, not the old always-search plugin), or Anthropic’s, only when asked and only for those providers', async () => {
     const sent: Record<string, unknown>[] = [];
     vi.resetModules();
     vi.doMock('../../providers/chat', () => ({ chatWithProvider: async (_p: unknown, request: Record<string, unknown>) => { sent.push(request); return { content: 'ok', reasoning: '', toolCalls: [], finish: 'stop', usage: null }; } }));
@@ -133,10 +133,12 @@ describe('letting a provider search for itself', () => {
     await generateOwn(provider('openai'), model, turns, () => {}, { web: true });
     await generateOwn(provider('openrouter'), model, turns, () => {});
     vi.doUnmock('../../providers/chat');
-    expect(sent[0].extra).toEqual({ plugins: [{ id: 'web', max_results: 5 }] });
+    expect(sent[0].serverTools).toEqual([{ type: 'openrouter:web_search', parameters: { max_results: 5, max_uses: 3 } }]);
+    expect(sent[0].extra).toBeUndefined();
     expect(sent[1].webSearch).toBe(true);
     expect(sent[2].extra).toBeUndefined();
     expect(sent[2].webSearch).toBeUndefined();
-    expect(sent[3].extra).toBeUndefined();
+    expect(sent[2].serverTools).toBeUndefined();
+    expect(sent[3].serverTools).toBeUndefined();
   });
 });

@@ -28,6 +28,8 @@ export interface ChatRequest {
   extra?: Record<string, unknown>;
   /** Let the provider search the web itself (Anthropic's search tool). */
   webSearch?: boolean;
+  /** Tools the provider runs itself (OpenRouter's search tool), offered next to any of ours; OpenAI format only. */
+  serverTools?: Record<string, unknown>[];
 }
 
 export interface ChatReply {

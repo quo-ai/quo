@@ -19,10 +19,10 @@ export function WebSettings() {
     <>
       <p className="note keys-intro">
         A model can search the web and read pages whenever it decides it needs to: there is no switch in the chat. What it searches for goes to the search service, and it can only open addresses a search found, you wrote, or a page it read links to.
-        {bridge ? ' These settings say whether models may search at all.' : ' In a browser, Quo’s cloud models search once per message when you turn Web on under the message box (a few a day on the free model, credits on the others), and your own OpenRouter or Anthropic key can search with their built-in search. The desktop app lets every model decide for itself, and works with offline models.'}
+        {bridge ? ' These settings say whether models may search at all.' : ' In a browser, Quo’s cloud models search through OpenRouter (a few searches a day on the free model, credits on the others), and your own OpenRouter or Anthropic key uses their built-in search. The desktop app also works with offline models.'}
       </p>
       <div className="toggle-list">
-        <Toggle label="Let online models search the web" detail="Quo’s cloud models and your own keys. In the desktop app the model decides when; in a browser it is the Web button. Switches itself off when you’re offline." on={settings.online} onChange={online => setWebSettings({ online })} />
+        <Toggle label="Let online models search the web" detail="Quo’s cloud models, the free one too, and your own keys. The model decides when. Switches itself off when you’re offline." on={settings.online} onChange={online => setWebSettings({ online })} />
         <Toggle label="Let offline models search the web" detail="Off keeps an offline chat fully offline, and keeps photos, documents and thinking." on={settings.offline} onChange={offline => setWebSettings({ offline })} />
       </div>
       {bridge && <SearchServices bridge={bridge} />}

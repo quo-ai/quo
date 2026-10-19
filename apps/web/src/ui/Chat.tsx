@@ -33,6 +33,9 @@ import type { CodeSession } from '../agent/session';
 import { useWebMode } from './chat/useWebMode';
 import { toast } from './Toasts';
 
+/** The free model's daily searches running out is said once, not after every reply. */
+let searchLimitShown = false;
+
 export type { ChatAction } from './chat/types';
 
 export interface ChatHandle {
@@ -77,7 +80,7 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
   const startLevel = defaultThinking(choice);
   // A model has its own levels and its own starting point; a choice made for another model doesn't carry over.
   useEffect(() => setThinking(startLevel), [choice?.model.id]); // eslint-disable-line react-hooks/exhaustive-deps
-  const web = useWebMode(choice, Boolean(code), conversation?.id);
+  const web = useWebMode(choice, Boolean(code));
   // How full the model's memory is: counted live while it works, estimated from the messages otherwise.
   const [live, setLive] = useState<{ tokens: number; exact: boolean } | null>(null);
   const mode: ContextMode = code ? 'code' : web.on && web.how === 'tools' ? 'web' : 'chat';
@@ -198,10 +201,14 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
           agentRun.current = null;
         }
       } else if (choice.kind === 'cloud') {
-        const searched = await replyInCloud(choice, thinking, target, { web: web.on && web.how === 'native' });
-        if (searched === 'limit') toast('Today’s free web searches are used up, so Quo answered without searching.');
+        // The server offers the model its search tool, also when a message skipped the tool loop (photos, a thinking level).
+        const searched = await replyInCloud(choice, thinking, target, { web: web.on });
+        if (searched === 'limit' && !searchLimitShown) {
+          searchLimitShown = true;
+          toast('Today’s free web searches are used up, so replies won’t search until tomorrow.');
+        }
       } else if (choice.kind === 'own') {
-        await replyOwn(choice, target, { web: web.on && web.how === 'native' });
+        await replyOwn(choice, target, { web: web.on });
       } else {
         await replyOffline(choice, thinking === 'deep', target);
       }
@@ -295,8 +302,6 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
       codeAvailable: codeMode.available,
       codeOn: Boolean(code),
       plan: codeMode.plan,
-      webAvailable: web.usable && !web.modelDecides,
-      webOn: web.on,
       canThink: levels.length > 1 && !code,
       thinking: LEVEL_LABEL[thinking],
       canSummarize: Boolean(conversation) && modelMessages(messages).length >= 2,
@@ -310,7 +315,6 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
       summarize: () => conversation && void summarizeConversation(conversation, false),
       toggleCode: () => void codeMode.toggle(),
       togglePlan: () => void codeMode.togglePlan(),
-      toggleWeb: web.toggle,
       toggleThinking: () => setThinking(current => nextLevel(levels, current)),
       undo: () => void takeBack(),
       chooseFolder: () => void codeMode.changeFolder(),

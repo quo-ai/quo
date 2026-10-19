@@ -1,35 +1,22 @@
-import { useEffect, useState } from 'react';
 import type { ModelChoice } from '../../models';
 import { useOnline } from '../../net/status';
-import { webDefault, webHow, type WebHow } from '../../web/support';
+import { webAllowed, webHow, type WebHow } from '../../web/support';
 import { useWebSettings } from '../../web/settings';
 
 /**
- * Web search for one chat: whether it can be offered for this model, whether the connection allows it, and whether it is
- * on. It starts as the settings say (on for the user's own keys and Code mode, off for offline models) and the Web
- * chip changes it for this chat; Quo's chat models never start with it on, because each message would search and a
- * search costs. Offline, it is off and can't be turned on.
+ * Web search for one chat: whether this model can search, and whether it may now. There is no switch in the chat: the
+ * model decides for itself when a message needs a search (with search tools, or the provider's own search tool), and
+ * the settings say whether models may search at all (online models yes, offline models no, by default). Offline, it is off.
  */
-export function useWebMode(choice: ModelChoice | null, codeOn: boolean, conversationId: string | undefined) {
+export function useWebMode(choice: ModelChoice | null, codeOn: boolean) {
   const online = useOnline();
   useWebSettings();
   const how: WebHow | null = webHow(choice, codeOn);
-  const modelId = choice?.model.id;
-  const [override, setOverride] = useState<boolean | null>(null);
-  // A different chat or model starts from the settings again.
-  useEffect(() => setOverride(null), [modelId, conversationId]);
-  // With search tools the model decides when to search, so there is nothing to switch: the settings say whether it may.
-  const modelDecides = how === 'tools';
-  const wanted = modelDecides ? webDefault(choice, how) : (override ?? webDefault(choice, how));
   return {
     how,
     online,
-    /** Can be switched on now. */
-    usable: how !== null && online,
-    on: how !== null && online && wanted,
-    /** The model has the search tools and decides when to use them: no switch is shown. */
-    modelDecides,
-    toggle: () => setOverride(!wanted),
+    /** The model may search for this message, if it decides to. */
+    on: how !== null && online && webAllowed(choice),
   };
 }
 

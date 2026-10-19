@@ -19,7 +19,7 @@ export function stopOwn(): void {
   current?.abort();
 }
 
-/** `web`: let the provider search the web for this reply (OpenRouter's web plugin, Anthropic's search tool). */
+/** `web`: offer the model the provider's own search tool (OpenRouter's, Anthropic's); the model decides whether to search. */
 export async function generateOwn(provider: ProviderInfo, model: OwnModel, messages: ChatTurn[], onUpdate: (update: GenerationUpdate) => void, options: { web?: boolean } = {}): Promise<OwnResult> {
   current?.abort();
   const controller = new AbortController();
@@ -33,7 +33,7 @@ export async function generateOwn(provider: ProviderInfo, model: OwnModel, messa
         maxTokens: CHAT_MAX_TOKENS,
         signal: controller.signal,
         ...(options.web && provider.id === 'anthropic' ? { webSearch: true } : {}),
-        ...(options.web && provider.id === 'openrouter' ? { extra: { plugins: [{ id: 'web', max_results: 5 }] } } : {}),
+        ...(options.web && provider.id === 'openrouter' ? { serverTools: [{ type: 'openrouter:web_search', parameters: { max_results: 5, max_uses: 3 } }] } : {}),
         messages: messages.map(turn => ({ role: turn.role, content: textOf(turn.content) })) },
       partial => {
         result.content = partial.content;

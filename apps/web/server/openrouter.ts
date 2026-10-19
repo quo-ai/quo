@@ -1,6 +1,6 @@
 import { config } from './env.js';
 import type { CloudModel } from './cloudModels.js';
-import { webPlugin } from './webSearch.js';
+import { webTool } from './webSearch.js';
 
 /**
  * Streams a chat completion from OpenRouter (OpenAI-compatible SSE).
@@ -32,6 +32,8 @@ export interface StreamUsage {
   /** Tools the model asked to use (Code mode); empty for an ordinary reply. */
   toolCalls: ToolCall[];
   finishReason: string | null;
+  /** Web searches the model made (OpenRouter's `usage.server_tool_use.web_search_requests`). */
+  searches: number;
 }
 
 export interface StreamOptions {
@@ -42,8 +44,8 @@ export interface StreamOptions {
   onDelta: (delta: StreamDelta) => void;
   /** Code mode: the tools the model may call (OpenAI function format). */
   tools?: unknown[];
-  /** Search the web once and add what it finds (see webSearch.ts). */
-  web?: boolean;
+  /** Offer the model web search, with at most this many searches (see webSearch.ts). The model decides whether to search. */
+  web?: { maxUses: number };
 }
 
 export class UpstreamError extends Error {
@@ -72,8 +74,7 @@ export async function streamChat(
       model: model.id,
       // An assistant turn that only called tools has no text; the API wants null, not "".
       messages: messages.map(m => (m.role === 'assistant' && m.tool_calls?.length && !m.content ? { ...m, content: null } : m)),
-      ...(options.tools?.length ? { tools: options.tools, tool_choice: 'auto' } : {}),
-      ...(options.web ? { plugins: [webPlugin()] } : {}),
+      ...(options.tools?.length ? { tools: options.tools, tool_choice: 'auto' } : options.web ? { tools: [webTool(options.web.maxUses)] } : {}),
       stream: true,
       max_tokens: options.maxTokens,
       usage: { include: true },
@@ -85,7 +86,7 @@ export async function streamChat(
     throw new UpstreamError(response.status, (await response.text().catch(() => '')).slice(0, 300));
   }
 
-  const usage: StreamUsage = { promptTokens: 0, completionTokens: 0, costUsd: null, toolCalls: [], finishReason: null };
+  const usage: StreamUsage = { promptTokens: 0, completionTokens: 0, costUsd: null, toolCalls: [], finishReason: null, searches: 0 };
   const calls = new Map<number, ToolCall>();
   const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
   let buffer = '';
@@ -110,7 +111,7 @@ export async function streamChat(
           };
           finish_reason?: string | null;
         }[];
-        usage?: { prompt_tokens?: number; completion_tokens?: number; cost?: number };
+        usage?: { prompt_tokens?: number; completion_tokens?: number; cost?: number; server_tool_use?: { web_search_requests?: number } };
       };
       try {
         chunk = JSON.parse(data);
@@ -137,6 +138,8 @@ export async function streamChat(
         usage.promptTokens = chunk.usage.prompt_tokens ?? usage.promptTokens;
         usage.completionTokens = chunk.usage.completion_tokens ?? usage.completionTokens;
         if (typeof chunk.usage.cost === 'number') usage.costUsd = chunk.usage.cost;
+        const searches = chunk.usage.server_tool_use?.web_search_requests;
+        if (typeof searches === 'number' && Number.isFinite(searches) && searches >= 0) usage.searches = Math.floor(searches);
       }
     }
   }
@@ -151,11 +154,13 @@ export async function streamChat(
 async function standIn(model: CloudModel, messages: ChatMessage[], options: StreamOptions): Promise<StreamUsage> {
   if (options.tools?.length) return standInAgent(model, messages, options);
   const question = [...messages].reverse().find(m => m.role === 'user')?.content ?? '';
-  const reply = `This is a **sandbox test reply** from the stand-in for ${model.name}. Add an OpenRouter API key to get real answers.${options.web ? ' (Web search was on.)' : ''}\n\nYou asked: “${question.slice(0, 120)}”`;
+  // Like a real model, the stand-in searches only when the question is about something current.
+  const searches = options.web && /\b(today|latest|news|current|now|this week|price|weather|score)\b/i.test(question) ? 1 : 0;
+  const reply = `This is a **sandbox test reply** from the stand-in for ${model.name}. Add an OpenRouter API key to get real answers.${searches ? ' (It searched the web.)' : ''}\n\nYou asked: “${question.slice(0, 120)}”`;
   if (options.reasoning && options.reasoning.effort !== 'none' && options.reasoning.enabled !== false) options.onDelta({ reasoning: 'Thinking about the question (sandbox stand-in).' });
   await streamWords(reply, options);
   const promptChars = messages.reduce((sum, m) => sum + m.content.length, 0);
-  return { promptTokens: Math.ceil(promptChars / 3.5), completionTokens: reply.split(/(?<= )/).length, costUsd: null, toolCalls: [], finishReason: 'stop' };
+  return { promptTokens: Math.ceil(promptChars / 3.5), completionTokens: reply.split(/(?<= )/).length, costUsd: null, toolCalls: [], finishReason: 'stop', searches };
 }
 
 async function streamWords(text: string, options: StreamOptions): Promise<void> {
@@ -181,7 +186,7 @@ async function standInAgent(model: CloudModel, messages: ChatMessage[], options:
   const call = (name: string, args: unknown): ToolCall => ({ id: `call_${results + 1}`, type: 'function', function: { name, arguments: JSON.stringify(args) } });
   const say = async (text: string, toolCalls: ToolCall[] = []): Promise<StreamUsage> => {
     await streamWords(text, options);
-    return { promptTokens, completionTokens: Math.ceil(text.length / 3.5), costUsd: null, toolCalls, finishReason: toolCalls.length ? 'tool_calls' : 'stop' };
+    return { promptTokens, completionTokens: Math.ceil(text.length / 3.5), costUsd: null, toolCalls, finishReason: toolCalls.length ? 'tool_calls' : 'stop', searches: 0 };
   };
   const label = `(sandbox stand-in for ${model.name})`;
 

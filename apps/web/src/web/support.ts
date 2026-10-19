@@ -6,11 +6,11 @@ import { webSettings } from './settings';
  * Whether, and how, a chat can search the web.
  *  - 'tools': the model is given search and page-reading tools that the desktop app runs (any model that can call
  *    tools: the user's own keys, offline models, and Quo's models while Code mode is on).
- *  - 'native': the provider searches itself (OpenRouter's web plugin, Anthropic's search tool), which is what works in
+ *  - 'native': the provider searches itself (OpenRouter's search tool, Anthropic's), which is what works in
  *    a browser, where other sites can't be reached from the page.
- * Quo's own models use the second in a browser: the server asks OpenRouter to search once per message (a few a day on the
- * free model, credits on the others), so there it is a switch. On the desktop every model that can use tools gets the
- * first, and decides for itself when to search, with no switch (the settings say whether models may).
+ * Either way the model decides for itself whether a message needs a search; there is no switch in the chat, and the
+ * settings say whether models may search at all. Quo's own models in a browser get OpenRouter's search tool through the
+ * server (one search a reply from a small daily allowance on the free model, a few paid with credits on the others).
  */
 
 export type WebHow = 'tools' | 'native';
@@ -28,9 +28,8 @@ export function webHow(choice: ModelChoice | null, codeOn: boolean): WebHow | nu
 
 const nativeProvider = (id: string): WebHow | null => (id === 'openrouter' || id === 'anthropic' ? 'native' : null);
 
-/** Whether a new chat on this model starts with web search on. Quo's own search is never on by itself: every message would search, and a search costs. */
-export function webDefault(choice: ModelChoice | null, how: WebHow | null): boolean {
-  if (choice?.kind === 'cloud' && how === 'native') return false;
+/** Whether the settings let this model search the web (online models by default; offline models only when turned on). */
+export function webAllowed(choice: ModelChoice | null): boolean {
   const settings = webSettings();
   return choice?.kind === 'local' ? settings.offline : settings.online;
 }
