@@ -77,4 +77,4 @@ function runCommand({ command, cwd, env, timeoutMs = 120_000, signal, headChars 
   });
 }
 
-module.exports = { runCommand };
+module.exports = { runCommand, killTree };

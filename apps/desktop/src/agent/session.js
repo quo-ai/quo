@@ -6,6 +6,7 @@ const { hideSecretDiffs, isReadOnlyCommand } = require('./commands');
 const { runCommand } = require('./exec');
 const commits = require('./commit');
 const { readScopedNotes } = require('./instructions');
+const { BackgroundCommands } = require('./background');
 const { ChangeLog } = require('./history');
 const { AgentError, redactSecrets, scrubbedEnv } = require('./safety');
 
@@ -23,7 +24,7 @@ const { AgentError, redactSecrets, scrubbedEnv } = require('./safety');
  * can adjust.
  */
 
-const TOOL_NAMES = ['list_directory', 'read_file', 'find_files', 'search_text', 'edit_file', 'write_file', 'run_command', 'git_commit', 'update_plan', 'open_repo', 'web_search', 'fetch_url'];
+const TOOL_NAMES = ['list_directory', 'read_file', 'find_files', 'search_text', 'edit_file', 'write_file', 'run_command', 'command_output', 'stop_command', 'git_commit', 'update_plan', 'open_repo', 'web_search', 'fetch_url'];
 const PLAN_TOOLS = ['list_directory', 'read_file', 'find_files', 'search_text', 'update_plan', 'open_repo', 'web_search', 'fetch_url'];
 const PLAN_STATUSES = ['pending', 'in_progress', 'completed'];
 const MAX_PLAN_ITEMS = 12;
@@ -60,6 +61,7 @@ class AgentSession {
     this.calls = 0;
     this.mode = 'work'; // or 'plan': read-only
     this.log = new ChangeLog();
+    this.background = new BackgroundCommands({ cwd: this.rootReal, env: this.env }); // commands left running (run_command with background: true)
     this.plan = []; // the agent's own checklist for the task (update_plan): shown to the person, changes nothing
     this.notesSeen = new Set(); // folders whose own AGENTS.md / CLAUDE.md has already come with a result
   }
@@ -107,6 +109,8 @@ class AgentSession {
         case 'edit_file': return await this.withNotes(await this.change(await files.planEdit(this.ctx, args)));
         case 'write_file': return await this.withNotes(await this.change(await files.planWrite(this.ctx, args)));
         case 'update_plan': return this.updatePlan(args);
+        case 'command_output': return await this.commandOutput(args, signal);
+        case 'stop_command': return this.stopCommand(args);
         case 'run_command': return await this.command(args, signal);
         case 'git_commit': return await this.commit(args);
         case 'open_repo': return await this.openRepo(args);
@@ -171,18 +175,24 @@ class AgentSession {
     if (!command) throw new AgentError('bad_args', 'run_command needs a command.');
     if (command.length > COMMAND_CHARS) throw new AgentError('bad_args', 'That command is too long.');
     const timeoutMs = Math.min(600, Math.max(1, Number(args.timeout_seconds) || 120)) * 1000;
-    const readOnly = this.autoReadOnly && isReadOnlyCommand(command);
+    const background = args.background === true;
+    if (background) this.background.assertRoom();
+    const readOnly = !background && this.autoReadOnly && isReadOnlyCommand(command);
     let answer = readOnly || this.allowedCommands.has(command) ? 'once' : 'ask';
     if (answer === 'ask') {
       answer = await this.approve({
         kind: 'command',
-        title: 'Run this command?',
-        detail: `In the project ${this.name}\n\n${clip(command, 1500)}`,
+        title: background ? 'Start this command in the background?' : 'Run this command?',
+        detail: `In the project ${this.name}${background ? '\nIt keeps running while Quo works, and stops when you end Code mode.' : ''}\n\n${clip(command, 1500)}`,
         rememberLabel: 'Allow this exact command for this session',
       });
     }
     if (answer === 'deny' || answer === 'cancel') return fail('denied', 'The user didn’t allow that command. Don’t try it again; ask what they’d like instead.', { kind: 'command', command, denied: true });
     if (answer === 'session') this.allowedCommands.add(command);
+    if (background) {
+      const started = this.background.start(command);
+      return { ok: true, text: `Started in the background as ${started.id}. Read what it prints with command_output (id "${started.id}"), stop it with stop_command.`, display: { kind: 'background', id: started.id, command } };
+    }
     const result = await runCommand({ command, cwd: this.rootReal, env: scrubbedEnv(this.env), timeoutMs, signal, ...(this.compact ? COMPACT_COMMAND : {}) });
     const status = result.aborted ? 'was stopped' : result.timedOut ? `timed out after ${timeoutMs / 1000}s` : `exited with code ${result.exitCode ?? result.signal}`;
     const output = readOnly ? hideSecretDiffs(result.output) : result.output;
@@ -201,6 +211,22 @@ class AgentSession {
     if (answer !== 'once') return fail('denied', 'The user didn’t allow that commit. Don’t try it again; ask what they’d like instead.', { kind: 'commit', denied: true, files: plan.files });
     const { hash } = await commits.applyCommit({ rootReal: this.rootReal, env: this.env }, plan);
     return { ok: true, text: `Committed ${hash} on ${plan.branch} (${plan.files.length} ${plan.files.length === 1 ? 'file' : 'files'}). Nothing was pushed.`, display: { kind: 'commit', hash, branch: plan.branch, files: plan.files, message: plan.text, credited: plan.credit } };
+  }
+
+  /** What a background command printed since the last look, and whether it is still going. */
+  async commandOutput(args, signal) {
+    const result = await this.background.output(args.id, args.wait_seconds, signal);
+    return { ok: true, text: result.text, display: { kind: 'background_output', id: result.id, command: result.command, running: result.running, state: result.state, output: clip(result.text.split('\n').slice(1).join('\n'), 4000) } };
+  }
+
+  stopCommand(args) {
+    const stopped = this.background.stop(args.id);
+    return { ok: true, text: stopped.already ? `${stopped.id} had already finished.` : `Stopped ${stopped.id}.`, display: { kind: 'background_stop', id: stopped.id, command: stopped.command } };
+  }
+
+  /** The Code session is over: nothing it started keeps running. */
+  close() {
+    this.background.close();
   }
 
   needWeb() {

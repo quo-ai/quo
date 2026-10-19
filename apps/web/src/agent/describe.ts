@@ -28,6 +28,9 @@ export function describeRunning(tool: string, args: Args): string {
     case 'edit_file': return `Waiting for your OK to edit ${text(args.path)}…`;
     case 'write_file': return `Waiting for your OK to write ${text(args.path)}…`;
     case 'run_command': return `Running ${clip(text(args.command), 50)}…`;
+    case 'command_output': return `Checking ${text(args.id, 'a background command')}…`;
+    case 'stop_command': return `Stopping ${text(args.id, 'a background command')}…`;
+    case 'task': return `Helper: ${clip(text(args.description, 'looking into it'), 60)}…`;
     case 'update_plan': return 'Updating the plan…';
     case 'git_commit': return 'Waiting for your OK to commit…';
     case 'open_repo': return `Downloading ${text(args.repo)}…`;
@@ -40,7 +43,7 @@ export function describeRunning(tool: string, args: Args): string {
 export function describeDone(tool: string, args: Args, result: ToolResult): Pick<AgentStep, 'title' | 'status' | 'detail'> {
   const display = result.display ?? {};
   if (display.denied) {
-    return { status: 'declined', title: tool === 'run_command' ? `You declined: ${clip(text(display.command), 60)}` : tool === 'git_commit' ? 'You declined the commit' : `You declined the change to ${text(display.path)}` };
+    return { status: 'declined', title: tool === 'run_command' ? `You declined: ${clip(text(display.command), 60)}${args.background ? ' (background)' : ''}` : tool === 'git_commit' ? 'You declined the commit' : `You declined the change to ${text(display.path)}` };
   }
   if (!result.ok) return { status: 'failed', title: `${verb(tool, args)} didn’t work: ${clip(result.text.split('\n')[0], 110)}` };
   switch (display.kind) {
@@ -50,6 +53,10 @@ export function describeDone(tool: string, args: Args, result: ToolResult): Pick
     case 'search': return { status: 'done', title: `Searched for “${clip(text(display.pattern), 40)}”: ${plural(Number(display.matches ?? 0), 'match')} in ${plural(Number(display.files ?? 0), 'file')}` };
     case 'edit': return { status: 'done', title: `Edited ${text(display.path)}  +${display.added} −${display.removed}`, detail: diffOf(display) };
     case 'create': return { status: 'done', title: `Created ${text(display.path)}  +${display.added}`, detail: diffOf(display) };
+    case 'background': return { status: 'done', title: `Started ${clip(text(display.command), 50)} in the background (${text(display.id)})` };
+    case 'background_output': return { status: 'done', title: `${text(display.id)} ${text(display.state)}: ${clip(text(display.command), 40)}`, detail: text(display.output) ? { kind: 'output', body: text(display.output) } : undefined };
+    case 'background_stop': return { status: 'done', title: `Stopped ${text(display.id)}: ${clip(text(display.command), 50)}` };
+    case 'task': return { status: 'done', title: `Helper done: ${clip(text(display.description), 60)} (${plural(Number(display.steps ?? 0), 'step')})`, detail: text(display.report) ? { kind: 'output', body: text(display.report) } : undefined };
     case 'plan': {
       const items = Array.isArray(display.items) ? display.items as { step?: string; status?: string }[] : [];
       const mark = (status?: string) => (status === 'completed' ? '[x]' : status === 'in_progress' ? '[>]' : '[ ]');
@@ -86,6 +93,9 @@ function verb(tool: string, args: Args): string {
     case 'edit_file': return `Editing ${text(args.path)}`;
     case 'write_file': return `Writing ${text(args.path)}`;
     case 'run_command': return `Running ${clip(text(args.command), 50)}`;
+    case 'command_output': return `Checking ${text(args.id, 'a background command')}`;
+    case 'stop_command': return `Stopping ${text(args.id, 'a background command')}`;
+    case 'task': return `Helper: ${clip(text(args.description, 'looking into it'), 60)}`;
     case 'update_plan': return 'Updating the plan';
     case 'git_commit': return 'Committing';
     case 'open_repo': return `Opening ${text(args.repo)}`;

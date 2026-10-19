@@ -10,10 +10,10 @@ import type { AgentMessage, StepReply } from './types';
 export async function askAgentModel(
   modelId: string,
   messages: AgentMessage[],
-  options: { tools: string[]; project: string; platform: string; instructions?: { file: string; text: string } | null; signal: AbortSignal; onText: (text: string) => void },
+  options: { tools: string[]; project: string; platform: string; instructions?: { file: string; text: string } | null; signal: AbortSignal; onText: (text: string) => void; /** A helper started by the task tool: read-only, with its own prompt. */ role?: 'explore' },
 ): Promise<StepReply> {
   const response = await apiFetch('chat', {
-    body: { model: modelId, messages, agent: { tools: options.tools, project: options.project, platform: options.platform, ...(options.instructions ? { instructions: options.instructions } : {}) } },
+    body: { model: modelId, messages, agent: { tools: options.tools, project: options.project, platform: options.platform, ...(options.role ? { role: options.role } : {}), ...(options.instructions ? { instructions: options.instructions } : {}) } },
     signal: options.signal,
   });
   const reply: StepReply = { content: '', toolCalls: [], finish: null, charged: 0, balance: null };

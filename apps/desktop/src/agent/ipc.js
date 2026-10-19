@@ -183,12 +183,18 @@ function setupAgent({ web = null } = {}) {
 
   function endSession(id) {
     const entry = sessions.get(id);
-    if (entry) abortAll(entry);
+    if (entry) {
+      abortAll(entry);
+      entry.session.close();
+    }
     sessions.delete(id);
   }
 
   app.on('will-quit', () => {
-    for (const entry of sessions.values()) abortAll(entry);
+    for (const entry of sessions.values()) {
+      abortAll(entry);
+      entry.session.close();
+    }
   });
   return { sessions };
 }

@@ -1,11 +1,12 @@
-import { WEB_TOOLS, webSystemPrompt } from '../../shared/agentTools';
+import { READ_ONLY_TOOLS, WEB_TOOLS, webSystemPrompt } from '../../shared/agentTools';
 import { runAgent, countChanges, CONTEXT_CHARS } from '../agent/loop';
 import { agentContextChars, askLocalAgentModel, prepareLocalAgent } from '../agent/local';
 import { askOwnAgentModel } from '../agent/own';
 import { codeSettings } from '../codeSettings';
 import { askAgentModel } from '../agent/stream';
+import { runSubagent, TASK_TOOL } from '../agent/subagent';
 import type { CodeSession } from '../agent/session';
-import type { AgentMessage } from '../agent/types';
+import type { AgentMessage, StepReply } from '../agent/types';
 import { applyUsage } from '../cloud/account';
 import { generateCloud, type CloudResult } from '../cloud/cloudEngine';
 import { localEngine } from '../engine/localEngine';
@@ -55,17 +56,26 @@ export async function replyWithAgent(choice: CloudChoice | OwnChoice | LocalChoi
   setStatus('generating');
   const conversation: AgentMessage[] = prior.filter(m => m.content).map(m => ({ role: m.role, content: m.content }));
   const { useNotes, maxSteps } = codeSettings();
-  const options = (onText: (text: string) => void) => ({ tools: code.tools, project: code.project.name, platform: code.info.platform, instructions: useNotes ? code.info.instructions : null, signal, onText });
+  // Helpers (the task tool) are for models with room to spare: not offline ones, whose window is small.
+  const tools = choice.kind === 'local' ? code.tools : [...code.tools, TASK_TOOL];
+  const options = (onText: (text: string) => void, extra: { tools?: string[]; role?: 'explore' } = {}) => ({ tools, project: code.project.name, platform: code.info.platform, instructions: useNotes ? code.info.instructions : null, signal, onText, ...extra });
+  const ask = (extra: { tools?: string[]; role?: 'explore' } = {}): ((messages: AgentMessage[], onText: (text: string) => void) => Promise<StepReply>) =>
+    choice.kind === 'own'
+      ? (messages, onText) => askOwnAgentModel(choice.provider, choice.model, messages, options(onText, extra))
+      : choice.kind === 'local'
+        ? (messages, onText) => askLocalAgentModel(choice.model, messages, options(onText, extra))
+        : (messages, onText) => askAgentModel(choice.model.id, messages, options(onText, extra));
+  const windowChars = choice.kind === 'own' ? contextChars(choice.model) : choice.kind === 'local' ? agentContextChars() : undefined;
+  let helperCost = 0;
   const outcome = await runAgent(conversation, {
     signal,
     maxSteps,
-    askModel: choice.kind === 'own'
-      ? (messages, onText) => askOwnAgentModel(choice.provider, choice.model, messages, options(onText))
-      : choice.kind === 'local'
-        ? (messages, onText) => askLocalAgentModel(choice.model, messages, options(onText))
-        : (messages, onText) => askAgentModel(choice.model.id, messages, options(onText)),
-    ...(choice.kind === 'own' ? { contextChars: contextChars(choice.model) } : choice.kind === 'local' ? { contextChars: agentContextChars() } : {}),
-    runTool: (name, args) => code.run(name, args),
+    askModel: ask(),
+    ...(windowChars ? { contextChars: windowChars } : {}),
+    runTool: (name, args) =>
+      name === TASK_TOOL
+        ? runSubagent(args, { askModel: ask({ tools: READ_ONLY_TOOLS, role: 'explore' }), runTool: (tool, toolArgs) => code.run(tool, toolArgs), signal, contextChars: windowChars, onCost: charged => (helperCost += charged) })
+        : code.run(name, args),
     onUpdate: ({ steps, text }) => update({ content: text, steps }, false),
     onContext,
   });
@@ -74,7 +84,7 @@ export async function replyWithAgent(choice: CloudChoice | OwnChoice | LocalChoi
     content: outcome.text,
     steps: outcome.steps,
     stopped: outcome.stopped || undefined,
-    ...(choice.kind === 'cloud' ? { charged: outcome.charged } : choice.kind === 'own' ? { usage: outcome.usage ?? undefined } : {}),
+    ...(choice.kind === 'cloud' ? { charged: Math.round((outcome.charged + helperCost) * 100) / 100 } : choice.kind === 'own' ? { usage: outcome.usage ?? undefined } : {}),
   }, true);
   return countChanges(outcome.steps);
 }

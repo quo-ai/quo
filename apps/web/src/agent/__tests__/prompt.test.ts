@@ -49,3 +49,27 @@ describe('the Code mode prompt', () => {
     expect(describeDone('git_commit', {}, { ok: false, text: 'no', display: { denied: true } }).title).toBe('You declined the commit');
   });
 });
+
+describe('background commands and helpers in the prompt', () => {
+  it('are explained only when the session has the tools', () => {
+    const none = agentSystemPrompt('demo', 'linux', WORKING);
+    expect(none).not.toMatch(/background: true|with task/);
+    const all = agentSystemPrompt('demo', 'linux', [...WORKING, 'command_output', 'stop_command', 'task']);
+    expect(all).toMatch(/background: true/);
+    expect(all).toMatch(/hand it to a helper with task/);
+  });
+
+  it('gives the helper a prompt that cannot change anything, keeps the notes inside their tags, and has no work tools', () => {
+    const helper = agentSystemPrompt('demo', 'linux', ['read_file'], { file: 'AGENTS.md', text: 'Be nice.' }, 'cloud', 'explore');
+    expect(helper).toMatch(/You can only read/);
+    expect(helper).toMatch(/<project-notes>\nBe nice\.\n<\/project-notes>/);
+    expect(helper).not.toMatch(/edit_file|run_command|git_commit|update_plan/);
+  });
+
+  it('describes the new steps in the chat', () => {
+    expect(describeRunning('task', { description: 'find auth' })).toBe('Helper: find auth…');
+    expect(describeDone('task', { description: 'x' }, { ok: true, text: '', display: { kind: 'task', description: 'find auth', steps: 4, report: 'In auth.ts:9' } })).toMatchObject({ title: 'Helper done: find auth (4 steps)', detail: { kind: 'output', body: 'In auth.ts:9' } });
+    expect(describeDone('run_command', { background: true }, { ok: false, text: '', display: { denied: true, command: 'npm run dev' } }).title).toBe('You declined: npm run dev (background)');
+    expect(describeDone('command_output', {}, { ok: true, text: '', display: { kind: 'background_output', id: 'bg1', state: 'still running', command: 'npm run dev', output: 'ready' } }).title).toBe('bg1 still running: npm run dev');
+  });
+});

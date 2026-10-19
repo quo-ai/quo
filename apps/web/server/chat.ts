@@ -43,7 +43,7 @@ interface ChatRequest {
   messages?: unknown;
   thinking?: boolean;
   web?: boolean;
-  agent?: { tools?: unknown; project?: unknown; platform?: unknown; instructions?: unknown };
+  agent?: { tools?: unknown; project?: unknown; platform?: unknown; instructions?: unknown; role?: unknown };
 }
 
 const MAX_AGENT_MESSAGES = 600;
@@ -232,12 +232,14 @@ function validateMessages(input: unknown): ChatMessage[] {
 function parseAgent(input: NonNullable<ChatRequest['agent']>, model: NonNullable<ReturnType<typeof getCloudModel>>) {
   if (!model.agent || isFreeModel(model)) throw new HttpError(400, 'agent_unsupported', 'This model can’t be used for Code mode. Choose one of the frontier models.');
   const requested = Array.isArray(input.tools) ? input.tools.filter((name): name is string => typeof name === 'string') : [];
-  const names = AGENT_TOOL_NAMES.filter(name => requested.includes(name));
+  // A helper (role "explore") only ever gets the reading tools, whatever the app asks for: it cannot be handed more.
+  const role = input.role === 'explore' ? 'explore' : 'main';
+  const names = role === 'explore' ? [...READ_ONLY_TOOLS] : AGENT_TOOL_NAMES.filter(name => requested.includes(name));
   if (!READ_ONLY_TOOLS.every(name => names.includes(name))) throw new HttpError(400, 'bad_tools', 'Code mode needs at least the tools that read files.');
   const platform: Platform = input.platform === 'win32' || input.platform === 'darwin' ? input.platform : 'linux';
   const project = (typeof input.project === 'string' ? input.project : '').replace(/[^\p{L}\p{N} ._-]/gu, '').trim().slice(0, 60) || 'project';
   const tools = toolDefinitions(names);
-  return { tools, toolChars: JSON.stringify(tools).length, prompt: agentSystemPrompt(project, platform, names, parseNotes(input.instructions)) };
+  return { tools, toolChars: JSON.stringify(tools).length, prompt: agentSystemPrompt(project, platform, names, parseNotes(input.instructions), 'cloud', role) };
 }
 
 /**

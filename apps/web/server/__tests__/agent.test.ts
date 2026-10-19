@@ -196,6 +196,29 @@ describe('what goes to the model', () => {
   });
 });
 
+describe('the helper behind the task tool', () => {
+  it('gets only the reading tools and its own read-only prompt, whatever the app asks for', async () => {
+    const token = await signIn('agent-helper@example.com');
+    const requests = stubUpstream([{ choices: [{ delta: { content: 'found it' }, finish_reason: 'stop' }] }]);
+    await (await step(token, { agent: { tools: [...ALL_TOOLS, 'task', 'git_commit'], project: 'demo', role: 'explore' } })).text();
+    const names = (requests[0].body.tools as { function: { name: string } }[]).map(t => t.function.name);
+    expect(names).toEqual(READ_TOOLS);
+    const system = (requests[0].body.messages as { content: string }[])[0].content;
+    expect(system).toMatch(/research helper/);
+    expect(system).toMatch(/you cannot change files or run commands/);
+    expect(system).not.toMatch(/edit_file|run_command|git_commit/);
+  });
+
+  it('is not reachable by the main agent’s prompt, and the main agent only hears of task when it has it', async () => {
+    const token = await signIn('agent-helper2@example.com');
+    const requests = stubUpstream([{ choices: [{ delta: { content: 'ok' }, finish_reason: 'stop' }] }]);
+    await (await step(token, { agent: { tools: [...ALL_TOOLS, 'task'], project: 'demo' } })).text();
+    expect((requests[0].body.tools as { function: { name: string } }[]).map(t => t.function.name)).toContain('task');
+    expect((requests[0].body.messages as { content: string }[])[0].content).toMatch(/hand it to a helper with task/);
+    expect((requests[0].body.messages as { content: string }[])[0].content).not.toMatch(/research helper/);
+  });
+});
+
 describe('tool calls coming back', () => {
   it('are put together from the pieces they arrive in, then sent on before done, and billed', async () => {
     const token = await signIn('agent-stream@example.com');

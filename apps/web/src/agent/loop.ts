@@ -145,7 +145,8 @@ export async function runAgent(history: AgentMessage[], deps: AgentDeps): Promis
       steps.push(step);
       show();
       const sameAsBefore = args !== null && `${call.name} ${JSON.stringify(args)}` === previous;
-      repeats = sameAsBefore ? repeats + 1 : 0;
+      // Looking at a background command again and again is how you wait for it, not a loop.
+      repeats = sameAsBefore && call.name !== 'command_output' ? repeats + 1 : 0;
       if (args !== null) previous = `${call.name} ${JSON.stringify(args)}`;
       const refused: ToolResult | null = args === null
         ? { ok: false, text: 'The arguments weren’t valid JSON. Send them again as a JSON object.' }

@@ -68,7 +68,8 @@ const plural = (count: number, one: string, many = `${one}s`) => `${count} ${cou
 const KINDS: [string[], string, string?][] = [
   [['list_directory', 'read_file', 'find_files', 'search_text'], 'look'],
   [['edit_file', 'write_file'], 'change'],
-  [['run_command'], 'command'],
+  [['run_command', 'command_output', 'stop_command'], 'command'],
+  [['task'], 'helper'],
   [['git_commit'], 'commit'],
   [['update_plan'], 'plan update'],
   [['web_search', 'fetch_url'], 'web lookup'],
