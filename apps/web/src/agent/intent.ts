@@ -15,6 +15,16 @@ const IN_PROJECT = /\b(in|across|through|inside|from)\s+(the\s+)?(codebase|code 
 const DO_IN_PROJECT = /(^|[.!?,]\s+|\b(please|then|and|can you|could you|would you|go)\s+)(run|rerun|re-run|execute|start)\s+(the\s+|my\s+|our\s+)?(unit\s+|integration\s+)?(tests?|test suite|build|linter?|typecheck|type check|dev server|migrations?)\b/i;
 const GIT = /\bgit\s+(status|diff|log|blame|commit|branch|stash|rebase|merge)\b/i;
 
+// "Build me a todo app", "create a website for my bakery", "make a Python script that...": something new to write into files.
+const MAKE = /(^|[.!?]\s+|\b(please|can you|could you|would you|i want you to|i need you to|let'?s|lets|go ahead and)\s+)(build|create|make|write|generate|scaffold|set up|code|develop|program)\s+(me\s+|us\s+)?(a|an|the|my|some)?\s*(new\s+|simple\s+|small\s+|basic\s+|full[- ]stack\s+|complete\s+|little\s+)*([\w.+#-]+\s+){0,3}?(app|application|website|web ?site|web app|site|landing page|game|project|cli|command[- ]line tool|tool|bot|extension|plugin|api|server|backend|frontend|script|program|dashboard|calculator|clone|prototype|library|package|component|page|service|scraper|crawler|extension)\b/i;
+const QUESTION = /^\s*(how|what|why|when|where|which|who|can i|should i|is it|are there|do i|does)\b/i;
+
+/** Whether a message asks Quo to make something new (with no project mentioned): it gets a fresh folder of its own. */
+export function looksLikeNewProjectRequest(text: string): boolean {
+  const message = text.trim();
+  return message.length >= 10 && !QUESTION.test(message) && MAKE.test(message);
+}
+
 export function looksLikeProjectRequest(text: string): boolean {
   const message = text.trim();
   if (message.length < 6) return false;

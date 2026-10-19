@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { chatProject, CodeSession, lastProjectId, pickProject, recentProjects } from '../../agent/session';
+import { chatProject, CodeSession, createWorkspace, lastProjectId, pickProject, recentProjects } from '../../agent/session';
 import type { CodeSupport } from '../../agent/support';
 import { codeSettings } from '../../codeSettings';
 import { NativeError, type CodeProject } from '../../native';
@@ -105,18 +105,31 @@ export function useCodeMode({ support, conversationId, modelId }: { support: Cod
     });
 
   /**
-   * A message that is about the person's project: start working in their folder without being asked to turn anything on.
-   * The folder is one they chose in the system's dialog, the last one used (or, the first time, they choose now and can
-   * say no, which is remembered for this chat). Always visible next to the message box, and one click to remove.
-   * Returns the session to use for this message, or null to answer as an ordinary chat.
+   * Starts Code mode for a message without the person turning anything on. `kind` says why:
+   *  - 'resume': this chat worked in a folder before, so it goes on there.
+   *  - 'project': the message is about their project, so the folder used last (or, the first time, one they choose in the
+   *    system dialog; saying no is remembered for this chat).
+   *  - 'new': they asked for something to be built, so it gets a new empty folder of its own under Documents/Quo Projects
+   *    (never the folder of an existing project).
+   * The folder is always visible next to the message box and one click to remove. Returns the session to use for this
+   * message, or null to answer as an ordinary chat.
    */
-  async function autoStart(): Promise<CodeSession | null> {
+  async function autoStart(kind: 'resume' | 'project' | 'new', request = ''): Promise<CodeSession | null> {
     if (code) return code;
     if (!available || starting || !codeSettings().autoStart || (gate && !gate.allowed)) return null;
     setStarting(true);
     try {
       const recent = await recentProjects();
-      const known = recent.find(project => project.id === chatProject(conversationId)) ?? recent.find(project => project.id === lastProjectId());
+      const ofThisChat = recent.find(project => project.id === chatProject(conversationId));
+      if (kind === 'resume') return ofThisChat ? await start(ofThisChat) : null;
+      if (kind === 'new') {
+        if (ofThisChat) return await start(ofThisChat);
+        const made = await createWorkspace(request);
+        const session = await start(made);
+        toast(`Made a folder for this: Documents/Quo Projects/${made.name}.`);
+        return session;
+      }
+      const known = ofThisChat ?? recent.find(project => project.id === lastProjectId());
       if (known) {
         const session = await start(known);
         toast(`Working in ${known.name}. You can change the folder next to the message box.`);

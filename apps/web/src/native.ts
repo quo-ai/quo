@@ -148,6 +148,8 @@ export interface UndoResult {
 export interface DesktopAgent {
   projects: () => Promise<NativeResult<CodeProject[]>>;
   pick: () => Promise<NativeResult<CodeProject | null>>;
+  /** Makes a new empty project folder under Documents/Quo Projects, named from these words. */
+  workspace: (name: string) => Promise<NativeResult<CodeProject>>;
   forget: (id: string) => Promise<NativeResult<unknown>>;
   start: (projectId: string, options?: { autoReadOnly?: boolean; compact?: boolean; creditQuo?: boolean }) => Promise<NativeResult<CodeSessionInfo>>;
   tool: (sessionId: string, name: string, args: Record<string, unknown>) => Promise<NativeResult<{ ok: boolean; text: string; display?: Record<string, unknown> }>>;

@@ -27,6 +27,7 @@ contextBridge.exposeInMainWorld('quoDesktop', {
   agent: {
     projects: () => invoke('agent:projects'),
     pick: () => invoke('agent:pick'),
+    workspace: name => invoke('agent:workspace', { name }),
     forget: id => invoke('agent:forget', { id }),
     start: (projectId, options) => invoke('agent:start', { projectId, autoReadOnly: options?.autoReadOnly, compact: options?.compact, creditQuo: options?.creditQuo }),
     tool: (sessionId, name, args) => invoke('agent:tool', { sessionId, name, args }),

@@ -109,6 +109,13 @@ export async function recentProjects(): Promise<CodeProject[]> {
   return bridge ? unwrap(await bridge.projects()).slice() : [];
 }
 
+/** A new empty folder for a project Quo is asked to build, named from the request (the desktop app decides where and what the name may hold). */
+export async function createWorkspace(name: string): Promise<CodeProject> {
+  const bridge = agentBridge();
+  if (!bridge) throw new NativeError('unavailable', 'Code mode needs the Quo desktop app.');
+  return unwrap(await bridge.workspace(name));
+}
+
 /** Opens the folder dialog. Null if the person cancels. */
 export async function pickProject(): Promise<CodeProject | null> {
   const bridge = agentBridge();

@@ -3,7 +3,7 @@ import { ArrowDown } from 'lucide-react';
 import { titleFrom } from '../chat/store';
 import { newId, type Attachment, type Conversation, type Message } from '../chat/types';
 import { AGENT_CONTEXT } from '../agent/local';
-import { rememberChatProject } from '../agent/session';
+import { chatProject, rememberChatProject } from '../agent/session';
 import { modelMessages, summarize } from '../chat/summary';
 import { autoSummarize, MIN_MESSAGES, SUMMARIZE_AT } from '../context/settings';
 import { contextUsage, ratio, type ContextMode } from '../context/usage';
@@ -23,7 +23,7 @@ import { MessageList } from './chat/MessageList';
 import type { ChatAction, ChatStatus, Failure, Undoable } from './chat/types';
 import { buildCommands } from './chat/useCommands';
 import { useCodeMode } from './chat/useCodeMode';
-import { looksLikeProjectRequest } from '../agent/intent';
+import { looksLikeNewProjectRequest, looksLikeProjectRequest } from '../agent/intent';
 import type { CodeSession } from '../agent/session';
 import { useWebMode } from './chat/useWebMode';
 import { toast } from './Toasts';
@@ -281,7 +281,8 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
     const full = usage ? ratio(usage) : null;
     if (base && autoSummarize() && full !== null && full >= SUMMARIZE_AT && modelMessages(base.messages).length >= MIN_MESSAGES) base = (await summarizeConversation(base, true)) ?? base;
     // A message about the person's project starts Code mode by itself: nothing to turn on.
-    const session = !code && attachments.length === 0 && codeMode.available && looksLikeProjectRequest(text) ? await codeMode.autoStart() : null;
+    const wants = chatProject(conversation?.id) ? 'resume' : looksLikeProjectRequest(text) ? 'project' : looksLikeNewProjectRequest(text) ? 'new' : null;
+    const session = !code && wants && attachments.length === 0 && codeMode.available ? await codeMode.autoStart(wants, text) : null;
     void run(base, text, !conversation, attachments, session);
   };
 

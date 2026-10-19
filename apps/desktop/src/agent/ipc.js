@@ -10,6 +10,7 @@ const { RepoCache } = require('./repos');
 const { gitInfo } = require('./git');
 const { whereIs } = require('./location');
 const { readInstructions } = require('./instructions');
+const { createWorkspace } = require('./workspace');
 const { AgentSession, PLAN_TOOLS, TOOL_NAMES } = require('./session');
 
 /**
@@ -129,6 +130,14 @@ function setupAgent({ web = null } = {}) {
     });
     if (result.canceled || !result.filePaths[0]) return null;
     const real = await fsp.realpath(result.filePaths[0]);
+    checkProjectRoot(real);
+    return publicProject(await projects.add(real));
+  });
+
+  // A new, empty folder under Documents/Quo Projects for something the person asked Quo to build. The page supplies only
+  // words to name it with; the place and the allowed characters are decided in workspace.js.
+  handle('agent:workspace', async ({ name }) => {
+    const real = await createWorkspace(path.join(app.getPath('documents'), 'Quo Projects'), typeof name === 'string' ? name.slice(0, 200) : '');
     checkProjectRoot(real);
     return publicProject(await projects.add(real));
   });
