@@ -42,7 +42,7 @@ describe('the cloud model catalog', () => {
     expect(published.defaultModel).toBe(models.find(isFreeModel)!.id);
     expect(published.models).toHaveLength(models.length);
     for (const model of published.models) {
-      expect(Object.keys(model).sort()).toEqual(['agent', 'creditsPerMessage', 'description', 'free', 'id', 'name', 'provider', 'released', 'supportsThinking', 'tier']);
+      expect(Object.keys(model).sort()).toEqual(['agent', 'agentLight', 'creditsPerMessage', 'description', 'free', 'id', 'name', 'provider', 'released', 'supportsThinking', 'tier']);
       expect(model.creditsPerMessage).toBeGreaterThan(0);
     }
   });
