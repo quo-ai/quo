@@ -8,7 +8,7 @@ export interface AgentStep {
   /** What the model said just before doing this. */
   text?: string;
   /** More to show when the step is opened: a diff, or a command's output. */
-  detail?: { kind: 'diff' | 'output'; body: string };
+  detail?: { kind: 'diff' | 'output' | 'plan'; body: string };
 }
 
 /** What a tool gave back (apps/desktop/src/agent/session.js). */

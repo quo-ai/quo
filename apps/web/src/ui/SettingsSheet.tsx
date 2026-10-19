@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Boxes, Brain, ChevronRight, Cloud, CloudAlert, Code2, Crown, Globe, KeyRound, MonitorDown, RefreshCw, UserRound, X } from 'lucide-react';
+import { Boxes, Brain, Keyboard, ChevronRight, Cloud, CloudAlert, Code2, Crown, Globe, KeyRound, MonitorDown, RefreshCw, UserRound, X } from 'lucide-react';
 import type { Account } from '../cloud/account';
 import { listMemories, onMemoriesChanged } from '../memory/store';
 import { agentBridge } from '../native';
@@ -7,7 +7,7 @@ import { useSyncStatus } from '../sync';
 import type { ModelsTab } from './ModelsSheet';
 
 /** What a row of Settings opens. */
-export type SettingsTarget = { kind: 'models'; tab: ModelsTab } | { kind: 'memories' } | { kind: 'sync' } | { kind: 'account' } | { kind: 'pro' } | { kind: 'getapp' };
+export type SettingsTarget = { kind: 'models'; tab: ModelsTab } | { kind: 'memories' } | { kind: 'sync' } | { kind: 'account' } | { kind: 'pro' } | { kind: 'getapp' } | { kind: 'shortcuts' };
 
 interface SettingsSheetProps {
   /** Null when the Quo API can't be reached; the account rows are left out then. */
@@ -98,6 +98,7 @@ export function SettingsSheet({ account, installedCount, hasCloud, onOpen, onClo
           )}
 
           <div className="sheet-section-title">About</div>
+          <Row icon={<Keyboard size={18} />} label="Keyboard shortcuts" detail="Everything you can do without the mouse" onClick={() => onOpen({ kind: 'shortcuts' })} />
           <Row icon={<MonitorDown size={18} />} label="Get the app" detail="Faster, and works with your own files" onClick={() => onOpen({ kind: 'getapp' })} />
         </div>
       </div>

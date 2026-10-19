@@ -1,8 +1,10 @@
-import { useState, type RefObject, type UIEvent } from 'react';
+import { useMemo, useState, type RefObject, type UIEvent } from 'react';
 import { Brain, Check, Copy, Layers, RotateCcw, Undo2, Volume2, VolumeX } from 'lucide-react';
 import type { CodeSession } from '../../agent/session';
 import type { Message } from '../../chat/types';
 import type { ModelChoice } from '../../models';
+import { greeting, pickStarters, type StarterMode } from '../../chat/starters';
+import { workingLabel } from '../../chat/working';
 import { canSpeak } from '../../voice/readAloud';
 import { AgentSteps } from '../AgentSteps';
 import { MessageAttachments } from '../Attachments';
@@ -12,14 +14,6 @@ import { toast } from '../Toasts';
 import { FailureCard } from './FailureCard';
 import type { ChatAction, Failure, Undoable } from './types';
 import { useReadAloud } from './useReadAloud';
-
-// Everyday starters. Never health or medical topics.
-const SUGGESTIONS = [
-  { title: 'Plan a weekend', detail: 'Two relaxed days in Lisbon', prompt: 'Plan a relaxed two-day weekend in Lisbon with a mix of food, sights and downtime.' },
-  { title: 'Write an email', detail: 'Politely reschedule a meeting', prompt: 'Write a short, polite email asking to move tomorrow’s meeting to next week.' },
-  { title: 'Explain simply', detail: 'How does Wi-Fi work?', prompt: 'Explain how Wi-Fi works in simple terms, in a few short paragraphs.' },
-  { title: 'Brainstorm', detail: 'Names for a coffee cart', prompt: 'Brainstorm ten memorable names for a small coffee cart, with a one-line reason for each.' },
-];
 
 interface MessageListProps {
   conversationId: string | undefined;
@@ -36,6 +30,8 @@ interface MessageListProps {
   onSuggest: (prompt: string) => void;
   onRetry: () => void;
   onUndo: () => void;
+  /** Code mode could start here (the desktop app, a model that can use tools): starters mix in things to build. */
+  canBuild?: boolean;
   onAction: (action: ChatAction) => void;
 }
 
@@ -63,7 +59,7 @@ function intro(choice: ModelChoice | null, code: CodeSession | null): string {
     const notes = code.info.instructions ? ` It follows the notes in ${code.info.instructions.file}.` : '';
     const privacy = choice.kind === 'local' ? ` ${choice.model.name} runs here, so your code never leaves this computer.` : '';
     const git = code.info.git?.branch ? ` (on ${code.info.git.branch}${code.info.git.changed ? `, ${code.info.git.changed} changed file${code.info.git.changed === 1 ? '' : 's'}` : ''})` : '';
-    return `Code mode is on in ${code.project.name}${git}.${notes}${privacy} Ask about the code, or ask for a change. ${code.plan ? 'Plan mode is on: nothing is changed or run.' : 'Nothing is changed or run without your OK.'}`;
+    return `Working in ${code.project.name}${git}.${notes}${privacy} Ask about the code, or ask for a change. ${code.plan ? 'Plan mode is on: nothing is changed or run.' : 'Nothing is changed or run without your OK.'}`;
   }
   if (choice.kind === 'own') {
     const where = choice.provider.custom ? `on ${choice.provider.name}, a server of your own` : `on your ${choice.provider.name} account`;
@@ -74,10 +70,17 @@ function intro(choice: ModelChoice | null, code: CodeSession | null): string {
 }
 
 /** The conversation: a greeting with starters when it's empty, then every message, then a failed turn's next steps. */
-export function MessageList({ conversationId, messages, busy, choice, code, failure, offlineReady, signedIn, undo, scroller, onScroll, onSuggest, onRetry, onUndo, onAction }: MessageListProps) {
+export function MessageList({ conversationId, messages, busy, choice, code, failure, offlineReady, signedIn, undo, scroller, onScroll, onSuggest, onRetry, onUndo, canBuild = false, onAction }: MessageListProps) {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const speech = useReadAloud(conversationId);
   const lastId = messages[messages.length - 1]?.id;
+  // A new set of starters for each empty chat, steady while it is on screen (the memo only changes with the chat or where it is).
+  const empty = messages.length === 0;
+  const mode: StarterMode = code ? 'project' : canBuild ? 'mixed' : 'chat';
+  const hello = useMemo(() => {
+    const seed = `${conversationId ?? 'new'}:${Math.random().toString(36).slice(2)}`;
+    return { title: greeting(new Date(), seed, Boolean(code)), starters: pickStarters(mode, seed) };
+  }, [conversationId, mode, empty]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function copy(message: Message) {
     try {
@@ -94,11 +97,11 @@ export function MessageList({ conversationId, messages, busy, choice, code, fail
       {messages.length === 0 && (
         <div className="hello">
           <QuoMark />
-          <h1>What’s on your mind?</h1>
+          <h1>{hello.title}</h1>
           <p>{intro(choice, code)}</p>
           <div className="suggestions">
-            {SUGGESTIONS.map(s => (
-              <button key={s.title} className="suggestion glass press" onClick={() => onSuggest(s.prompt)} disabled={busy || !choice}>
+            {hello.starters.map((s, index) => (
+              <button key={s.title} className="suggestion glass press" style={{ '--i': index } as React.CSSProperties} onClick={() => onSuggest(s.prompt)} disabled={busy || !choice}>
                 <strong>{s.title}</strong>
                 <span>{s.detail}</span>
               </button>
@@ -142,7 +145,7 @@ export function MessageList({ conversationId, messages, busy, choice, code, fail
             )}
             {message.content
               ? <Markdown text={message.content} />
-              : streaming && !message.reasoning && !message.steps?.some(step => step.status === 'running') && <div className="typing" aria-label="Writing"><span className="bar" /><span className="block" /></div>}
+              : streaming && !message.reasoning && !message.steps?.some(step => step.status === 'running') && <div className="typing" role="status" aria-label={workingLabel(message) || 'Working'}><span className="bar" /><span className="block" /><span className="typing-label">{workingLabel(message)}</span></div>}
             {!streaming && message.content && (
               <div className="msg-actions">
                 <button className="icon-btn press" onClick={() => void copy(message)} aria-label="Copy reply" title="Copy">

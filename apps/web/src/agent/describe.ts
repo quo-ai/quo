@@ -1,3 +1,4 @@
+import { planToText } from './plan';
 import type { AgentStep, ToolResult } from './types';
 
 /**
@@ -64,9 +65,8 @@ export function describeDone(tool: string, args: Args, result: ToolResult): Pick
     case 'task': return { status: 'done', title: `Helper done: ${clip(text(display.description), 60)} (${plural(Number(display.steps ?? 0), 'step')})`, detail: text(display.report) ? { kind: 'output', body: text(display.report) } : undefined };
     case 'plan': {
       const items = Array.isArray(display.items) ? display.items as { step?: string; status?: string }[] : [];
-      const mark = (status?: string) => (status === 'completed' ? '[x]' : status === 'in_progress' ? '[>]' : '[ ]');
       const done = items.filter(item => item.status === 'completed').length;
-      return { status: 'done', title: `Plan: ${done} of ${plural(items.length, 'step')} done`, detail: { kind: 'output', body: items.map(item => `${mark(item.status)} ${text(item.step)}`).join('\n') } };
+      return { status: 'done', title: `Plan: ${done} of ${plural(items.length, 'step')} done`, detail: { kind: 'plan', body: planToText(items.map(item => ({ step: text(item.step), status: item.status === 'completed' || item.status === 'in_progress' ? item.status : 'pending' }))) } };
     }
     case 'commit': return { status: 'done', title: `Committed ${plural(Array.isArray(display.files) ? display.files.length : 0, 'file')} (${text(display.hash)})`, detail: text(display.message) ? { kind: 'output', body: text(display.message) } : undefined };
     case 'repo': return { status: 'done', title: `Opened ${text(display.repo)}` };

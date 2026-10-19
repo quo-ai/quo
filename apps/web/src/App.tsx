@@ -34,6 +34,7 @@ import { MemorySheet } from './ui/MemorySheet';
 import { PaywallSheet } from './ui/PaywallSheet';
 import { ProSheet } from './ui/ProSheet';
 import { SettingsSheet, type SettingsTarget } from './ui/SettingsSheet';
+import { ShortcutsSheet } from './ui/ShortcutsSheet';
 import { SyncSheet } from './ui/SyncSheet';
 import { toast, Toasts } from './ui/Toasts';
 import { Welcome } from './ui/Welcome';
@@ -82,6 +83,7 @@ export function App() {
   const [syncOpen, setSyncOpen] = useState(false);
   const [memoriesOpen, setMemoriesOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
   // A sheet opened from Settings goes back to Settings when it is closed.
   const [fromSettings, setFromSettings] = useState(false);
   const [paywall, setPaywall] = useState<CloudModel | null>(null);
@@ -117,7 +119,7 @@ export function App() {
   }, [fromSettings]);
   const closeSettings = useCallback(() => setSettingsOpen(false), []);
   // Once nothing opened from Settings is left on screen (a model was chosen, say), there is nowhere to go back to.
-  const childOpen = modelsOpen || accountOpen || memoriesOpen || syncOpen || proOpen || getAppOpen;
+  const childOpen = modelsOpen || accountOpen || memoriesOpen || syncOpen || proOpen || getAppOpen || shortcutsOpen;
   useEffect(() => {
     if (!childOpen && !settingsOpen && fromSettings) setFromSettings(false);
   }, [childOpen, settingsOpen, fromSettings]);
@@ -129,6 +131,7 @@ export function App() {
     else if (target.kind === 'sync') setSyncOpen(true);
     else if (target.kind === 'account') setAccountOpen(true);
     else if (target.kind === 'pro') setProOpen(true);
+    else if (target.kind === 'shortcuts') setShortcutsOpen(true);
     else setGetAppOpen(true);
   }, [openModels]);
 
@@ -233,6 +236,10 @@ export function App() {
       } else if (mod && event.shiftKey && event.key.toLowerCase() === 'e' && codePanel.get().session) {
         event.preventDefault();
         codePanel.toggle();
+      } else if (mod && !event.shiftKey && event.key === '/') {
+        event.preventDefault();
+        setFromSettings(false);
+        setShortcutsOpen(open => !open);
       } else if (mod && !event.shiftKey && event.key === ',') {
         event.preventDefault();
         setFromSettings(false);
@@ -473,6 +480,7 @@ export function App() {
       {proOpen && <ProSheet catalog={catalog} account={account} onClose={() => { setProOpen(false); if (fromSettings) setSettingsOpen(true); }} onContinue={continueFromPro} />}
       {paywall && <PaywallSheet model={paywall} account={account} currentName={choice?.model.name ?? null} onClose={() => setPaywall(null)} onContinue={continueFromPaywall} />}
       {syncOpen && <SyncSheet account={account} onClose={closeSync} onOpenAccount={() => { setSyncOpen(false); setAccountOpen(true); }} />}
+      {shortcutsOpen && <ShortcutsSheet onClose={() => { setShortcutsOpen(false); if (fromSettings) setSettingsOpen(true); }} />}
       {getAppOpen && <GetAppSheet slowBrowser={slowBrowser} onClose={() => { closeGetApp(); if (fromSettings) setSettingsOpen(true); }} />}
       <Toasts />
     </>

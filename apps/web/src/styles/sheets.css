@@ -56,3 +56,11 @@
 .settings-detail { font-size: 12.5px; color: var(--text-3); }
 .settings-value { flex: none; font-size: 12.5px; color: var(--text-3); }
 .settings-chevron { flex: none; color: var(--text-3); }
+
+/* Keyboard shortcuts. */
+.shortcut-list { margin: 0; display: grid; gap: 1px; }
+.shortcut-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 8px 4px; border-bottom: 1px solid var(--hairline); }
+.shortcut-row:last-child { border-bottom: 0; }
+.shortcut-row dt { font-size: 14px; color: var(--text); }
+.shortcut-row dd { margin: 0; display: inline-flex; gap: 4px; flex: none; }
+kbd { min-width: 24px; padding: 3px 7px; border-radius: 8px; background: #fff; box-shadow: 0 1px 0 rgba(14, 14, 60, 0.18), 0 0 0 0.5px rgba(14, 14, 60, 0.12); font: 600 12px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--text-2); text-align: center; }

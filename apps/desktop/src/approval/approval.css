@@ -16,6 +16,11 @@
   --warn: #9a5b00;
   --accent-ink: #3b2eff;
   color-scheme: light dark;
+  --dither-1: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='8'%20height='8'%20shape-rendering='crispEdges'%3E%3Cpath%20d='M0%200h2v2h-2zM4%204h2v2h-2z'/%3E%3C/svg%3E");
+  --dither-2: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='8'%20height='8'%20shape-rendering='crispEdges'%3E%3Cpath%20d='M0%200h2v2h-2zM4%200h2v2h-2zM2%202h2v2h-2zM0%204h2v2h-2zM4%204h2v2h-2z'/%3E%3C/svg%3E");
+  --dither-3: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='8'%20height='8'%20shape-rendering='crispEdges'%3E%3Cpath%20d='M0%200h2v2h-2zM4%200h2v2h-2zM2%202h2v2h-2zM6%202h2v2h-2zM0%204h2v2h-2zM4%204h2v2h-2zM2%206h2v2h-2zM6%206h2v2h-2z'/%3E%3C/svg%3E");
+  --dither-4: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='8'%20height='8'%20shape-rendering='crispEdges'%3E%3Cpath%20d='M0%200h8v2h-8zM2%202h2v2h-2zM6%202h2v2h-2zM0%204h2v2h-2zM4%204h4v2h-4zM2%206h2v2h-2zM6%206h2v2h-2z'/%3E%3C/svg%3E");
+  --dither-5: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='8'%20height='8'%20shape-rendering='crispEdges'%3E%3Cpath%20d='M0%200h8v2h-8zM0%202h4v2h-4zM6%202h2v2h-2zM0%204h8v2h-8zM2%206h6v2h-6z'/%3E%3C/svg%3E");
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -37,8 +42,16 @@
 * { box-sizing: border-box; }
 html, body { margin: 0; background: transparent; overflow: hidden; font: 14px/1.45 system-ui, -apple-system, 'Segoe UI', Inter, Roboto, sans-serif; color: var(--ink); -webkit-font-smoothing: antialiased; user-select: text; }
 body { padding: 14px 18px 26px; }
-#card { display: flex; flex-direction: column; max-height: calc(100vh - 40px); background: var(--card); border-radius: 22px; border: 0.5px solid var(--hairline); box-shadow: 0 0 0 0.5px rgba(14, 14, 60, 0.08), 0 18px 50px -12px rgba(30, 20, 120, 0.38), 0 40px 90px -40px rgba(30, 20, 120, 0.3); overflow: hidden; animation: rise 220ms cubic-bezier(0.22, 1, 0.36, 1); }
-@keyframes rise { from { opacity: 0; transform: translateY(10px) scale(0.985); } to { opacity: 1; transform: none; } }
+#card { display: flex; flex-direction: column; max-height: calc(100vh - 40px); background: var(--card); border-radius: 22px; border: 0.5px solid var(--hairline); box-shadow: 0 0 0 0.5px rgba(14, 14, 60, 0.08), 0 18px 50px -12px rgba(30, 20, 120, 0.38), 0 40px 90px -40px rgba(30, 20, 120, 0.3); overflow: hidden; -webkit-mask-size: 8px 8px; animation: dissolve 0.42s step-end both; }
+/* Appears the way everything in Quo does: dissolving in through an ordered dither, in five steps. */
+@keyframes dissolve {
+  0%   { -webkit-mask-image: var(--dither-1); }
+  20%  { -webkit-mask-image: var(--dither-2); }
+  40%  { -webkit-mask-image: var(--dither-3); }
+  60%  { -webkit-mask-image: var(--dither-4); }
+  80%  { -webkit-mask-image: var(--dither-5); }
+  100% { -webkit-mask-image: none; }
+}
 @media (prefers-reduced-motion: reduce) { #card { animation: none; } }
 
 .head { display: flex; gap: 12px; align-items: center; padding: 18px 20px 12px; }

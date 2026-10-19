@@ -43,7 +43,7 @@ describe('the Code mode prompt', () => {
   it('shows the plan and a commit in the chat', () => {
     const plan = describeDone('update_plan', {}, { ok: true, text: '', display: { kind: 'plan', items: [{ step: 'Read code', status: 'completed' }, { step: 'Fix bug', status: 'in_progress' }, { step: 'Test', status: 'pending' }] } });
     expect(plan.title).toBe('Plan: 1 of 3 steps done');
-    expect(plan.detail).toEqual({ kind: 'output', body: '[x] Read code\n[>] Fix bug\n[ ] Test' });
+    expect(plan.detail).toEqual({ kind: 'plan', body: '[x] Read code\n[>] Fix bug\n[ ] Test' });
     const commit = describeDone('git_commit', {}, { ok: true, text: '', display: { kind: 'commit', hash: 'abc1234', files: ['a.ts', 'b.ts'], message: 'Fix' } });
     expect(commit.title).toBe('Committed 2 files (abc1234)');
     expect(describeDone('git_commit', {}, { ok: false, text: 'no', display: { denied: true } }).title).toBe('You declined the commit');

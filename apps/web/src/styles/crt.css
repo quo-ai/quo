@@ -22,7 +22,7 @@
   80%  { -webkit-mask-image: var(--dither-5); mask-image: var(--dither-5); }
   100% { -webkit-mask-image: none; mask-image: none; }
 }
-.step, .step-pre, .summary-note, .undo-chip, .ctx-pop, .menu-up, .mention-list, .cmd-list, .jump, .code {
+.step, .step-pre, .summary-note, .undo-chip, .ctx-pop, .menu-up, .mention-list, .cmd-list, .jump, .code, .filepanel, .fp-viewer, .step-plan {
   -webkit-mask-size: 8px 8px; mask-size: 8px 8px;
   animation: dissolve 0.42s step-end both;
 }
@@ -94,3 +94,27 @@
 .step-fold details[open] .step-chev-start { transform: rotate(90deg); }
 .step-chev-start { transition: transform 0.2s var(--ease); }
 .step-fold .steps { margin: 2px 0 4px 12px; padding-left: 8px; border-left: 2px solid rgba(59, 46, 255, 0.12); }
+
+/* An empty chat: the greeting and the starters dissolve in one after another. */
+.hello h1, .hello > p, .hello .suggestion { -webkit-mask-size: 8px 8px; mask-size: 8px 8px; animation: dissolve 0.42s step-end both; }
+.hello > p { animation-delay: 0.08s; }
+.hello .suggestion { animation-delay: calc(0.16s + var(--i, 0) * 0.09s); }
+
+/* What it is doing when nothing else says: a label after the bar, with an ellipsis that fills in four steps. */
+@keyframes ellipsis { from { width: 0; } to { width: 1.15em; } }
+.typing-label { color: var(--text-3); font-size: 13.5px; }
+.typing-label:not(:empty)::after { content: '...'; display: inline-block; width: 1.15em; overflow: hidden; vertical-align: bottom; animation: ellipsis 1.2s steps(4) infinite; }
+
+/* How long a step has been running, once it is more than a few seconds. */
+.step-time { margin-left: 8px; font-size: 12px; font-variant-numeric: tabular-nums; color: var(--text-3); }
+.step.running .step-time { color: var(--indigo); }
+
+/* A plan: what is done, what is being worked on, what is left. */
+.step-plan { list-style: none; margin: 6px 0 4px 26px; padding: 0; display: grid; gap: 3px; font-size: 13.5px; }
+.step-plan li { display: flex; align-items: center; gap: 8px; color: var(--text-2); }
+.step-plan li svg { flex: none; }
+.step-plan .completed { color: var(--text-3); }
+.step-plan .completed svg { color: var(--indigo); }
+.step-plan .completed span { text-decoration: line-through; text-decoration-color: rgba(14, 14, 40, 0.25); }
+.step-plan .in_progress { color: var(--ink); font-weight: 600; }
+.step-plan .in_progress svg { color: var(--indigo); animation: blink 1s steps(1) infinite; }

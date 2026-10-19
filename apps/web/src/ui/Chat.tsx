@@ -348,6 +348,7 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
           setAtBottom(stickToBottom.current);
         }}
         onSuggest={send}
+        canBuild={codeMode.available && codeSettings().autoStart}
         onRetry={retry}
         onUndo={() => void takeBack()}
         onAction={onAction}

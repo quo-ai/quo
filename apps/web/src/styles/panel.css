@@ -1,6 +1,5 @@
 /* ---------- The project beside the chat ---------- */
-.filepanel { width: 392px; margin: 12px 12px 12px 0; border-radius: var(--r-panel); display: flex; flex-direction: column; overflow: hidden; min-height: 0; animation: fp-in 0.35s var(--ease); }
-@keyframes fp-in { from { opacity: 0; transform: translateX(14px); } to { opacity: 1; transform: none; } }
+.filepanel { width: 392px; margin: 12px 12px 12px 0; border-radius: var(--r-panel); display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
 .fp-head { display: flex; align-items: center; gap: 8px; padding: 14px 12px 8px 16px; color: var(--indigo); }
 .fp-title { display: flex; flex-direction: column; min-width: 0; margin-right: auto; color: var(--text); }
 .fp-project { font-weight: 650; font-size: 14.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -50,4 +49,4 @@ code.file-link:hover { background: rgba(59, 46, 255, 0.16); }
 @media (max-width: 820px) {
   .filepanel { position: fixed; z-index: 30; top: 8px; right: 8px; bottom: 8px; margin: 0; width: min(420px, calc(100% - 16px)); }
 }
-@media (prefers-reduced-motion: reduce) { .filepanel, .fp-busy { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .fp-busy { animation: none; } }

@@ -1,5 +1,7 @@
-import { AlertCircle, Ban, ChevronRight, FilePlus, FileText, Folder, Globe, Link2, Loader2, Pencil, Search, Square, Terminal, Download, Check } from 'lucide-react';
+import { AlertCircle, Ban, ChevronRight, FilePlus, FileText, Folder, Globe, Link2, Loader2, Pencil, Search, Square, Terminal, Download, Check, Circle } from 'lucide-react';
+import { planFromText } from '../agent/plan';
 import type { AgentStep } from '../agent/types';
+import { formatElapsed, useElapsed } from './elapsed';
 
 const ICONS: Record<string, typeof FileText> = {
   list_directory: Folder,
@@ -29,6 +31,7 @@ function StepIcon({ step }: { step: AgentStep }) {
 
 /** A diff with the added and removed lines coloured, command output as terminal text; anything else is plain. */
 function Detail({ detail }: { detail: NonNullable<AgentStep['detail']> }) {
+  if (detail.kind === 'plan') return <PlanList body={detail.body} />;
   if (detail.kind === 'output') return <pre className="step-pre output">{detail.body}</pre>;
   return (
     <pre className="step-pre">
@@ -51,18 +54,34 @@ function Title({ title }: { title: string }) {
   );
 }
 
-function Row({ step }: { step: AgentStep }) {
+/** The plan as a checklist: done, the one being worked on, and what is left. */
+function PlanList({ body }: { body: string }) {
+  return (
+    <ul className="step-plan">
+      {planFromText(body).map((item, index) => (
+        <li key={index} className={item.status}>
+          {item.status === 'completed' ? <Check size={13} /> : item.status === 'in_progress' ? <ChevronRight size={13} /> : <Circle size={11} />}
+          <span>{item.step}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function Row({ step, openByDefault = false }: { step: AgentStep; openByDefault?: boolean }) {
   const more = step.detail || step.text;
+  const elapsed = useElapsed(step.status === 'running');
+  const clock = elapsed !== null && <span className="step-time" aria-label={`${formatElapsed(elapsed)} so far`}>{formatElapsed(elapsed)}</span>;
   return (
     <li className={`step ${step.status}`}>
       {more ? (
-        <details>
-          <summary><StepIcon step={step} /> <Title title={step.title} /> <ChevronRight size={13} className="step-chev" /></summary>
+        <details open={openByDefault || undefined}>
+          <summary><StepIcon step={step} /> <Title title={step.title} />{clock} <ChevronRight size={13} className="step-chev" /></summary>
           {step.text && <p className="step-text">{step.text}</p>}
           {step.detail && <Detail detail={step.detail} />}
         </details>
       ) : (
-        <div className="step-row"><StepIcon step={step} /> <Title title={step.title} /></div>
+        <div className="step-row"><StepIcon step={step} /> <Title title={step.title} />{clock}</div>
       )}
     </li>
   );
@@ -92,6 +111,8 @@ const KEEP = 3;
 /** What the coding agent did during a reply, one line each; open one for the diff or the output. */
 export function AgentSteps({ steps, live = false }: { steps: AgentStep[]; live?: boolean }) {
   const folded = steps.length > FOLD_AFTER ? steps.slice(0, steps.length - KEEP) : [];
+  // The agent's own checklist is the thing worth seeing while it works: the latest one is open, the rest stay folded.
+  const latestPlan = [...steps].reverse().find(step => step.tool === 'update_plan')?.id;
   return (
     <ul className={`steps${live ? ' live' : ''}`} aria-label="What Quo Code did">
       {folded.length > 0 && (
@@ -102,7 +123,7 @@ export function AgentSteps({ steps, live = false }: { steps: AgentStep[]; live?:
           </details>
         </li>
       )}
-      {steps.slice(folded.length).map(step => <Row key={step.id} step={step} />)}
+      {steps.slice(folded.length).map(step => <Row key={step.id} step={step} openByDefault={step.id === latestPlan} />)}
     </ul>
   );
 }

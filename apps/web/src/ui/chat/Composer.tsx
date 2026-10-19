@@ -166,7 +166,7 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
           onChange={e => { setInput(e.target.value); mentions.track(e.target); }}
           onSelect={e => mentions.track(e.currentTarget)}
           onKeyDown={onKeyDown}
-          placeholder={choice ? `Message ${choice.model.name}` : 'Choose a model to start'}
+          placeholder={!choice ? 'Choose a model to start' : code ? `Ask about ${code.project.name}, or ask for a change` : `Message ${choice.model.name}`}
           rows={1}
           aria-label="Message"
         />
