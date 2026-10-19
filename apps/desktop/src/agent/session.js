@@ -8,6 +8,7 @@ const commits = require('./commit');
 const { readScopedNotes } = require('./instructions');
 const { BackgroundCommands } = require('./background');
 const { ExternalReads } = require('./external');
+const { planOpen } = require('./open');
 const { ChangeLog } = require('./history');
 const { AgentError, redactSecrets, scrubbedEnv } = require('./safety');
 
@@ -25,11 +26,11 @@ const { AgentError, redactSecrets, scrubbedEnv } = require('./safety');
  * can adjust.
  */
 
-const TOOL_NAMES = ['list_directory', 'read_file', 'find_files', 'search_text', 'edit_file', 'write_file', 'run_command', 'command_output', 'stop_command', 'git_commit', 'update_plan', 'open_repo', 'web_search', 'fetch_url'];
+const TOOL_NAMES = ['list_directory', 'read_file', 'find_files', 'search_text', 'edit_file', 'write_file', 'run_command', 'command_output', 'stop_command', 'git_commit', 'open_in_browser', 'update_plan', 'open_repo', 'web_search', 'fetch_url'];
 const PLAN_TOOLS = ['list_directory', 'read_file', 'find_files', 'search_text', 'update_plan', 'open_repo', 'web_search', 'fetch_url'];
 const PLAN_STATUSES = ['pending', 'in_progress', 'completed'];
 const MAX_PLAN_ITEMS = 12;
-const CHANGING_TOOLS = new Set(['edit_file', 'write_file', 'run_command', 'git_commit']);
+const CHANGING_TOOLS = new Set(['edit_file', 'write_file', 'run_command', 'git_commit', 'open_in_browser']);
 const MAX_CALLS = 500;
 const COMMAND_CHARS = 4000;
 // What a small context window can afford for one tool result (about 4,000 tokens at most).
@@ -44,7 +45,9 @@ const preview = diff => {
 };
 
 class AgentSession {
-  constructor({ root, name, approve, repos, web = null, webSession = 'code', env = process.env, autoReadOnly = true, compact = false, creditQuo = true }) {
+  constructor({ root, name, approve, repos, web = null, webSession = 'code', env = process.env, autoReadOnly = true, compact = false, creditQuo = true, openExternal = null }) {
+    this.openExternal = openExternal; // hands an address to the system's browser (the app supplies it; none here means this can't open anything)
+    this.allowOpen = false; // "Allow opening pages for this session"
     this.creditQuo = creditQuo; // add Quo as co-author to commits made with git_commit (a setting, on by default)
     this.web = web; // search and page reading (web/service.js), or none
     this.webSession = webSession;
@@ -115,6 +118,7 @@ class AgentSession {
         case 'stop_command': return this.stopCommand(args);
         case 'run_command': return await this.command(args, signal);
         case 'git_commit': return await this.commit(args);
+        case 'open_in_browser': return await this.openTarget(args.target);
         case 'open_repo': return await this.openRepo(args);
         case 'web_search': return ok(await this.needWeb().search(this.webSession, args.query, { count: args.count, maxChars: this.webChars }));
         case 'fetch_url': return ok(await this.needWeb().read(this.webSession, args.url, { maxChars: this.webChars }));
@@ -140,6 +144,31 @@ class AgentSession {
     }
     const result = ok(await run(this.ctx, args));
     return notes ? await this.withNotes(result, args) : result;
+  }
+
+  /** Opens a project page, or a dev server on this computer, in the person's browser, once they say yes (to this one, or for the session). */
+  async openTarget(input) {
+    if (!this.openExternal) throw new AgentError('unavailable', 'Opening a browser isn’t available here.');
+    const plan = planOpen(this.ctx, input);
+    let answer = this.allowOpen ? 'once' : 'ask';
+    if (answer === 'ask') {
+      answer = await this.approve({
+        kind: 'open',
+        title: plan.what === 'url' ? `Open ${plan.target} in your browser?` : `Open ${plan.target} in your browser?`,
+        detail: `In the project ${this.name}\n\n${plan.target}`,
+        project: this.name,
+        rememberLabel: 'Allow opening pages for this session',
+        view: { kind: 'open', what: plan.what, target: plan.target },
+      });
+    }
+    if (answer === 'deny' || answer === 'cancel') return fail('denied', 'The person didn’t want that opened. Don’t try again; tell them where it is instead.', { kind: 'open', denied: true, target: plan.target });
+    if (answer === 'session') this.allowOpen = true;
+    try {
+      await this.openExternal(plan.url);
+    } catch {
+      throw new AgentError('failed', 'The system couldn’t open it.');
+    }
+    return { ok: true, text: `Opened ${plan.target} in the person’s browser.`, display: { kind: 'opened', target: plan.target, what: plan.what } };
   }
 
   /** The agent's checklist: validated and kept for the session. It runs nothing and asks nothing, so it works in plan mode too. */

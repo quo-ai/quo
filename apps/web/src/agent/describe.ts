@@ -28,6 +28,7 @@ export function describeRunning(tool: string, args: Args): string {
     case 'edit_file': return `Waiting for your OK to edit ${text(args.path)}…`;
     case 'write_file': return `Waiting for your OK to write ${text(args.path)}…`;
     case 'run_command': return `Running ${clip(text(args.command), 50)}…`;
+    case 'open_in_browser': return `Waiting for your OK to open ${clip(text(args.target), 50)}…`;
     case 'open_project': return args.kind === 'new' ? 'Making a folder for this…' : 'Looking for your project folder…';
     case 'command_output': return `Checking ${text(args.id, 'a background command')}…`;
     case 'stop_command': return `Stopping ${text(args.id, 'a background command')}…`;
@@ -44,7 +45,7 @@ export function describeRunning(tool: string, args: Args): string {
 export function describeDone(tool: string, args: Args, result: ToolResult): Pick<AgentStep, 'title' | 'status' | 'detail'> {
   const display = result.display ?? {};
   if (display.denied) {
-    return { status: 'declined', title: tool === 'run_command' ? `You declined: ${clip(text(display.command), 60)}${args.background ? ' (background)' : ''}` : tool === 'git_commit' ? 'You declined the commit' : `You declined the change to ${text(display.path)}` };
+    return { status: 'declined', title: tool === 'run_command' ? `You declined: ${clip(text(display.command), 60)}${args.background ? ' (background)' : ''}` : tool === 'git_commit' ? 'You declined the commit' : tool === 'open_in_browser' ? `You declined opening ${clip(text(display.target), 50)}` : `You declined the change to ${text(display.path)}` };
   }
   if (!result.ok) return { status: 'failed', title: `${verb(tool, args)} didn’t work: ${clip(result.text.split('\n')[0], 110)}` };
   switch (display.kind) {
@@ -54,6 +55,7 @@ export function describeDone(tool: string, args: Args, result: ToolResult): Pick
     case 'search': return { status: 'done', title: `Searched for “${clip(text(display.pattern), 40)}”: ${plural(Number(display.matches ?? 0), 'match')} in ${plural(Number(display.files ?? 0), 'file')}` };
     case 'edit': return { status: 'done', title: `Edited ${text(display.path)}  +${display.added} −${display.removed}`, detail: diffOf(display) };
     case 'create': return { status: 'done', title: `Created ${text(display.path)}  +${display.added}`, detail: diffOf(display) };
+    case 'opened': return { status: 'done', title: `Opened ${clip(text(display.target), 60)} in your browser` };
     case 'folder': return { status: 'done', title: display.created ? `Made the folder ${text(display.name)}` : `Working in ${text(display.name)}` };
     case 'folder_none': return { status: 'done', title: 'No folder chosen' };
     case 'background': return { status: 'done', title: `Started ${clip(text(display.command), 50)} in the background (${text(display.id)})` };
@@ -96,6 +98,7 @@ function verb(tool: string, args: Args): string {
     case 'edit_file': return `Editing ${text(args.path)}`;
     case 'write_file': return `Writing ${text(args.path)}`;
     case 'run_command': return `Running ${clip(text(args.command), 50)}`;
+    case 'open_in_browser': return `Opening ${clip(text(args.target), 50)}`;
     case 'open_project': return args.kind === 'new' ? 'Making a folder' : 'Opening your project folder';
     case 'command_output': return `Checking ${text(args.id, 'a background command')}`;
     case 'stop_command': return `Stopping ${text(args.id, 'a background command')}`;

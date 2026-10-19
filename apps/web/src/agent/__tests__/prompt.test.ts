@@ -119,3 +119,21 @@ describe('web search in a chat with no folder yet', () => {
     expect(agentSystemPrompt('', 'linux', ['open_project'])).not.toMatch(/web_search/);
   });
 });
+
+describe('opening a page for the person', () => {
+  it('is offered with its limits, and the prompt says when it is worth doing', () => {
+    const tool = toolDefinitions(['open_in_browser'])[0].function;
+    expect(tool.description).toMatch(/The person approves each time/);
+    expect(tool.description).toMatch(/never to reach a website/);
+    const prompt = agentSystemPrompt('demo', 'linux', ['read_file', 'edit_file', 'open_in_browser']);
+    expect(prompt).toMatch(/call open_in_browser with the file/);
+    expect(prompt).toMatch(/click them to look inside/);
+    expect(agentSystemPrompt('demo', 'linux', ['read_file', 'edit_file'])).not.toMatch(/open_in_browser/);
+  });
+
+  it('reads well in the chat, running, done and declined', () => {
+    expect(describeRunning('open_in_browser', { target: 'index.html' })).toBe('Waiting for your OK to open index.html…');
+    expect(describeDone('open_in_browser', { target: 'index.html' }, { ok: true, text: '', display: { kind: 'opened', target: 'index.html' } }).title).toBe('Opened index.html in your browser');
+    expect(describeDone('open_in_browser', {}, { ok: false, text: '', display: { denied: true, target: 'index.html' } }).title).toBe('You declined opening index.html');
+  });
+});

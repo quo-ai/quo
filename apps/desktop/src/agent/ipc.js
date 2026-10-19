@@ -3,7 +3,7 @@
 const crypto = require('node:crypto');
 const fsp = require('node:fs/promises');
 const path = require('node:path');
-const { app, BrowserWindow, dialog, ipcMain } = require('electron');
+const { app, BrowserWindow, dialog, ipcMain, shell } = require('electron');
 const { trusted } = require('../trust');
 const { AgentError, checkProjectRoot } = require('./safety');
 const { RepoCache } = require('./repos');
@@ -183,7 +183,7 @@ function setupAgent({ web = null } = {}) {
     if (sessions.size >= MAX_SESSIONS) throw new AgentError('busy', 'Too many Code sessions are open. Close one first.');
     const id = crypto.randomBytes(8).toString('hex');
     const window = BrowserWindow.fromWebContents(event.sender) ?? undefined;
-    const session = new AgentSession({ root: real, name: project.name, repos, web, webSession: id, autoReadOnly: autoReadOnly !== false, compact: compact === true, creditQuo: creditQuo !== false, approve: request => ask(window, request) });
+    const session = new AgentSession({ root: real, name: project.name, repos, web, webSession: id, autoReadOnly: autoReadOnly !== false, compact: compact === true, creditQuo: creditQuo !== false, openExternal: url => shell.openExternal(url), approve: request => ask(window, request) });
     sessions.set(id, { session, owner: event.sender.id, project: project.id, controllers: new Set() });
     event.sender.once('destroyed', () => endSession(id));
     return { sessionId: id, name: project.name, platform: process.platform, tools: compact === true ? TOOL_NAMES.filter(name => name !== 'update_plan') : TOOL_NAMES, planTools: compact === true ? PLAN_TOOLS.filter(name => name !== 'update_plan') : PLAN_TOOLS, instructions: await readInstructions(real), hint: whereIs(real), git: await gitInfo(real) };

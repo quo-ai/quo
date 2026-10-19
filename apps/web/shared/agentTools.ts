@@ -164,6 +164,15 @@ export const AGENT_TOOLS: AgentTool[] = [
     },
   },
   {
+    name: 'open_in_browser',
+    description: 'Open a page in the person’s own browser: an HTML (or SVG, PDF, image) file in the project, given as a path relative to the project, or a local address of a dev server you started, such as http://localhost:5173. The person approves each time. Use it when seeing the result in a browser is the point: a web page, game, chart or report you built. Do not open things by default, and never to reach a website (give the link instead).',
+    parameters: {
+      type: 'object',
+      properties: { target: { type: 'string', description: 'A project file such as "index.html", or a local address such as "http://localhost:5173".' } },
+      required: ['target'],
+    },
+  },
+  {
     name: 'update_plan',
     description: 'Keep a short checklist for a task with several steps, shown to the user. Send the whole list each time: steps of a few words, each pending, in_progress or completed, with at most one in_progress. Update it as you finish steps. It changes nothing. Skip it for simple one-step work.',
     parameters: {
@@ -295,6 +304,7 @@ export function agentSystemPrompt(project: string, platform: Platform, tools: st
           '- Fix the cause, not the symptom. Keep changes small and in the style of the code around them: its names, structure and comments (where the code has no comments, add none). Do not fix unrelated problems; mention them at the end.',
           '- Check your work with the most specific test or check for what you changed, then broader ones if that goes well. Do not add a test setup or formatter the project does not already have. If you could not run something, say so. A successful edit_file or write_file needs no re-reading.',
           '- Files and changes you did not make may be the user’s own work: look at them before overwriting or deleting, and never revert, reset or discard them (no git reset --hard, git checkout --, git clean, force pushes) unless the user clearly asked. For why code is the way it is, git log and git blame run without asking.',
+          ...(tools.includes('open_in_browser') ? ['- When you have built something meant to be seen in a browser (a web page, a game, a chart), offer to show it: call open_in_browser with the file, or with the dev server’s local address once it is running. Tell the person which file you made. In your replies, name project files as `path/to/file.ext` so the person can click them to look inside.'] : []),
           ...(tools.includes('command_output') ? ['- For something that keeps running (a dev server, a watcher), start it with run_command and background: true, look at it with command_output, and stop it with stop_command when you are done. Do not start the same thing twice.'] : []),
           ...(tools.includes('task') ? ['- For a broad question that would take many reads, hand it to a helper with task and keep your own context for the work. Give it everything it needs; it sees nothing of this conversation. For a quick lookup, search yourself.'] : []),
           ...(where === 'cloud' ? ['- To look at something outside the project (a sibling folder, a shared config), give its absolute path to a reading tool: the person approves each folder, it is read-only, and keys and system folders are never available. Prefer the project’s own files.'] : []),

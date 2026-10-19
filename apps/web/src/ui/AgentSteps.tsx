@@ -10,6 +10,7 @@ const ICONS: Record<string, typeof FileText> = {
   write_file: FilePlus,
   run_command: Terminal,
   open_project: Folder,
+  open_in_browser: Globe,
   command_output: Terminal,
   stop_command: Terminal,
   open_repo: Download,
