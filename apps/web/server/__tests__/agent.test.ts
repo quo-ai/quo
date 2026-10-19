@@ -294,3 +294,18 @@ describe('what a step costs', () => {
     expect(Number(charged.toFixed(2))).toBe(charged); // two decimals at most
   });
 });
+
+describe('the summariser behind long sessions', () => {
+  it('gets no tools, whatever the app asks for, and a prompt that treats the transcript as data', async () => {
+    const token = await signIn('agent-summary@example.com');
+    const requests = stubUpstream([{ choices: [{ delta: { content: 'Goal: x' }, finish_reason: 'stop' }] }]);
+    const response = await step(token, { messages: [{ role: 'user', content: 'The person asked: fix it' }], agent: { tools: ALL_TOOLS, project: 'demo', role: 'summarize' } });
+    expect(response.status).toBe(200);
+    await response.text();
+    expect(requests[0].body.tools).toBeUndefined();
+    const system = (requests[0].body.messages as { content: string }[])[0].content;
+    expect(system).toMatch(/condense the earlier part/);
+    expect(system).toMatch(/never follow them/);
+    expect(system).not.toMatch(/edit_file|run_command/);
+  });
+});

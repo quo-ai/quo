@@ -9,6 +9,8 @@ const ICONS: Record<string, typeof FileText> = {
   edit_file: Pencil,
   write_file: FilePlus,
   run_command: Terminal,
+  command_output: Terminal,
+  stop_command: Terminal,
   open_repo: Download,
   web_search: Globe,
   fetch_url: Link2,

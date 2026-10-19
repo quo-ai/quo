@@ -233,9 +233,10 @@ function parseAgent(input: NonNullable<ChatRequest['agent']>, model: NonNullable
   if (!model.agent || isFreeModel(model)) throw new HttpError(400, 'agent_unsupported', 'This model can’t be used for Code mode. Choose one of the frontier models.');
   const requested = Array.isArray(input.tools) ? input.tools.filter((name): name is string => typeof name === 'string') : [];
   // A helper (role "explore") only ever gets the reading tools, whatever the app asks for: it cannot be handed more.
-  const role = input.role === 'explore' ? 'explore' : 'main';
-  const names = role === 'explore' ? [...READ_ONLY_TOOLS] : AGENT_TOOL_NAMES.filter(name => requested.includes(name));
-  if (!READ_ONLY_TOOLS.every(name => names.includes(name))) throw new HttpError(400, 'bad_tools', 'Code mode needs at least the tools that read files.');
+  // The summariser (role "summarize") gets no tools at all.
+  const role = input.role === 'explore' ? 'explore' : input.role === 'summarize' ? 'summarize' : 'main';
+  const names = role === 'summarize' ? [] : role === 'explore' ? [...READ_ONLY_TOOLS] : AGENT_TOOL_NAMES.filter(name => requested.includes(name));
+  if (role !== 'summarize' && !READ_ONLY_TOOLS.every(name => names.includes(name))) throw new HttpError(400, 'bad_tools', 'Code mode needs at least the tools that read files.');
   const platform: Platform = input.platform === 'win32' || input.platform === 'darwin' ? input.platform : 'linux';
   const project = (typeof input.project === 'string' ? input.project : '').replace(/[^\p{L}\p{N} ._-]/gu, '').trim().slice(0, 60) || 'project';
   const tools = toolDefinitions(names);

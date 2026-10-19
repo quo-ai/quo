@@ -58,8 +58,8 @@ export async function replyWithAgent(choice: CloudChoice | OwnChoice | LocalChoi
   const { useNotes, maxSteps } = codeSettings();
   // Helpers (the task tool) are for models with room to spare: not offline ones, whose window is small.
   const tools = choice.kind === 'local' ? code.tools : [...code.tools, TASK_TOOL];
-  const options = (onText: (text: string) => void, extra: { tools?: string[]; role?: 'explore' } = {}) => ({ tools, project: code.project.name, platform: code.info.platform, instructions: useNotes ? code.info.instructions : null, signal, onText, ...extra });
-  const ask = (extra: { tools?: string[]; role?: 'explore' } = {}): ((messages: AgentMessage[], onText: (text: string) => void) => Promise<StepReply>) =>
+  const options = (onText: (text: string) => void, extra: { tools?: string[]; role?: 'explore' | 'summarize' } = {}) => ({ tools, project: code.project.name, platform: code.info.platform, instructions: useNotes ? code.info.instructions : null, signal, onText, ...extra });
+  const ask = (extra: { tools?: string[]; role?: 'explore' | 'summarize' } = {}): ((messages: AgentMessage[], onText: (text: string) => void) => Promise<StepReply>) =>
     choice.kind === 'own'
       ? (messages, onText) => askOwnAgentModel(choice.provider, choice.model, messages, options(onText, extra))
       : choice.kind === 'local'
@@ -71,6 +71,16 @@ export async function replyWithAgent(choice: CloudChoice | OwnChoice | LocalChoi
     signal,
     maxSteps,
     askModel: ask(),
+    // A long session is written up by the model rather than forgotten. Not for offline models: a small one writes a poor report.
+    ...(choice.kind === 'local'
+      ? {}
+      : {
+          summarize: async (transcript: string) => {
+            const reply = await ask({ tools: [], role: 'summarize' })([{ role: 'user', content: transcript }], () => {});
+            helperCost += reply.charged;
+            return reply.content;
+          },
+        }),
     ...(windowChars ? { contextChars: windowChars } : {}),
     runTool: (name, args) =>
       name === TASK_TOOL

@@ -16,7 +16,7 @@ export async function askOwnAgentModel(
   provider: ProviderInfo,
   model: OwnModel,
   messages: AgentMessage[],
-  options: { tools: string[]; project: string; platform: string; instructions?: { file: string; text: string } | null; /** A helper started by the task tool: read-only, with its own prompt. */ role?: 'explore'; /** Replaces the Code mode rules (a chat that only searches the web). */ system?: string; signal: AbortSignal; onText: (text: string) => void },
+  options: { tools: string[]; project: string; platform: string; instructions?: { file: string; text: string } | null; /** A helper started by the task tool: read-only, with its own prompt. */ role?: 'explore' | 'summarize'; /** Replaces the Code mode rules (a chat that only searches the web). */ system?: string; signal: AbortSignal; onText: (text: string) => void },
 ): Promise<StepReply> {
   const platform: Platform = options.platform === 'win32' || options.platform === 'darwin' ? options.platform : 'linux';
   const project = options.project.replace(/[^\p{L}\p{N} ._-]/gu, '').trim().slice(0, 60) || 'project';

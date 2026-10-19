@@ -1,5 +1,6 @@
 import { describeDone, describeRunning } from './describe';
 import { READ_ONLY_TOOLS } from '../../shared/agentTools';
+import { previousReport, originalGoal, splitForSummary, transcriptOf, withSummary } from './summarize';
 import type { AgentMessage, AgentStep, StepReply, ToolCall, ToolResult } from './types';
 
 /**
@@ -30,6 +31,11 @@ export interface AgentDeps {
   onUpdate: (state: { steps: AgentStep[]; text: string }) => void;
   signal: AbortSignal;
   maxSteps?: number;
+  /**
+   * Writes the given steps up as a short report (a plain request to the model with no tools). When it is given, a long
+   * conversation is summarised before old output is dropped. A failure is not an error: the old output is dropped instead.
+   */
+  summarize?: (transcript: string) => Promise<string>;
   /** How much conversation to send before old tool output is dropped, for a model with a smaller window. */
   contextChars?: number;
   /** How many tokens the conversation is about to take (counted by the provider after a reply, when it says; otherwise estimated). */
@@ -101,6 +107,36 @@ export function parseArguments(raw: string): Record<string, unknown> | null {
   }
 }
 
+const SUMMARY_AT = 0.7; // of the window
+const SUMMARY_RETRY_ROUNDS = 4;
+
+const sizeOf = (messages: AgentMessage[]) => messages.reduce((sum, m) => sum + m.content.length + (m.role === 'assistant' ? (m.tool_calls ?? []).reduce((total, call) => total + call.function.arguments.length, 0) : 0), 0);
+
+/** The conversation with its middle written up, when it is long enough to need it; null when it isn't, or the report failed. */
+async function condense(messages: AgentMessage[], deps: AgentDeps, steps: AgentStep[], show: () => void): Promise<AgentMessage[] | null> {
+  if (sizeOf(messages) < (deps.contextChars ?? CONTEXT_CHARS) * SUMMARY_AT) return null;
+  const split = splitForSummary(messages);
+  const user = split ? messages[split.userIndex] : null;
+  if (!split || !user || user.role !== 'user') return null;
+  const step: AgentStep = { id: `summary-${steps.length}`, tool: 'summary', status: 'running', title: 'Summarising the earlier work to save space…' };
+  steps.push(step);
+  show();
+  try {
+    const report = (await deps.summarize!(transcriptOf(originalGoal(user.content), previousReport(user.content), split.middle))).trim();
+    if (!report) throw new Error('empty');
+    step.status = 'done';
+    step.title = `Summarised ${split.middle.length} earlier messages to save space`;
+    show();
+    return withSummary(messages, split, report);
+  } catch {
+    if (deps.signal.aborted) throw new Error('aborted');
+    step.status = 'failed';
+    step.title = 'Couldn’t summarise the earlier work; dropping old output instead';
+    show();
+    return null;
+  }
+}
+
 /** Runs one turn of the agent on top of the conversation so far (which ends with the user's message). */
 export async function runAgent(history: AgentMessage[], deps: AgentDeps): Promise<AgentOutcome> {
   const maxSteps = deps.maxSteps ?? MAX_STEPS;
@@ -109,6 +145,7 @@ export async function runAgent(history: AgentMessage[], deps: AgentDeps): Promis
   const outcome: AgentOutcome = { steps, text: '', charged: 0, balance: null, usage: null, stopped: false, limited: false };
   const show = (text = '') => deps.onUpdate({ steps: steps.map(step => ({ ...step })), text });
   let previous = '';
+  let nextSummary = 0;
   let repeats = 0;
   let failures = 0;
 
@@ -118,6 +155,11 @@ export async function runAgent(history: AgentMessage[], deps: AgentDeps): Promis
 
     let reply: StepReply;
     try {
+      if (deps.summarize && round >= nextSummary) {
+        const compacted = await condense(messages, deps, steps, show);
+        if (compacted) messages.splice(0, messages.length, ...compacted);
+        else nextSummary = round + SUMMARY_RETRY_ROUNDS;
+      }
       const sent = trimToolOutput(messages, deps.contextChars);
       deps.onContext?.(estimateTokens(sent), false);
       reply = await deps.askModel([...sent], text => show(text));
