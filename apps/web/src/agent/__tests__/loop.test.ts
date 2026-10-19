@@ -354,3 +354,20 @@ describe('reading tools in one reply', () => {
     expect(outcome.steps.map(step => step.status)).toEqual(['stopped', 'stopped']);
   });
 });
+
+describe('dropping old output', () => {
+  it('says which call each dropped result belonged to, and keeps the newest in full', () => {
+    const big = 'x'.repeat(2000);
+    const messages: AgentMessage[] = [
+      { role: 'user', content: 'Go' },
+      { role: 'assistant', content: '', tool_calls: [{ id: 'a', type: 'function', function: { name: 'read_file', arguments: '{"path":"src/a.ts"}' } }] },
+      { role: 'tool', tool_call_id: 'a', content: big },
+      { role: 'assistant', content: '', tool_calls: [{ id: 'b', type: 'function', function: { name: 'search_text', arguments: '{"pattern":"needle"}' } }] },
+      { role: 'tool', tool_call_id: 'b', content: big },
+    ];
+    const trimmed = trimToolOutput(messages, 2500);
+    expect(trimmed[2].content).toMatch(/^\[Earlier output left out to save space \(read_file \{"path":"src\/a\.ts"\}\)\. Run it again/);
+    expect(trimmed[4].content).toBe(big);
+    expect(trimToolOutput(trimmed, 2500)[2].content).toBe(trimmed[2].content);
+  });
+});

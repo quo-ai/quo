@@ -19,7 +19,7 @@ const REPEATS_ALLOWED = 2;
 const FAILURES_ALLOWED = 5;
 const REPEATED = 'You have already made this exact call twice with the same result. Do not repeat it. Use what you have, try something different, or tell the user what is blocking you.';
 const ALWAYS_KEEP = 1; // the newest tool result is what the model is about to read; it is never dropped
-const LEFT_OUT = '[Earlier output left out to save space. Read the file or run the command again if you need it.]';
+const LEFT_OUT_START = '[Earlier output left out';
 
 export interface AgentDeps {
   /** One request to the model. `onText` gets its words as they arrive. */
@@ -49,7 +49,22 @@ export interface AgentOutcome {
   limited: boolean;
 }
 
-/** Drops the oldest tool output first (keeping the calls) once the conversation is long, so it keeps fitting. Newer output survives as long as it fits. */
+/** What a dropped result was the answer to, in a few words: "read_file {"path":"src/app.ts"}". */
+function describeCall(messages: AgentMessage[], id: string): string {
+  for (const m of messages) {
+    const call = m.role === 'assistant' ? m.tool_calls?.find(c => c.id === id) : undefined;
+    if (call) {
+      const args = call.function.arguments.replace(/\s+/g, ' ');
+      return `${call.function.name} ${args.length > 100 ? `${args.slice(0, 100)}…` : args}`.trim();
+    }
+  }
+  return '';
+}
+
+/**
+ * Drops the oldest tool output first (keeping the calls) once the conversation is long, so it keeps fitting. Newer output
+ * survives as long as it fits. A dropped result says which call it was, so the model still knows what it has already looked at.
+ */
 export function trimToolOutput(messages: AgentMessage[], limit = CONTEXT_CHARS): AgentMessage[] {
   const size = (m: AgentMessage) => m.content.length + (m.role === 'assistant' ? (m.tool_calls ?? []).reduce((sum, call) => sum + call.function.arguments.length, 0) : 0);
   let total = messages.reduce((sum, m) => sum + size(m), 0);
@@ -57,9 +72,11 @@ export function trimToolOutput(messages: AgentMessage[], limit = CONTEXT_CHARS):
   const results = messages.map((m, index) => (m.role === 'tool' ? index : -1)).filter(index => index >= 0);
   const droppable = new Set(results.slice(0, Math.max(0, results.length - ALWAYS_KEEP)));
   return messages.map((m, index) => {
-    if (total <= limit || !droppable.has(index) || m.role !== 'tool' || m.content === LEFT_OUT) return m;
-    total -= m.content.length - LEFT_OUT.length;
-    return { ...m, content: LEFT_OUT };
+    if (total <= limit || !droppable.has(index) || m.role !== 'tool' || m.content.startsWith(LEFT_OUT_START)) return m;
+    const call = describeCall(messages, m.tool_call_id);
+    const note = `${LEFT_OUT_START} to save space${call ? ` (${call})` : ''}. Run it again if you need it.]`;
+    total -= Math.max(0, m.content.length - note.length);
+    return { ...m, content: note };
   });
 }
 
