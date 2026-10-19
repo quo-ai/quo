@@ -297,6 +297,7 @@ export function agentSystemPrompt(project: string, platform: Platform, tools: st
           '- Files and changes you did not make may be the user’s own work: look at them before overwriting or deleting, and never revert, reset or discard them (no git reset --hard, git checkout --, git clean, force pushes) unless the user clearly asked. For why code is the way it is, git log and git blame run without asking.',
           ...(tools.includes('command_output') ? ['- For something that keeps running (a dev server, a watcher), start it with run_command and background: true, look at it with command_output, and stop it with stop_command when you are done. Do not start the same thing twice.'] : []),
           ...(tools.includes('task') ? ['- For a broad question that would take many reads, hand it to a helper with task and keep your own context for the work. Give it everything it needs; it sees nothing of this conversation. For a quick lookup, search yourself.'] : []),
+          ...(where === 'cloud' ? ['- To look at something outside the project (a sibling folder, a shared config), give its absolute path to a reading tool: the person approves each folder, it is read-only, and keys and system folders are never available. Prefer the project’s own files.'] : []),
           ...(tools.includes('update_plan') ? ['- For work with several steps, keep a short checklist with update_plan: one step in_progress, mark each done as you finish it, and do not repeat the list in your reply.'] : []),
         ]
       : []),

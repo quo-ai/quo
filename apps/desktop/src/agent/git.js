@@ -1,7 +1,9 @@
 'use strict';
 
 const { execFile } = require('node:child_process');
+const fs = require('node:fs');
 const fsp = require('node:fs/promises');
+const os = require('node:os');
 const path = require('node:path');
 const { scrubbedEnv } = require('./safety');
 
@@ -35,4 +37,24 @@ async function gitInfo(root) {
   return output === null ? null : parseStatus(output);
 }
 
-module.exports = { gitInfo, parseStatus };
+/**
+ * The git repository a folder is inside, when the folder is a subfolder of it: the nearest parent with a `.git`, never
+ * going above the home folder or into a system folder (`stop`, and `isOk`). Null when the folder is itself the top, or
+ * isn't in a repository. Pure file-system checks, no git program run.
+ */
+function findRepoRoot(start, { stop = os.homedir(), isOk = () => true } = {}) {
+  let dir = path.dirname(start);
+  const stopAt = path.resolve(stop);
+  for (;;) {
+    if (dir === stopAt || dir === path.dirname(dir) || !(dir.startsWith(stopAt + path.sep))) return null;
+    try {
+      fs.statSync(path.join(dir, '.git'));
+      return isOk(dir) ? dir : null;
+    } catch {
+      // Not here: look one level up.
+    }
+    dir = path.dirname(dir);
+  }
+}
+
+module.exports = { gitInfo, parseStatus, findRepoRoot };

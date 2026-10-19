@@ -101,3 +101,40 @@ describe('what counts as a secret', () => {
     assert.equal(safety.checkProjectRoot(project, home), project);
   });
 });
+
+describe('finding the repository a folder is in', () => {
+  const { findRepoRoot } = require('../../src/agent/git');
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const { temp } = require('./helpers');
+
+  it('finds the nearest parent with .git, never the folder itself, and stops at the limit', () => {
+    const home = temp();
+    const repo = path.join(home, 'work', 'app');
+    fs.mkdirSync(path.join(repo, '.git'), { recursive: true });
+    fs.mkdirSync(path.join(repo, 'packages', 'api', 'src'), { recursive: true });
+    assert.equal(findRepoRoot(path.join(repo, 'packages', 'api'), { stop: home }), repo);
+    assert.equal(findRepoRoot(path.join(repo, 'packages', 'api', 'src'), { stop: home }), repo);
+    assert.equal(findRepoRoot(repo, { stop: home }), null, 'the top of a repository has nothing above it to offer');
+    assert.equal(findRepoRoot(path.join(home, 'work'), { stop: home }), null);
+  });
+
+  it('never looks above the home folder, even if it holds a .git, and honours a veto', () => {
+    const home = temp();
+    fs.mkdirSync(path.join(home, '.git'));
+    fs.mkdirSync(path.join(home, 'docs', 'notes'), { recursive: true });
+    assert.equal(findRepoRoot(path.join(home, 'docs', 'notes'), { stop: home }), null);
+    const repo = path.join(home, 'r');
+    fs.mkdirSync(path.join(repo, '.git'), { recursive: true });
+    fs.mkdirSync(path.join(repo, 'sub'));
+    assert.equal(findRepoRoot(path.join(repo, 'sub'), { stop: home, isOk: () => false }), null);
+  });
+
+  it('works for a .git file too (a worktree or submodule)', () => {
+    const home = temp();
+    const repo = path.join(home, 'wt');
+    fs.mkdirSync(path.join(repo, 'src'), { recursive: true });
+    fs.writeFileSync(path.join(repo, '.git'), 'gitdir: /elsewhere\n');
+    assert.equal(findRepoRoot(path.join(repo, 'src'), { stop: home }), repo);
+  });
+});

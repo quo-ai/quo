@@ -100,3 +100,12 @@ describe('a chat with no folder yet', () => {
     expect(tool.parameters.required).toEqual(['kind']);
   });
 });
+
+describe('reading outside the project', () => {
+  it('is explained to cloud models, with its limits, and left out for a small offline model', () => {
+    const cloud = agentSystemPrompt('demo', 'linux', ['read_file', 'edit_file']);
+    expect(cloud).toMatch(/give its absolute path to a reading tool: the person approves each folder, it is read-only/);
+    expect(cloud).toMatch(/keys and system folders are never available/);
+    expect(agentSystemPrompt('demo', 'linux', ['read_file', 'edit_file'], null, 'local')).not.toMatch(/absolute path to a reading tool/);
+  });
+});

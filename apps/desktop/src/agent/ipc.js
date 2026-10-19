@@ -7,7 +7,7 @@ const { app, BrowserWindow, dialog, ipcMain } = require('electron');
 const { trusted } = require('../trust');
 const { AgentError, checkProjectRoot } = require('./safety');
 const { RepoCache } = require('./repos');
-const { gitInfo } = require('./git');
+const { findRepoRoot, gitInfo } = require('./git');
 const { whereIs } = require('./location');
 const { readInstructions } = require('./instructions');
 const { createWorkspace } = require('./workspace');
@@ -129,8 +129,24 @@ function setupAgent({ web = null } = {}) {
       properties: ['openDirectory'],
     });
     if (result.canceled || !result.filePaths[0]) return null;
-    const real = await fsp.realpath(result.filePaths[0]);
+    let real = await fsp.realpath(result.filePaths[0]);
     checkProjectRoot(real);
+    // A folder inside a git repository: offer the whole repository (its notes, branch and sibling folders), as opencode
+    // does by default. Choosing narrower is the default button: Enter keeps the person's own pick.
+    const repo = findRepoRoot(real, { isOk: dir => { try { checkProjectRoot(dir); return true; } catch { return false; } } });
+    if (repo) {
+      const choice = await dialog.showMessageBox(window, {
+        type: 'question',
+        title: 'Quo Code',
+        message: `Work in the whole ${path.basename(repo)} repository?`,
+        detail: `${path.basename(real)} is a folder inside the git repository ${path.basename(repo)} (${whereIs(repo)}).\n\nQuo can work in just this folder, or in the whole repository, which gives it the project's notes and everything the folder depends on. It still asks before changing anything.`,
+        buttons: ['Whole repository', 'Only this folder'],
+        defaultId: 1,
+        cancelId: 1,
+        noLink: true,
+      });
+      if (choice.response === 0) real = await fsp.realpath(repo);
+    }
     return publicProject(await projects.add(real));
   });
 

@@ -7,6 +7,7 @@ const { runCommand } = require('./exec');
 const commits = require('./commit');
 const { readScopedNotes } = require('./instructions');
 const { BackgroundCommands } = require('./background');
+const { ExternalReads } = require('./external');
 const { ChangeLog } = require('./history');
 const { AgentError, redactSecrets, scrubbedEnv } = require('./safety');
 
@@ -62,6 +63,7 @@ class AgentSession {
     this.mode = 'work'; // or 'plan': read-only
     this.log = new ChangeLog();
     this.background = new BackgroundCommands({ cwd: this.rootReal, env: this.env }); // commands left running (run_command with background: true)
+    this.external = new ExternalReads({ rootReal: this.rootReal, approve: request => this.approve(request), context: () => ({ ...(this.compact ? COMPACT_LIMITS : {}) }) }); // reading outside the project, folder by approved folder
     this.plan = []; // the agent's own checklist for the task (update_plan): shown to the person, changes nothing
     this.notesSeen = new Set(); // folders whose own AGENTS.md / CLAUDE.md has already come with a result
   }
@@ -102,10 +104,10 @@ class AgentSession {
       if (CHANGING_TOOLS.has(name) && this.mode === 'plan') throw new AgentError('plan_mode', 'Plan mode is on, so nothing can be changed or run. Describe the plan instead, and the user can switch it off to carry it out.');
       if (CHANGING_TOOLS.has(name) && args.repo) throw new AgentError('read_only', 'Reference repositories are read-only. Changes go in the project folder.');
       switch (name) {
-        case 'list_directory': return ok(await files.listDirectory(this.contextFor(args), args));
-        case 'read_file': return await this.withNotes(ok(await files.readFile(this.contextFor(args), args)), args);
-        case 'find_files': return ok(await files.findFiles(this.contextFor(args), args));
-        case 'search_text': return ok(await files.searchText(this.contextFor(args), args));
+        case 'list_directory': return await this.reading(args, (ctx, a) => files.listDirectory(ctx, a));
+        case 'read_file': return await this.reading(args, (ctx, a) => files.readFile(ctx, a), true);
+        case 'find_files': return await this.reading(args, (ctx, a) => files.findFiles(ctx, a));
+        case 'search_text': return await this.reading(args, (ctx, a) => files.searchText(ctx, a));
         case 'edit_file': return await this.withNotes(await this.change(await files.planEdit(this.ctx, args)));
         case 'write_file': return await this.withNotes(await this.change(await files.planWrite(this.ctx, args)));
         case 'update_plan': return this.updatePlan(args);
@@ -123,6 +125,21 @@ class AgentSession {
       return fail('failed', 'That didn’t work.');
     }
     return fail('unknown_tool', `There’s no tool called ${name}.`);
+  }
+
+  /**
+   * Runs a reading tool in the project, in a reference repository, or (for an absolute path outside the project that the
+   * person approves) in that folder, read-only. What comes back says where it was read when it isn't the project.
+   */
+  async reading(args, run, notes = false) {
+    if (args.repo) return ok(await run(this.contextFor(args), args));
+    const outside = await this.external.resolve(args.path);
+    if (outside) {
+      const result = ok(await run(outside.ctx, { ...args, path: outside.path }));
+      return { ...result, text: `[Outside the project, read-only: ${outside.root}]\n${result.text}` };
+    }
+    const result = ok(await run(this.ctx, args));
+    return notes ? await this.withNotes(result, args) : result;
   }
 
   /** The agent's checklist: validated and kept for the session. It runs nothing and asks nothing, so it works in plan mode too. */
