@@ -176,6 +176,8 @@ class AgentSession {
         kind: 'edit',
         title: `${verb} ${plan.relative}?`,
         detail: `In the project ${this.name}\n+${plan.added} −${plan.removed} lines\n\n${preview(plan.diff)}`,
+        project: this.name,
+        view: { kind: 'edit', action: plan.kind === 'create' ? 'create' : plan.kind === 'overwrite' ? 'replace' : 'edit', file: plan.relative, added: plan.added, removed: plan.removed, diff: plan.diff },
         rememberLabel: 'Allow edits to this project for this session',
       });
     }
@@ -201,6 +203,8 @@ class AgentSession {
         kind: 'command',
         title: background ? 'Start this command in the background?' : 'Run this command?',
         detail: `In the project ${this.name}${background ? '\nIt keeps running while Quo works, and stops when you end Code mode.' : ''}\n\n${clip(command, 1500)}`,
+        project: this.name,
+        view: { kind: 'command', command, background },
         rememberLabel: 'Allow this exact command for this session',
       });
     }
@@ -224,6 +228,8 @@ class AgentSession {
       kind: 'commit',
       title: `Commit ${plan.files.length} ${plan.files.length === 1 ? 'file' : 'files'} to ${plan.branch}?`,
       detail: `In the project ${this.name}\nBy ${plan.author}\n\n${plan.files.join('\n')}\n\n${plan.text}\n\n${plan.credit ? 'The last line credits Quo as co-author. You can turn that off in Models & storage → Code.' : 'Nothing is pushed.'}`,
+      project: this.name,
+      view: { kind: 'commit', branch: plan.branch, author: plan.author, files: plan.files, message: plan.message, credit: plan.credit ? commits.QUO_CREDIT : '' },
     });
     if (answer !== 'once') return fail('denied', 'The user didn’t allow that commit. Don’t try it again; ask what they’d like instead.', { kind: 'commit', denied: true, files: plan.files });
     const { hash } = await commits.applyCommit({ rootReal: this.rootReal, env: this.env }, plan);

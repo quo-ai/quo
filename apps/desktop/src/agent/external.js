@@ -56,6 +56,7 @@ class ExternalReads {
         title: 'Let Quo read files in this folder?',
         detail: `${directory}\n\nIt is outside the project. Quo can list, read and search there, and never change anything. Keys, credentials and .env files stay unreadable.`,
         rememberLabel: 'Allow reading here for this session',
+        view: { kind: 'read', folder: directory },
       });
       if (answer !== 'once' && answer !== 'session') throw new AgentError('denied', 'The person didn’t allow reading there. Don’t ask again; work in the project, or ask them what they’d like.');
       root = directory;

@@ -7,6 +7,7 @@ const { app, BrowserWindow, dialog, ipcMain } = require('electron');
 const { trusted } = require('../trust');
 const { AgentError, checkProjectRoot } = require('./safety');
 const { RepoCache } = require('./repos');
+const { askInApp } = require('../approval/window');
 const { findRepoRoot, gitInfo } = require('./git');
 const { whereIs } = require('./location');
 const { readInstructions } = require('./instructions');
@@ -69,7 +70,7 @@ function setupAgent({ web = null } = {}) {
   const sessions = new Map();
 
   /** Asks the person, in a window the page can't draw or click, whether to allow something. */
-  async function ask(window, request) {
+  async function askNative(window, request) {
     // A commit is always asked about, with no "for this session" choice.
     const single = request.kind === 'commit';
     const buttons = single ? ['Commit', 'Don’t commit'] : request.kind === 'command' ? ['Run it', request.rememberLabel, 'Don’t run it'] : ['Allow', request.rememberLabel, 'Don’t allow'];
@@ -87,6 +88,18 @@ function setupAgent({ web = null } = {}) {
       return (single ? ['once', 'deny'] : ['once', 'session', 'deny'])[result.response] ?? 'deny';
     } catch {
       return 'deny';
+    }
+  }
+
+  /**
+   * Asks the person, in a window the page can't draw or click, whether to allow something: Quo's own styled window
+   * (approval/window.js) when it can show the request, the plain system dialog otherwise.
+   */
+  async function ask(window, request) {
+    try {
+      return await askInApp(window, request);
+    } catch {
+      return askNative(window, request);
     }
   }
 
