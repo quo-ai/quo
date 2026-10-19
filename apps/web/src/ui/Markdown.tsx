@@ -2,6 +2,8 @@ import { memo, isValidElement, useState, type ReactElement, type ReactNode } fro
 import { Check, Copy } from 'lucide-react';
 import ReactMarkdown, { type Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { codePanel, useFileExists } from '../agent/codePanel';
+import { fileRefFromHref, parseFileRef, type FileRef } from '../agent/fileRefs';
 
 /**
  * Renders model output as markdown (GitHub-flavoured: tables, lists, code).
@@ -44,10 +46,34 @@ function CodeBlock({ children }: { children?: ReactNode }) {
   );
 }
 
+/**
+ * A path the agent named. It becomes a link to look inside the file only once the project confirms it is a real file there
+ * (so "node.js" in a sentence stays text); until then, and for anything else, it is drawn as it would have been.
+ */
+function FileMention({ file, inline, children, fallback }: { file: FileRef; inline: boolean; children: ReactNode; fallback: ReactNode }) {
+  const exists = useFileExists(file.path);
+  if (!exists) return <>{fallback}</>;
+  const open = (event: { preventDefault: () => void }) => {
+    event.preventDefault();
+    codePanel.openFile(file.path, file.line);
+  };
+  return inline
+    ? <code className="file-link" role="link" tabIndex={0} title="Look inside in the file panel" onClick={open} onKeyDown={event => event.key === 'Enter' && open(event)}>{children}</code>
+    : <a className="file-link" href="#" title="Look inside in the file panel" onClick={open}>{children}</a>;
+}
+
 const components: Components = {
-  a: ({ href, children }) => (
-    <a href={href} target="_blank" rel="noopener noreferrer">{children}</a>
-  ),
+  a: ({ href, children }) => {
+    const file = fileRefFromHref(href);
+    const plain = <a href={href} target="_blank" rel="noopener noreferrer">{children}</a>;
+    return file ? <FileMention file={file} inline={false} fallback={plain}>{children}</FileMention> : plain;
+  },
+  code: ({ className, children }) => {
+    const text = textOf(children);
+    const file = !className && !text.includes('\n') ? parseFileRef(text) : null;
+    const plain = <code className={className}>{children}</code>;
+    return file ? <FileMention file={file} inline fallback={plain}>{children}</FileMention> : plain;
+  },
   pre: ({ children }) => <CodeBlock>{children}</CodeBlock>,
 };
 

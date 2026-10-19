@@ -17,5 +17,6 @@ const { globToRegExp } = require('./glob');
 const { unifiedDiff } = require('./diff');
 const { planEdit, planWrite, applyPlan } = require('./edit');
 const { suggestFiles } = require('./fuzzy');
+const { listEntries, viewFile, existing } = require('./browse');
 
-module.exports = { LIMITS, suggestFiles, listDirectory, readFile, findFiles, searchText, planEdit, planWrite, applyPlan, unifiedDiff, globToRegExp, sha };
+module.exports = { LIMITS, listEntries, viewFile, existing, suggestFiles, listDirectory, readFile, findFiles, searchText, planEdit, planWrite, applyPlan, unifiedDiff, globToRegExp, sha };

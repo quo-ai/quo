@@ -5,7 +5,7 @@ const fsp = require('node:fs/promises');
 const path = require('node:path');
 const { app, BrowserWindow, dialog, ipcMain, shell } = require('electron');
 const { trusted } = require('../trust');
-const { AgentError, checkProjectRoot } = require('./safety');
+const { AgentError, checkProjectRoot, resolveInside } = require('./safety');
 const { RepoCache } = require('./repos');
 const { askInApp } = require('../approval/window');
 const { findRepoRoot, gitInfo } = require('./git');
@@ -192,6 +192,22 @@ function setupAgent({ web = null } = {}) {
   handle('agent:files', ({ sessionId, query }, event) => owned(sessionId, event).session.suggestFiles(query));
 
   handle('agent:mode', ({ sessionId, mode }, event) => owned(sessionId, event).session.setMode(mode));
+
+  // The file panel: the person looking at their project. Reading only, with the rules the agent's own reading has.
+  handle('agent:browse', ({ sessionId, path: input }, event) => owned(sessionId, event).session.browse(typeof input === 'string' ? input : '.'));
+  handle('agent:view', ({ sessionId, path: input }, event) => owned(sessionId, event).session.view(input));
+  handle('agent:exists', ({ sessionId, paths }, event) => owned(sessionId, event).session.exists(paths));
+  handle('agent:changes', ({ sessionId }, event) => owned(sessionId, event).session.changes());
+  // Open a page in the browser (the same approval as when the agent asks), or show a project file in the file manager.
+  handle('agent:open', async ({ sessionId, target }, event) => {
+    const result = await owned(sessionId, event).session.openTarget(typeof target === 'string' ? target : '');
+    return { ok: result.ok, text: result.text };
+  });
+  handle('agent:reveal', ({ sessionId, path: input }, event) => {
+    const { session } = owned(sessionId, event);
+    const { absolute } = resolveInside(session.rootReal, typeof input === 'string' && input ? input : '.');
+    shell.showItemInFolder(absolute);
+  });
 
   handle('agent:undo', async ({ sessionId, count }, event) => owned(sessionId, event).session.undo(count));
 

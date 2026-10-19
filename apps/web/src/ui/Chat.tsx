@@ -3,6 +3,7 @@ import { ArrowDown } from 'lucide-react';
 import { titleFrom } from '../chat/store';
 import { newId, type Attachment, type Conversation, type Message } from '../chat/types';
 import { AGENT_CONTEXT } from '../agent/local';
+import { codePanel } from '../agent/codePanel';
 import { usesFolderLoop } from '../agent/route';
 import type { ThinkLevel } from '../../shared/thinking';
 import { defaultThinking, LEVEL_LABEL, nextLevel, thinkingLevels } from '../chat/thinking';
@@ -82,6 +83,17 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
   const usage = contextUsage(choice, mode, modelMessages(messages), live);
 
   useImperativeHandle(ref, () => ({ focus: () => composer.current?.focus() }), []);
+
+  // The file panel beside the chat shows this chat's project, and follows the agent's work.
+  useEffect(() => {
+    codePanel.setSession(code);
+    return () => codePanel.setSession(null);
+  }, [code]);
+  useEffect(() => codePanel.setBusy(busy), [busy]);
+  const lastSteps = messages[messages.length - 1]?.steps?.length ?? 0;
+  useEffect(() => {
+    if (code) codePanel.bump();
+  }, [lastSteps, busy]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Follow the stream only while the user is at the bottom.
   useEffect(() => {

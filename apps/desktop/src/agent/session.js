@@ -81,6 +81,32 @@ class AgentSession {
     return files.suggestFiles(this.ctx, query);
   }
 
+  /** For the file panel (the person's own clicks): a folder's entries, a file to look at, and which mentioned paths exist. Reading only. */
+  browse(input) {
+    return files.listEntries({ rootReal: this.rootReal }, input);
+  }
+
+  view(input) {
+    return files.viewFile({ rootReal: this.rootReal }, input);
+  }
+
+  exists(paths) {
+    return files.existing({ rootReal: this.rootReal }, paths);
+  }
+
+  /** What the agent has changed in this session, newest per file, with the change itself. */
+  changes() {
+    const latest = new Map();
+    for (const entry of this.log.entries) {
+      const first = latest.get(entry.relative);
+      latest.set(entry.relative, { relative: entry.relative, before: first ? first.before : entry.before, after: entry.after });
+    }
+    return [...latest.values()].map(entry => {
+      const diff = files.unifiedDiff(entry.before ?? '', entry.after);
+      return { path: entry.relative, created: entry.before === null, added: diff.added, removed: diff.removed, diff: diff.text.length > 60_000 ? `${diff.text.slice(0, 60_000)}\n…` : diff.text };
+    }).reverse();
+  }
+
   /** Takes back the last `count` changes the agent made, where the files are still as it left them. */
   undo(count) {
     return this.log.undo(this.ctx, count);

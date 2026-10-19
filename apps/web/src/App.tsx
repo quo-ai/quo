@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { PanelLeftOpen, SquarePen, WifiOff } from 'lucide-react';
+import { PanelLeftOpen, PanelRight, SquarePen, WifiOff } from 'lucide-react';
+import { codePanel, useCodePanel } from './agent/codePanel';
+import { FilePanel } from './ui/FilePanel';
 import { allLocalModels, getLocalModel, LOCAL_MODELS, type LocalModel } from './catalog';
 import { refreshCustomModels, useCustomModels } from './customModels';
 import { nativeBridge } from './native';
@@ -202,6 +204,8 @@ export function App() {
   const installed = allLocalModels().filter(m => downloads[m.id]?.status === 'installed');
   const choice = resolveChoice(selectedKey, installed, catalog, ownModels, providers.accounts);
   const online = useOnline();
+  const panel = useCodePanel();
+  const hasProject = Boolean(panel.session);
   const { onFailure } = useFallback({ choice, installed, select });
   const current = conversations.find(c => c.id === currentId) ?? null;
   const freeCloud = catalog?.models.find(m => m.id === catalog.defaultModel && m.free) ?? null;
@@ -226,6 +230,9 @@ export function App() {
       if (mod && event.shiftKey && event.key.toLowerCase() === 'o') {
         event.preventDefault();
         newChat();
+      } else if (mod && event.shiftKey && event.key.toLowerCase() === 'e' && codePanel.get().session) {
+        event.preventDefault();
+        codePanel.toggle();
       } else if (mod && !event.shiftKey && event.key === ',') {
         event.preventDefault();
         setFromSettings(false);
@@ -408,6 +415,11 @@ export function App() {
               />
             )}
             <span className="spacer" />
+            {hasProject && (
+              <button type="button" className="icon-btn round press toolbar-files" onClick={() => codePanel.toggle()} aria-label="Project files" aria-pressed={panel.open} title={`Project files (${MOD_KEY}+Shift+E)`}>
+                <PanelRight size={18} />
+              </button>
+            )}
             {!online && <span className="net-pill glass" role="status"><WifiOff size={14} /> Offline</span>}
             {pendingOffline && (
               <OfflineModelCard
@@ -435,6 +447,7 @@ export function App() {
               />
             )}
         </main>
+        <FilePanel />
         {showNudge && <InstallNudge slowBrowser={slowBrowser} onMore={() => setGetAppOpen(true)} />}
       </div>
 

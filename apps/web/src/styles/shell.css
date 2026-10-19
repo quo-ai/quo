@@ -1,5 +1,5 @@
 /* ---------- Shell ---------- */
-.app { position: relative; z-index: 1; height: 100%; display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); }
+.app { position: relative; z-index: 1; height: 100%; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-rows: minmax(0, 1fr); }
 
 .sidebar {
   width: 288px; margin: 12px 0 12px 12px; border-radius: var(--r-panel);

@@ -1,5 +1,5 @@
 import { WEB_TOOLS } from '../../shared/agentTools';
-import { agentBridge, NativeError, unwrap, type CodeProject, type CodeSessionInfo, type DesktopAgent, type UndoResult } from '../native';
+import { agentBridge, NativeError, unwrap, type CodeProject, type CodeSessionInfo, type DesktopAgent, type FileChange, type FileView, type FolderListing, type UndoResult } from '../native';
 import type { ToolResult } from './types';
 
 /** The project a person last used, so turning Code mode on again needs no dialog. */
@@ -61,6 +61,32 @@ export class CodeSession {
   async setPlan(plan: boolean): Promise<void> {
     unwrap(await this.bridge.mode(this.info.sessionId, plan ? 'plan' : 'work'));
     this.plan = plan;
+  }
+
+  /** The file panel: a folder's entries, one file, the agent's changes, and which mentioned paths exist. Reading only. */
+  async browse(path = '.'): Promise<FolderListing> {
+    return unwrap(await this.bridge.browse(this.info.sessionId, path));
+  }
+
+  async view(path: string): Promise<FileView> {
+    return unwrap(await this.bridge.view(this.info.sessionId, path));
+  }
+
+  async changes(): Promise<FileChange[]> {
+    return unwrap(await this.bridge.changes(this.info.sessionId));
+  }
+
+  async exists(paths: string[]): Promise<string[]> {
+    return unwrap(await this.bridge.exists(this.info.sessionId, paths));
+  }
+
+  /** Opens a page in the browser; the person approves it in the desktop app's own window. */
+  async openInBrowser(target: string): Promise<{ ok: boolean; text: string }> {
+    return unwrap(await this.bridge.open(this.info.sessionId, target));
+  }
+
+  async reveal(path: string): Promise<void> {
+    unwrap(await this.bridge.reveal(this.info.sessionId, path));
   }
 
   /** Files in the project matching part of a name, for the @ picker. Empty if the desktop app can't say. */

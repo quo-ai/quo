@@ -139,6 +139,44 @@ export interface CodeSessionInfo {
   git?: { branch: string | null; changed: number } | null;
 }
 
+/** One entry in a folder, for the file panel. */
+export interface FileEntry {
+  name: string;
+  /** Relative to the project, with forward slashes. */
+  path: string;
+  dir: boolean;
+  /** A folder of dependencies or build output: shown dimmed and not opened by itself. */
+  ignored: boolean;
+}
+
+export interface FolderListing {
+  path: string;
+  entries: FileEntry[];
+  truncated: boolean;
+}
+
+/** One file for the viewer: text, an image as a data address, or why it can't be shown. */
+export interface FileView {
+  path: string;
+  size: number;
+  /** A browser can show it (a page, image or document), so "Open in browser" is offered. */
+  canOpen: boolean;
+  kind: 'text' | 'image' | 'binary' | 'toolarge';
+  text?: string;
+  lines?: number;
+  clipped?: boolean;
+  dataUrl?: string;
+}
+
+/** A file the agent changed in this session, with the change. */
+export interface FileChange {
+  path: string;
+  created: boolean;
+  added: number;
+  removed: number;
+  diff: string;
+}
+
 export interface UndoResult {
   restored: string[];
   /** Left alone because they changed again after the agent's change. */
@@ -157,6 +195,14 @@ export interface DesktopAgent {
   /** Files in the project matching part of a name, best first. */
   files: (sessionId: string, query: string) => Promise<NativeResult<string[]>>;
   undo: (sessionId: string, count: number) => Promise<NativeResult<UndoResult>>;
+  /** The file panel: reading only, with the rules the agent's own reading has. */
+  browse: (sessionId: string, path: string) => Promise<NativeResult<FolderListing>>;
+  view: (sessionId: string, path: string) => Promise<NativeResult<FileView>>;
+  exists: (sessionId: string, paths: string[]) => Promise<NativeResult<string[]>>;
+  changes: (sessionId: string) => Promise<NativeResult<FileChange[]>>;
+  /** Open a page in the browser (approved in the desktop app's own window), or show a project file in the file manager. */
+  open: (sessionId: string, target: string) => Promise<NativeResult<{ ok: boolean; text: string }>>;
+  reveal: (sessionId: string, path: string) => Promise<NativeResult<unknown>>;
   abort: (sessionId: string) => Promise<NativeResult<unknown>>;
   end: (sessionId: string) => Promise<NativeResult<unknown>>;
   clearRepos: () => Promise<NativeResult<unknown>>;
