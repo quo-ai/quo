@@ -6,6 +6,7 @@ const os = require('node:os');
 const path = require('node:path');
 const { describe, it } = require('node:test');
 const { hasMtp, readGgufMeta } = require('../src/engine/gguf');
+const { tempDir } = require('./tempdir');
 
 const u32 = n => {
   const b = Buffer.alloc(4);
@@ -27,7 +28,7 @@ function gguf(pairs, { version = 3, magic = 'GGUF', declared } = {}) {
   return Buffer.concat([Buffer.from(magic), u32(version), u64(0), u64(declared ?? pairs.length), ...pairs]);
 }
 
-const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'quo-gguf-'));
+const dir = tempDir('quo-gguf-');
 const file = (name, buffer) => {
   const target = path.join(dir, name);
   fs.writeFileSync(target, buffer);

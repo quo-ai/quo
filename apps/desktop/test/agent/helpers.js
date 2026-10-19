@@ -5,7 +5,9 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 
-const temp = () => fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), 'quo-agent-')));
+const { tempDir } = require('../tempdir');
+
+const temp = () => tempDir('quo-agent-');
 const write = (root, relative, content) => {
   const target = path.join(root, ...relative.split('/'));
   fs.mkdirSync(path.dirname(target), { recursive: true });

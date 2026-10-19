@@ -5,7 +5,9 @@ const http = require('node:http');
 const os = require('node:os');
 const path = require('node:path');
 
-const temp = () => fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), 'quo-providers-')));
+const { tempDir } = require('../tempdir');
+
+const temp = () => tempDir('quo-providers-');
 
 /** A stand-in for the operating system's secure storage: reversible, and not the plain text. */
 const fakeSafeStorage = (backend = 'gnome_libsecret', available = true) => ({

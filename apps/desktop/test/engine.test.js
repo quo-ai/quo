@@ -10,7 +10,9 @@ const { after, before, describe, it } = require('node:test');
 const { LlamaEngine, engineTarget, explainFailure, parseDevices } = require('../src/engine/llama');
 const { ModelError, ModelStore, findProjector } = require('../src/engine/models');
 
-const temp = () => fs.mkdtempSync(path.join(os.tmpdir(), 'quo-test-'));
+const { tempDir } = require('./tempdir');
+
+const temp = () => tempDir('quo-test-');
 const gguf = (size, fill = 7) => Buffer.concat([Buffer.from('GGUF'), Buffer.alloc(size - 4, fill)]);
 const permissive = () => true;
 
@@ -263,7 +265,7 @@ describe('models you already have', () => {
     it('does not offer a model again once added, even when its folder is reached through a symlink', { skip: process.platform === 'win32' }, async () => {
       // macOS reaches /tmp and /var through symlinks, and so can any home folder or models drive.
       const real = temp();
-      const home = `${real}-link`;
+      const home = path.join(temp(), 'home-link');
       fs.symlinkSync(real, home);
       process.env.HOME = home;
       process.env.USERPROFILE = home;
