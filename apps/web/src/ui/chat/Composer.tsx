@@ -203,15 +203,14 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
           )}
           {codeAvailable && (
             <CodeChip
-              active={Boolean(code)}
               starting={codeMode.starting}
               disabled={busy}
               session={code}
               plan={codeMode.plan}
-              onToggle={() => void codeMode.toggle()}
               onSwitchProject={project => void codeMode.switchProject(project)}
               onChooseFolder={() => void codeMode.changeFolder()}
               onTogglePlan={() => void codeMode.togglePlan()}
+              onRemove={codeMode.end}
             />
           )}
           {web.how && (

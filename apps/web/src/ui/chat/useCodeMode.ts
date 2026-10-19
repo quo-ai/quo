@@ -17,6 +17,9 @@ export function useCodeMode({ support, conversationId, modelId }: { support: Cod
   const [plan, setPlan] = useState(false);
   // An offline model that isn't expected to do this well: ask first, once.
   const [caution, setCaution] = useState(false);
+  const afterCaution = useRef<(() => Promise<void>) | null>(null);
+  // The chat where the person said no to choosing a folder when asked: not asked again there.
+  const declinedFolder = useRef<string | null>(null);
 
   const end = () =>
     setCode(session => {
@@ -41,51 +44,96 @@ export function useCodeMode({ support, conversationId, modelId }: { support: Cod
   useEffect(() => setCaution(false), [modelId]);
   useEffect(() => () => code?.end(), [code]);
 
-  async function start(project: CodeProject) {
+  async function start(project: CodeProject): Promise<CodeSession> {
     code?.end();
     const settings = codeSettings();
     const session = await CodeSession.start(project, { autoReadOnly: settings.autoReadOnly, compact, creditQuo: settings.creditQuo });
     if (settings.startInPlan) await session.setPlan(true);
     setPlan(session.plan);
     setCode(session);
+    return session;
   }
 
-  async function toggle(confirmed = false) {
+  /** Runs `action` now, or after the person agrees to use this model for Code mode (an offline one that isn't expected to do well). */
+  function guarded(action: () => Promise<void>, confirmed = false): Promise<void> {
+    if (gate && !gate.allowed && !confirmed) {
+      afterCaution.current = action;
+      setCaution(true);
+      return Promise.resolve();
+    }
+    return action();
+  }
+
+  /** Turns Code mode on or off (the /code command). On: the folder this chat used, else the last one, else ask. */
+  async function toggle() {
     if (code) {
       code.end();
       return setCode(null);
     }
-    if (gate && !gate.allowed && !confirmed) return setCaution(true);
-    setCaution(false);
+    await guarded(async () => {
+      setStarting(true);
+      try {
+        const recent = await recentProjects();
+        const remembered = recent.find(project => project.id === chatProject(conversationId)) ?? recent.find(project => project.id === lastProjectId());
+        const project = remembered ?? (await pickProject());
+        if (project) await start(project);
+      } catch (error) {
+        toast(error instanceof NativeError ? error.message : 'Couldn’t turn on Code mode.');
+      } finally {
+        setStarting(false);
+      }
+    });
+  }
+
+  /** The folder menu: work in this folder (one used before), or pick another in the system's folder dialog. */
+  const switchProject = (project: CodeProject) =>
+    guarded(async () => {
+      try {
+        await start(project);
+      } catch (error) {
+        toast(error instanceof NativeError ? error.message : 'Couldn’t use that folder.');
+      }
+    });
+  const changeFolder = () =>
+    guarded(async () => {
+      try {
+        const project = await pickProject();
+        if (project) await start(project);
+      } catch (error) {
+        toast(error instanceof NativeError ? error.message : 'Couldn’t use that folder.');
+      }
+    });
+
+  /**
+   * A message that is about the person's project: start working in their folder without being asked to turn anything on.
+   * The folder is one they chose in the system's dialog, the last one used (or, the first time, they choose now and can
+   * say no, which is remembered for this chat). Always visible next to the message box, and one click to remove.
+   * Returns the session to use for this message, or null to answer as an ordinary chat.
+   */
+  async function autoStart(): Promise<CodeSession | null> {
+    if (code) return code;
+    if (!available || starting || !codeSettings().autoStart || (gate && !gate.allowed)) return null;
     setStarting(true);
     try {
-      // The folder this chat used, else the last one used anywhere, else ask.
       const recent = await recentProjects();
-      const remembered = recent.find(project => project.id === chatProject(conversationId)) ?? recent.find(project => project.id === lastProjectId());
-      const project = remembered ?? (await pickProject());
-      if (project) await start(project);
+      const known = recent.find(project => project.id === chatProject(conversationId)) ?? recent.find(project => project.id === lastProjectId());
+      if (known) {
+        const session = await start(known);
+        toast(`Working in ${known.name}. You can change the folder next to the message box.`);
+        return session;
+      }
+      if (declinedFolder.current === (conversationId ?? '')) return null;
+      const picked = await pickProject();
+      if (!picked) {
+        declinedFolder.current = conversationId ?? '';
+        return null;
+      }
+      return await start(picked);
     } catch (error) {
-      toast(error instanceof NativeError ? error.message : 'Couldn’t turn on Code mode.');
+      toast(error instanceof NativeError ? error.message : 'Couldn’t use that folder.');
+      return null;
     } finally {
       setStarting(false);
-    }
-  }
-
-  async function changeFolder() {
-    try {
-      const project = await pickProject();
-      if (project) await start(project);
-    } catch (error) {
-      toast(error instanceof NativeError ? error.message : 'Couldn’t use that folder.');
-    }
-  }
-
-  /** Switches to another folder from the recent ones. */
-  async function switchProject(project: CodeProject) {
-    try {
-      await start(project);
-    } catch (error) {
-      toast(error instanceof NativeError ? error.message : 'Couldn’t use that folder.');
     }
   }
 
@@ -102,10 +150,13 @@ export function useCodeMode({ support, conversationId, modelId }: { support: Cod
   /** "Turn it on anyway": remembered for this model, which can be changed in Models & storage → Code. */
   async function confirmCaution() {
     gate?.allow();
-    await toggle(true);
+    setCaution(false);
+    const action = afterCaution.current;
+    afterCaution.current = null;
+    await action?.();
   }
 
-  return { code, available, gate, caution, dismissCaution: () => setCaution(false), confirmCaution, starting, plan, toggle: () => toggle(), changeFolder, switchProject, togglePlan, end };
+  return { code, available, gate, caution, dismissCaution: () => { afterCaution.current = null; setCaution(false); }, confirmCaution, starting, plan, toggle, autoStart, changeFolder, switchProject, togglePlan, end };
 }
 
 export type CodeMode = ReturnType<typeof useCodeMode>;

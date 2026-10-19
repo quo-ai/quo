@@ -23,6 +23,8 @@ import { MessageList } from './chat/MessageList';
 import type { ChatAction, ChatStatus, Failure, Undoable } from './chat/types';
 import { buildCommands } from './chat/useCommands';
 import { useCodeMode } from './chat/useCodeMode';
+import { looksLikeProjectRequest } from '../agent/intent';
+import type { CodeSession } from '../agent/session';
 import { useWebMode } from './chat/useWebMode';
 import { toast } from './Toasts';
 
@@ -105,8 +107,10 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
     return () => document.removeEventListener('keydown', onKey);
   }, [busy]);
 
-  async function run(base: Conversation | null, userText: string, created: boolean, sent: Attachment[] = []) {
+  async function run(base: Conversation | null, userText: string, created: boolean, sent: Attachment[] = [], started: CodeSession | null = null) {
     if (!choice) return;
+    // A folder added just for this message (it is not in this render's state yet), else the chat's own.
+    const code = started ?? codeMode.code;
     setFailure(null);
     setUndo(null);
     stickToBottom.current = true;
@@ -276,7 +280,9 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
     // Nearly full: make room first, as the person chose (it can be turned off in the memory menu).
     const full = usage ? ratio(usage) : null;
     if (base && autoSummarize() && full !== null && full >= SUMMARIZE_AT && modelMessages(base.messages).length >= MIN_MESSAGES) base = (await summarizeConversation(base, true)) ?? base;
-    void run(base, text, !conversation, attachments);
+    // A message about the person's project starts Code mode by itself: nothing to turn on.
+    const session = !code && attachments.length === 0 && codeMode.available && looksLikeProjectRequest(text) ? await codeMode.autoStart() : null;
+    void run(base, text, !conversation, attachments, session);
   };
 
   return (
