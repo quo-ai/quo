@@ -11,7 +11,7 @@ const { askInApp } = require('../approval/window');
 const { findRepoRoot, gitInfo } = require('./git');
 const { whereIs } = require('./location');
 const { readInstructions } = require('./instructions');
-const { createWorkspace } = require('./workspace');
+const { createApproved } = require('./workspace');
 const { AgentSession, PLAN_TOOLS, TOOL_NAMES } = require('./session');
 
 /**
@@ -165,20 +165,27 @@ function setupAgent({ web = null } = {}) {
 
   // A new, empty folder under Documents/Quo Projects for something the person asked Quo to build. The page supplies only
   // words to name it with; the place and the allowed characters are decided in workspace.js.
-  handle('agent:workspace', async ({ name }) => {
-    const real = await createWorkspace(path.join(app.getPath('documents'), 'Quo Projects'), typeof name === 'string' ? name.slice(0, 200) : '');
+  handle('agent:workspace', async ({ name }, event) => {
+    const window = BrowserWindow.fromWebContents(event.sender) ?? undefined;
+    const real = await createApproved(path.join(app.getPath('documents'), 'Quo Projects'), typeof name === 'string' ? name.slice(0, 200) : '', request => ask(window, request));
     checkProjectRoot(real);
     return publicProject(await projects.add(real));
   });
 
   handle('agent:forget', ({ id }) => projects.remove(String(id)));
 
-  handle('agent:start', async ({ projectId, autoReadOnly, compact, creditQuo }, event) => {
+  handle('agent:start', async ({ projectId, autoReadOnly, compact, creditQuo, confirm }, event) => {
     const project = (await projects.list()).find(entry => entry.id === String(projectId));
     if (!project) throw new AgentError('no_project', 'That project isn’t in the list any more. Choose the folder again.');
     const real = await fsp.realpath(project.path).catch(() => null);
     if (!real) throw new AgentError('no_project', 'That folder can’t be found any more.');
     checkProjectRoot(real);
+    // A model asked for this folder (open_project): the person says yes first. A folder they picked or clicked is already their choice.
+    if (confirm === true) {
+      const window = BrowserWindow.fromWebContents(event.sender) ?? undefined;
+      const answer = await ask(window, { kind: 'folder', title: `Let Quo work in ${project.name}?`, detail: `${project.name}\n${whereIs(real)}`, view: { kind: 'folder', mode: 'existing', name: project.name, where: whereIs(real) } });
+      if (answer !== 'once' && answer !== 'session') throw new AgentError('denied', 'The person didn’t want Quo to work in that folder.');
+    }
     for (const [id, entry] of sessions) if (entry.owner === event.sender.id && entry.project === project.id) endSession(id);
     if (sessions.size >= MAX_SESSIONS) throw new AgentError('busy', 'Too many Code sessions are open. Close one first.');
     const id = crypto.randomBytes(8).toString('hex');

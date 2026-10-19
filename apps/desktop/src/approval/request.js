@@ -7,7 +7,7 @@
  */
 
 const LIMITS = { title: 200, short: 300, label: 120, diff: 60_000, command: 4000, message: 4000, files: 50 };
-const KINDS = new Set(['edit', 'command', 'commit', 'read', 'open']);
+const KINDS = new Set(['edit', 'command', 'commit', 'read', 'open', 'folder']);
 
 const text = (value, max) => (typeof value === 'string' ? (value.length > max ? `${value.slice(0, max)}…` : value) : '');
 const count = value => (Number.isFinite(value) && value >= 0 ? Math.min(Math.floor(value), 1e9) : 0);
@@ -36,6 +36,8 @@ function shapeRequest(request) {
       message: text(view.message, LIMITS.message),
       credit: view.credit ? text(view.credit, LIMITS.short) : '',
     };
+  } else if (request.kind === 'folder') {
+    shaped.view = { kind: 'folder', mode: view.mode === 'new' ? 'new' : 'existing', name: text(view.name, LIMITS.short), where: text(view.where, LIMITS.short) };
   } else if (request.kind === 'open') {
     shaped.view = { kind: 'open', what: view.what === 'url' ? 'url' : 'file', target: text(view.target, LIMITS.short) };
   } else {

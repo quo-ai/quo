@@ -46,3 +46,13 @@ describe('what the window may answer', () => {
     for (const choice of ['allow', 'yes', '', undefined, null, 1, { choice: 'once' }, 'ONCE', 'deny']) assert.equal(normalizeChoice(edit, choice), 'deny', String(choice));
   });
 });
+
+describe('a folder the model asked for', () => {
+  it('is shown with its name and where, for a new one or an existing one', () => {
+    const shaped = shapeRequest({ kind: 'folder', title: 'Make a folder for this?', view: { kind: 'folder', mode: 'new', name: 'todo-app', where: 'Documents/Quo Projects' } });
+    assert.deepEqual(shaped.view, { kind: 'folder', mode: 'new', name: 'todo-app', where: 'Documents/Quo Projects' });
+    assert.equal(shapeRequest({ kind: 'folder', title: 't', view: { kind: 'folder', mode: 'anything else', name: 'x' } }).view.mode, 'existing');
+    assert.equal(normalizeChoice(shaped, 'once'), 'once');
+    assert.equal(normalizeChoice(shaped, 'session'), 'deny', 'there is no "for this session" for a folder');
+  });
+});

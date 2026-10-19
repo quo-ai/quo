@@ -17,6 +17,13 @@ describe('does a chat with no folder go through the tool loop?', () => {
     expect(usesFolderLoop({ ...base, choice: cloud(), plainFeatures: true })).toBe(false);
   });
 
+  it('leaves the decision to an offline model only when it is rated good at tools, even if the person allowed it for Code mode', () => {
+    const local = { kind: 'local', model: {} } as never;
+    expect(usesFolderLoop({ ...base, choice: local, localRated: true })).toBe(true);
+    expect(usesFolderLoop({ ...base, choice: local, localRated: false })).toBe(false);
+    expect(usesFolderLoop({ ...base, choice: cloud(), localRated: false })).toBe(true); // only about offline models
+  });
+
   it('asks an untrusted offline model first, by not using the loop', () => {
     expect(usesFolderLoop({ ...base, choice: { kind: 'local', model: {} } as never, gated: true })).toBe(false);
   });

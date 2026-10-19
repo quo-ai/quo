@@ -51,4 +51,20 @@ async function createWorkspace(parent, rawName) {
   throw new AgentError('failed', 'Couldn’t find a free name for the project folder.');
 }
 
-module.exports = { createWorkspace, slugOf, MAX_FOLDERS };
+/**
+ * A new folder the model asked for: the person approves it first, naming where it will go. Nothing is made if they say no.
+ * `approve` is the approval window; `label` is how the place is shown (Documents/Quo Projects).
+ */
+async function createApproved(parent, rawName, approve, label = 'Documents/Quo Projects') {
+  const slug = slugOf(rawName);
+  const answer = await approve({
+    kind: 'folder',
+    title: 'Make a folder for this?',
+    detail: `${label}/${slug}`,
+    view: { kind: 'folder', mode: 'new', name: slug, where: label },
+  });
+  if (answer !== 'once' && answer !== 'session') throw new AgentError('denied', 'The person didn’t want a folder made. Carry on without one, and say what you can do here.');
+  return createWorkspace(parent, rawName);
+}
+
+module.exports = { createWorkspace, createApproved, slugOf, MAX_FOLDERS };

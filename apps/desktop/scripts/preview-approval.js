@@ -16,6 +16,8 @@ const SAMPLES = {
   background: { kind: 'command', title: 'Start this command in the background?', project: 'todo-app', rememberLabel: 'Allow this exact command for this session', view: { kind: 'command', command: 'npm run dev', background: true } },
   commit: { kind: 'commit', title: 'Commit 3 files to main?', project: 'todo-app', view: { kind: 'commit', branch: 'main', author: `Pat Person <${'pat' + '@example.test'}>`, files: ['index.html', 'style.css', 'app.js'], message: 'Add a todo list page\n\nList, add and remove items; saved in localStorage.', credit: 'Co-Authored-By: Quo <344842314+quo-ai[bot]@users.noreply.github.com>' } },
   read: { kind: 'read', title: 'Let Quo read files in this folder?', project: 'todo-app', rememberLabel: 'Allow reading here for this session', view: { kind: 'read', folder: path.join(os.tmpdir(), 'shared-config') } },
+  folder: { kind: 'folder', title: 'Make a folder for this?', project: '', view: { kind: 'folder', mode: 'new', name: 'todo-app', where: 'Documents/Quo Projects' } },
+  work: { kind: 'folder', title: 'Let Quo work in quo?', project: '', view: { kind: 'folder', mode: 'existing', name: 'quo', where: '~/Desktop/localai' } },
   open: { kind: 'open', title: 'Open index.html in your browser?', project: 'todo-app', rememberLabel: 'Allow opening pages for this session', view: { kind: 'open', what: 'file', target: 'index.html' } },
 };
 

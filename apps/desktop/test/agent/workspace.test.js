@@ -58,3 +58,32 @@ describe('project folders made by the app', () => {
     await assert.rejects(createWorkspace(parent, 'one more'), error => error.code === 'too_many');
   });
 });
+
+describe('a folder the model asked for, approved first', () => {
+  const { createApproved } = require('../../src/agent/workspace');
+
+  it('is made only after a yes, and the person is shown the name and the place', async () => {
+    const parent = path.join(temp(), 'Quo Projects');
+    const asked = [];
+    const made = await createApproved(parent, 'Todo app', async request => (asked.push(request), 'once'));
+    assert.equal(path.basename(made), 'todo-app');
+    assert.equal(asked.length, 1);
+    assert.equal(asked[0].kind, 'folder');
+    assert.deepEqual(asked[0].view, { kind: 'folder', mode: 'new', name: 'todo-app', where: 'Documents/Quo Projects' });
+  });
+
+  it('makes nothing when the person says no, and tells the model to carry on', async () => {
+    const parent = path.join(temp(), 'Quo Projects');
+    for (const answer of ['deny', 'cancel', undefined, null, 'whatever']) {
+      await assert.rejects(createApproved(parent, 'Nope', async () => answer), error => error.code === 'denied' && /Carry on without/.test(error.message));
+    }
+    assert.equal(fs.existsSync(parent), false, 'not even the parent folder was made');
+  });
+
+  it('shows the name that will really be used, however the request was worded', async () => {
+    const parent = path.join(temp(), 'Quo Projects');
+    let shown;
+    await createApproved(parent, '../../Evil Plan!', async request => ((shown = request.view.name), 'once'));
+    assert.equal(shown, 'evil-plan');
+  });
+});

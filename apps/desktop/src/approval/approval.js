@@ -10,6 +10,7 @@ const ICONS = {
   command: ['m4 17 6-6-6-6', 'M12 19h8'],
   commit: ['M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z', 'M3 12h6', 'M15 12h6'],
   read: ['M6 14l1.5-2.4A2 2 0 0 1 9.2 10H20a2 2 0 0 1 1.9 2.6l-1.6 5.2a2 2 0 0 1-1.9 1.4H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.7.9l.8 1.2a2 2 0 0 0 1.7.9H18a2 2 0 0 1 2 2v1'],
+  folder: ['M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.7-.9l-.8-1.2A2 2 0 0 0 7.9 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z', 'M12 10v6', 'M9 13h6'],
   open: ['M15 3h6v6', 'M10 14 21 3', 'M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6'],
 };
 
@@ -86,6 +87,14 @@ function body(request) {
     chips.appendChild(el('span', 'chip', view.folder));
     box.appendChild(chips);
     box.appendChild(el('p', 'note', 'It is outside the project. Quo can list, read and search there, and never change anything. Keys, credentials and .env files stay unreadable.'));
+  } else if (view.kind === 'folder') {
+    const chips = el('div', 'chips');
+    chips.appendChild(el('span', 'chip', view.name));
+    if (view.where) chips.appendChild(el('span', 'chip', view.where));
+    box.appendChild(chips);
+    box.appendChild(el('p', 'note', view.mode === 'new'
+      ? 'Quo makes an empty folder here and works in it. It can read what it makes, and asks before every change or command. You can remove the folder from the chat at any time.'
+      : 'Quo can read the files here. Nothing is changed or run without your OK, and files a cloud model reads are sent to its provider.'));
   } else if (view.kind === 'open') {
     const chips = el('div', 'chips');
     chips.appendChild(el('span', 'chip', view.target));
@@ -111,7 +120,7 @@ function show(request) {
 
   const foot = el('div', 'foot');
   foot.appendChild(el('span', 'hint', 'Esc to decline'));
-  const deny = el('button', '', request.kind === 'command' ? 'Don’t run' : request.kind === 'commit' ? 'Don’t commit' : request.kind === 'open' ? 'Don’t open' : 'Don’t allow');
+  const deny = el('button', '', request.kind === 'command' ? 'Don’t run' : request.kind === 'commit' ? 'Don’t commit' : request.kind === 'open' ? 'Don’t open' : request.kind === 'folder' ? 'Not now' : 'Don’t allow');
   deny.type = 'button';
   deny.addEventListener('click', () => window.quoApproval.answer('deny'));
   foot.appendChild(deny);
@@ -121,7 +130,7 @@ function show(request) {
     remember.addEventListener('click', () => window.quoApproval.answer('session'));
     foot.appendChild(remember);
   }
-  const allow = el('button', 'primary', request.kind === 'command' ? 'Run it' : request.kind === 'commit' ? 'Commit' : request.kind === 'open' ? 'Open' : 'Allow');
+  const allow = el('button', 'primary', request.kind === 'command' ? 'Run it' : request.kind === 'commit' ? 'Commit' : request.kind === 'open' ? 'Open' : request.kind === 'folder' ? (request.view.mode === 'new' ? 'Make the folder' : 'Work here') : 'Allow');
   allow.type = 'button';
   allow.addEventListener('click', () => window.quoApproval.answer('once'));
   foot.appendChild(allow);

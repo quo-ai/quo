@@ -4,6 +4,7 @@ import { titleFrom } from '../chat/store';
 import { newId, type Attachment, type Conversation, type Message } from '../chat/types';
 import { AGENT_CONTEXT } from '../agent/local';
 import { codePanel } from '../agent/codePanel';
+import { agentRating } from '../agent/capability';
 import { usesFolderLoop } from '../agent/route';
 import type { ThinkLevel } from '../../shared/thinking';
 import { defaultThinking, LEVEL_LABEL, nextLevel, thinkingLevels } from '../chat/thinking';
@@ -152,7 +153,7 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
       const searching = web.on && web.how === 'tools';
       // Plain chats on the desktop go through the same loop when a folder could be wanted, so the model decides. Anything the loop
       // doesn't do (attachments, thinking, Quo's own web search) keeps its own route; the folder button is always there.
-      const folderless = !code && usesFolderLoop({ choice, available: codeMode.available, autoStart: codeSettings().autoStart, gated: Boolean(choice.kind === 'local' && codeMode.gate && !codeMode.gate.allowed), plainFeatures: sent.length > 0 || thinking !== startLevel || (web.on && web.how === 'native') });
+      const folderless = !code && usesFolderLoop({ choice, available: codeMode.available, autoStart: codeSettings().autoStart, gated: Boolean(choice.kind === 'local' && codeMode.gate && !codeMode.gate.allowed), localRated: choice.kind !== 'local' || agentRating(choice.model) === 'good', plainFeatures: sent.length > 0 || thinking !== startLevel || (web.on && web.how === 'native') });
       if (code && (choice.kind === 'local' || choice.model.agent || (choice.kind === 'cloud' && choice.model.agentLight))) {
         setStatus('generating');
         const controller = new AbortController();

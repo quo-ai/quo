@@ -44,10 +44,11 @@ export function useCodeMode({ support, conversationId, modelId }: { support: Cod
   useEffect(() => setCaution(false), [modelId]);
   useEffect(() => () => code?.end(), [code]);
 
-  async function start(project: CodeProject): Promise<CodeSession> {
+  /** `confirm`: the model asked for this folder, so the desktop app asks the person in its own window before opening it. */
+  async function start(project: CodeProject, confirm = false): Promise<CodeSession> {
     code?.end();
     const settings = codeSettings();
-    const session = await CodeSession.start(project, { autoReadOnly: settings.autoReadOnly, compact, creditQuo: settings.creditQuo });
+    const session = await CodeSession.start(project, { autoReadOnly: settings.autoReadOnly, compact, creditQuo: settings.creditQuo, confirm });
     if (settings.startInPlan) await session.setPlan(true);
     setPlan(session.plan);
     setCode(session);
@@ -140,7 +141,8 @@ export function useCodeMode({ support, conversationId, modelId }: { support: Cod
       }
       const known = ofThisChat ?? recent.find(project => project.id === lastProjectId());
       if (known) {
-        const session = await start(known);
+        // This chat's own folder needs no question; the folder used last, picked by the model, does.
+        const session = await start(known, !ofThisChat);
         toast(`Working in ${known.name}. You can change the folder next to the message box.`);
         return { session, note: '' };
       }
