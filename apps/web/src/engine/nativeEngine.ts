@@ -1,5 +1,7 @@
 import type { LocalModel } from '../catalog';
+import { engineMemoryGB, getDeviceProfile } from '../device';
 import { nativeBridge, NativeError, unwrap, type NativeStatus } from '../native';
+import { contextFor, hasImages, maxTokensFor, samplingFor } from './tuning';
 import type { ChatTurn, EngineInfo, GenerationResult, GenerationUpdate, InferenceEngine } from './localEngine';
 
 /**
@@ -39,8 +41,14 @@ export class NativeEngine implements InferenceEngine {
     return this.status?.running ? this.status.modelId ?? null : null;
   }
 
+  /** The window the loaded model has, in tokens (what was asked for, held back if this computer is short of memory). */
+  get contextSize(): number | null {
+    return this.status?.running ? this.status.contextSize ?? null : null;
+  }
+
   async load(model: LocalModel, options: { contextSize?: number } = {}): Promise<void> {
-    const contextSize = options.contextSize ?? model.contextSize;
+    // The window asked for, held back where this computer cannot hold it (tuning.ts).
+    const contextSize = contextFor(model, options.contextSize ?? model.contextSize, engineMemoryGB(await getDeviceProfile()));
     // Loaded already, with the room that was asked for.
     const ready = () => this.modelId === model.id && this.status?.contextSize === contextSize;
     if (ready()) return;
@@ -90,7 +98,8 @@ export class NativeEngine implements InferenceEngine {
 
     const controller = new AbortController();
     const thinking = options.thinking && model.supportsThinking;
-    const sampling: Sampling = { ...model.sampling, ...(thinking ? model.thinkingSampling : undefined) };
+    const sampling: Sampling = samplingFor(model, { thinking, images: hasImages(messages) });
+    const maxTokens = maxTokensFor(model, thinking, this.status?.contextSize ?? model.contextSize);
 
     const run = (async (): Promise<GenerationResult> => {
       let content = '';
@@ -101,12 +110,12 @@ export class NativeEngine implements InferenceEngine {
       let firstTokenAt = 0;
 
       try {
-        let response = await this.request(model, messages, sampling, thinking, controller.signal);
+        let response = await this.request(model, messages, sampling, thinking, maxTokens, controller.signal);
         if (response.status === 503) {
           // The server is gone (it crashed or was stopped): load the model again, once.
           this.status = null;
           await this.load(model);
-          response = await this.request(model, messages, sampling, thinking, controller.signal);
+          response = await this.request(model, messages, sampling, thinking, maxTokens, controller.signal);
         }
         if (!response.ok || !response.body) throw new NativeError('generation_failed', await errorText(response));
 
@@ -163,7 +172,7 @@ export class NativeEngine implements InferenceEngine {
     }
   }
 
-  private request(model: LocalModel, messages: ChatTurn[], sampling: Sampling, thinking: boolean, signal: AbortSignal): Promise<Response> {
+  private request(model: LocalModel, messages: ChatTurn[], sampling: Sampling, thinking: boolean, maxTokens: number, signal: AbortSignal): Promise<Response> {
     return fetch('/engine/v1/chat/completions', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -171,7 +180,7 @@ export class NativeEngine implements InferenceEngine {
       body: JSON.stringify({
         messages,
         stream: true,
-        max_tokens: model.maxTokens,
+        max_tokens: maxTokens,
         temperature: sampling.temperature,
         top_p: sampling.top_p,
         top_k: sampling.top_k,

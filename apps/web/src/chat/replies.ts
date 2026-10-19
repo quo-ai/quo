@@ -96,7 +96,7 @@ export async function replyWithAgent(choice: CloudChoice | OwnChoice | LocalChoi
       : choice.kind === 'local'
         ? (messages, onText) => askLocalAgentModel(choice.model, messages, options(onText, extra))
         : (messages, onText) => askAgentModel(choice.model.id, messages, options(onText, extra));
-  const windowChars = light ? FREE_CODE_CHARS * 0.85 : choice.kind === 'own' ? contextChars(choice.model) : choice.kind === 'local' ? agentContextChars() : undefined;
+  const windowChars = light ? FREE_CODE_CHARS * 0.85 : choice.kind === 'own' ? contextChars(choice.model) : choice.kind === 'local' ? agentContextChars((localEngine as { contextSize?: number | null }).contextSize ?? undefined) : undefined;
   let helperCost = 0;
   const outcome = await runAgent(conversation, {
     signal,

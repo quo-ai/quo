@@ -70,6 +70,26 @@ The server reports what's switched on in `/api/me` (`features`). Services that a
 | Offline | Service worker caches the app shell (not built yet); models already local. |
 | Phones | Too memory-limited in mobile browsers; point to the native apps. |
 
+
+### Recommended settings for each offline model (checked 19 Oct 2026)
+
+Sampling follows each maker's own model card; the catalog (`src/catalog.ts`) holds the numbers and `src/engine/tuning.ts` applies them. Memory is the cost of one token of window (16-bit cache, from the model's architecture; Qwen3.5 only caches its full-attention layers). Windows are what fits a typical computer, held back further where memory is short (the window may take about 12% of the memory the model runs in, never under 8,192 tokens). The models themselves are tuned for far more: 262,144 tokens (Qwen3.5) and 131,072 (Gemma 4, Llama 3.2, Phi-4 mini); Qwen advises 128K or more to keep its thinking at full strength, which no ordinary computer can hold, so longer chats are summarised.
+
+| Model | Window here | Memory per token | Without thinking (temp / top_p / top_k / presence) | With thinking | Source |
+|---|---|---|---|---|---|
+| Qwen3.5 0.8B, 2B | 32,768 | 12 KB | text 1.0 / 1.0 / 20 / 2.0; pictures 0.7 / 0.8 / 20 / 1.5 | 1.0 / 0.95 / 20 / 1.5 | Qwen model card |
+| Qwen3.5 4B, 9B | 32,768 | 32 KB | 0.7 / 0.8 / 20 / 1.5 | 1.0 / 0.95 / 20 / 1.5 | Qwen model card |
+| Qwen3.5 27B | 32,768 | 64 KB | 0.7 / 0.8 / 20 / 1.5 | 1.0 / 0.95 / 20 / 1.5 | Qwen model card |
+| Gemma 4 E2B | 32,768 | 8 KB | 1.0 / 0.95 / 64 | (not offered) | Gemma model card |
+| Llama 3.2 3B | 16,384 | 112 KB | 0.6 / 0.9 / 40 / min_p 0.05 | not a thinking model | Meta's generation config |
+| Phi-4 mini | 16,384 | 128 KB | 0.3 / 0.95 / 40 / min_p 0.05 | not a thinking model | no vendor advice; Microsoft's examples use 0 |
+
+- **Output length:** 4,096 tokens, or, with thinking on, as much as half the window up to 16,384, because the thinking comes out of the same budget (a reply could otherwise run out before its answer began).
+- **Code mode** loads a 32,768 window (held back like any other) and uses its own careful sampling for tool calls: temperature at most 0.4, no repetition penalties (they damage code and JSON), thinking off.
+- **Qwen's own coding advice** (thinking, precise tasks: 0.6 / 0.95 / 20 / presence 0) is not used: the agent runs with thinking off to keep each step quick.
+- **Cloud models** are not tuned here: the provider's own defaults apply, and Thinking is described per model (`shared/thinking.ts`).
+- When a model is added or updated, read its card for the recommended sampling and its `config.json` for `num_hidden_layers`, `num_key_value_heads` and `head_dim` (memory per token = full-attention layers × 2 × KV heads × head dim × 2 bytes).
+
 ## Cloud models and credits
 
 Optional, and never chosen for the user (see below).

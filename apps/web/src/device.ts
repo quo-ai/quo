@@ -162,6 +162,13 @@ function nativeMemory(device: DeviceProfile): { vramGB: number; ramGB: number } 
   return { vramGB: best / 1024, ramGB: (device.native?.ramBytes ?? 0) / 2 ** 30 };
 }
 
+/** The memory the model's window will live in, in GB: graphics memory if there is some, else RAM; null when unknown (a browser). */
+export function engineMemoryGB(device: DeviceProfile): number | null {
+  if (!device.native) return null;
+  const { vramGB, ramGB } = nativeMemory(device);
+  return vramGB > 0 ? vramGB : ramGB > 0 ? ramGB : null;
+}
+
 /** How well a model should run here. deviceMemory caps at 8, so 8 means "8 or more". */
 export function modelFit(model: LocalModel, device: DeviceProfile): ModelFit {
   if (device.native) {

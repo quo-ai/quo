@@ -40,6 +40,10 @@ export interface LocalModel {
   sampling: Sampling;
   /** Applied over `sampling` when thinking is on. */
   thinkingSampling?: Partial<Sampling>;
+  /** Applied over `sampling` when the message has a picture, where the model's makers recommend something different. */
+  visionSampling?: Partial<Sampling>;
+  /** Memory one token of the context window takes (16-bit cache, from the model's architecture): used to hold the window back on a small computer. */
+  kvBytesPerToken?: number;
   supportsThinking: boolean;
   /** Rough device memory the model needs to run comfortably. */
   minMemoryGB: number;
@@ -61,7 +65,13 @@ const HF = 'https://huggingface.co';
 const QWEN: Sampling = {
   temperature: 0.7, top_p: 0.8, top_k: 20, min_p: 0, penalty_present: 1.5, penalty_last_n: 256,
 };
-const QWEN_THINKING: Partial<Sampling> = { temperature: 1.0, top_p: 0.95, top_k: 20, min_p: 0 };
+const QWEN_THINKING: Partial<Sampling> = { temperature: 1.0, top_p: 0.95, top_k: 20, min_p: 0, penalty_present: 1.5 };
+// Qwen's own advice for the two smallest (0.8B, 2B), without thinking: for text a freer set with a strong presence penalty, for
+// pictures the gentler set the bigger models use for everything (model cards, checked 19 Oct 2026).
+const QWEN_SMALL: Sampling = { temperature: 1.0, top_p: 1.0, top_k: 20, min_p: 0, penalty_present: 2.0, penalty_last_n: 256 };
+const QWEN_SMALL_VISION: Partial<Sampling> = { temperature: 0.7, top_p: 0.8, penalty_present: 1.5 };
+// What one token of window costs in memory, from each architecture (only full-attention layers keep a cache in Qwen3.5).
+const KV = { qwenSmall: 12_288, qwenMid: 32_768, qwenLarge: 65_536, gemmaE2B: 8_192, llama3b: 114_688, phi4mini: 131_072 };
 
 const WEB_MODELS: LocalModel[] = [
   {
@@ -75,7 +85,7 @@ const WEB_MODELS: LocalModel[] = [
     }],
     contextSize: 8192,
     maxTokens: 2048,
-    sampling: QWEN,
+    sampling: QWEN_SMALL,
     thinkingSampling: QWEN_THINKING,
     supportsThinking: true,
     minMemoryGB: 4,
@@ -91,7 +101,7 @@ const WEB_MODELS: LocalModel[] = [
     }],
     contextSize: 8192,
     maxTokens: 3072,
-    sampling: QWEN,
+    sampling: QWEN_SMALL,
     thinkingSampling: QWEN_THINKING,
     supportsThinking: true,
     minMemoryGB: 8,
@@ -118,7 +128,10 @@ const WEB_MODELS: LocalModel[] = [
 // plus larger Qwen3.5 sizes. Files are stored as model.gguf (+ mmproj.gguf for
 // vision) in the app's models folder. No 2 GiB limit and a longer context.
 
+// What the models are tuned for is far more (128K to 262K tokens); these are what fits a typical computer, and tuning.ts holds the
+// window back further where memory is short. Qwen3.5 and Gemma 4 keep a small cache per token, so they get a longer window.
 const NATIVE_LIMITS = { contextSize: 16384, maxTokens: 4096 };
+const LONG_WINDOW = 32768;
 const GEMMA: Sampling = { temperature: 1.0, top_p: 0.95, top_k: 64, min_p: 0 };
 const LLAMA: Sampling = { temperature: 0.6, top_p: 0.9, top_k: 40, min_p: 0.05 };
 const PHI: Sampling = { temperature: 0.3, top_p: 0.95, top_k: 40, min_p: 0.05 };
@@ -138,25 +151,28 @@ function nativeModel(
   return { id, name, description, files, ...NATIVE_LIMITS, sampling: QWEN, supportsThinking: false, minMemoryGB, native: true, vision: Boolean(vision), ...extra };
 }
 
-const qwen = (id: string, size: string, description: string, file: number, vision: number, minMemoryGB: number, agent?: LocalModel['agent']) =>
+const qwen = (id: string, size: string, description: string, file: number, vision: number, minMemoryGB: number, kv: number, small: boolean, agent?: LocalModel['agent']) =>
   nativeModel(id, `Qwen3.5 ${size}`, description, `unsloth/Qwen3.5-${size}-GGUF`, { name: `Qwen3.5-${size}-Q4_K_M.gguf`, bytes: file }, { bytes: vision }, minMemoryGB, {
+    contextSize: LONG_WINDOW,
+    kvBytesPerToken: kv,
+    ...(small ? { sampling: QWEN_SMALL, visionSampling: QWEN_SMALL_VISION } : {}),
     thinkingSampling: QWEN_THINKING,
     supportsThinking: true,
     ...(agent ? { agent } : {}),
   });
 
 export const DESKTOP_MODELS: LocalModel[] = [
-  qwen('qwen35-0.8b', '0.8B', 'Fast and light. A quick first download that runs on almost any computer, and reads images.', 532517120, 204987232, 4),
-  qwen('qwen35-2b', '2B', 'Balanced. Noticeably smarter, still quick on most computers, and reads images.', 1280835840, 668227264, 6),
-  qwen('qwen35-4b', '4B', 'Strong all-rounder with careful reasoning. Reads images. Best on a computer with a graphics card.', 2740937888, 672423616, 8, 'limited'),
-  qwen('qwen35-9b', '9B', 'A big step up in quality and reasoning. Reads images. Wants a graphics card with 8 GB or more, or 16 GB of memory.', 5680522464, 918166080, 12, 'good'),
-  qwen('qwen35-27b', '27B', 'The most capable model here. Reads images. For computers with 32 GB or more of memory, or a high-end graphics card.', 16740812704, 927607040, 32, 'good'),
+  qwen('qwen35-0.8b', '0.8B', 'Fast and light. A quick first download that runs on almost any computer, and reads images.', 532517120, 204987232, 4, KV.qwenSmall, true),
+  qwen('qwen35-2b', '2B', 'Balanced. Noticeably smarter, still quick on most computers, and reads images.', 1280835840, 668227264, 6, KV.qwenSmall, true),
+  qwen('qwen35-4b', '4B', 'Strong all-rounder with careful reasoning. Reads images. Best on a computer with a graphics card.', 2740937888, 672423616, 8, KV.qwenMid, false, 'limited'),
+  qwen('qwen35-9b', '9B', 'A big step up in quality and reasoning. Reads images. Wants a graphics card with 8 GB or more, or 16 GB of memory.', 5680522464, 918166080, 12, KV.qwenMid, false, 'good'),
+  qwen('qwen35-27b', '27B', 'The most capable model here. Reads images. For computers with 32 GB or more of memory, or a high-end graphics card.', 16740812704, 927607040, 32, KV.qwenLarge, false, 'good'),
   nativeModel('gemma4-e2b', 'Gemma 4 E2B', 'Google’s small multilingual model. Reads images and speaks 140+ languages.', 'unsloth/gemma-4-E2B-it-GGUF',
-    { name: 'gemma-4-E2B-it-Q4_K_M.gguf', bytes: 3106738272 }, { bytes: 985654080 }, 8, { sampling: GEMMA }),
+    { name: 'gemma-4-E2B-it-Q4_K_M.gguf', bytes: 3106738272 }, { bytes: 985654080 }, 8, { sampling: GEMMA, contextSize: LONG_WINDOW, kvBytesPerToken: KV.gemmaE2B }),
   nativeModel('llama32-3b', 'Llama 3.2 3B', 'Dependable all-rounder for writing and summarising.', 'unsloth/Llama-3.2-3B-Instruct-GGUF',
-    { name: 'Llama-3.2-3B-Instruct-Q4_K_M.gguf', bytes: 2019377600 }, null, 8, { sampling: LLAMA }),
+    { name: 'Llama-3.2-3B-Instruct-Q4_K_M.gguf', bytes: 2019377600 }, null, 8, { sampling: LLAMA, kvBytesPerToken: KV.llama3b }),
   nativeModel('phi4-mini', 'Phi-4 Mini', 'Microsoft’s compact reasoning model. Strong at maths, logic and structured answers.', 'unsloth/Phi-4-mini-instruct-GGUF',
-    { name: 'Phi-4-mini-instruct-Q4_K_M.gguf', bytes: 2491874272 }, null, 8, { sampling: PHI }),
+    { name: 'Phi-4-mini-instruct-Q4_K_M.gguf', bytes: 2491874272 }, null, 8, { sampling: PHI, kvBytesPerToken: KV.phi4mini }),
 ];
 
 /** The models offered here: the desktop app's native catalog, or the browser's. */
