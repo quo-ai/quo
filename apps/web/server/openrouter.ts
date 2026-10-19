@@ -88,6 +88,7 @@ export async function streamChat(
 
   const usage: StreamUsage = { promptTokens: 0, completionTokens: 0, costUsd: null, toolCalls: [], finishReason: null, searches: 0 };
   const calls = new Map<number, ToolCall>();
+  const searchRecords = new Set<string>();
   const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
   let buffer = '';
   for (;;) {
@@ -107,11 +108,12 @@ export async function streamChat(
           delta?: {
             content?: string | null;
             reasoning?: string | null;
+            reasoning_details?: { type?: string; tool_name?: string; tool_call_id?: string }[];
             tool_calls?: { index?: number; id?: string; function?: { name?: string; arguments?: string } }[];
           };
           finish_reason?: string | null;
         }[];
-        usage?: { prompt_tokens?: number; completion_tokens?: number; cost?: number; server_tool_use?: { web_search_requests?: number } };
+        usage?: { prompt_tokens?: number; completion_tokens?: number; cost?: number; server_tool_use?: { web_search_requests?: number }; server_tool_use_details?: { web_search_requests?: number } };
       };
       try {
         chunk = JSON.parse(data);
@@ -133,16 +135,23 @@ export async function streamChat(
         if (piece.function?.arguments) call.function.arguments += piece.function.arguments;
         calls.set(index, call);
       }
+      // A search OpenRouter ran also arrives as a record among the reasoning details.
+      for (const detail of delta?.reasoning_details ?? []) {
+        if (detail?.type === 'reasoning.server_tool_call' && /web_search/.test(detail.tool_name ?? '')) searchRecords.add(detail.tool_call_id || `search_${searchRecords.size}`);
+      }
       if (choice?.finish_reason) usage.finishReason = choice.finish_reason;
       if (chunk.usage) {
         usage.promptTokens = chunk.usage.prompt_tokens ?? usage.promptTokens;
         usage.completionTokens = chunk.usage.completion_tokens ?? usage.completionTokens;
         if (typeof chunk.usage.cost === 'number') usage.costUsd = chunk.usage.cost;
-        const searches = chunk.usage.server_tool_use?.web_search_requests;
-        if (typeof searches === 'number' && Number.isFinite(searches) && searches >= 0) usage.searches = Math.floor(searches);
+        // OpenRouter's guide and its API reference name this differently; either counts.
+        for (const searches of [chunk.usage.server_tool_use?.web_search_requests, chunk.usage.server_tool_use_details?.web_search_requests]) {
+          if (typeof searches === 'number' && Number.isFinite(searches) && searches >= 0) usage.searches = Math.max(usage.searches, Math.floor(searches));
+        }
       }
     }
   }
+  usage.searches = Math.max(usage.searches, searchRecords.size);
   usage.toolCalls = [...calls.entries()]
     .sort(([a], [b]) => a - b)
     .map(([index, call]) => ({ ...call, id: call.id || `call_${index}` }))
