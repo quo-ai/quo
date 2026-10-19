@@ -11,7 +11,7 @@ import { toast } from '../Toasts';
  * model; leaving either ends it, along with whatever was allowed in it.
  */
 export function useCodeMode({ support, conversationId, modelId }: { support: CodeSupport; conversationId: string | undefined; modelId: string | undefined }) {
-  const { available, compact, gate } = support;
+  const { available, compact, gate, reason } = support;
   const [code, setCode] = useState<CodeSession | null>(null);
   const [starting, setStarting] = useState(false);
   const [plan, setPlan] = useState(false);
@@ -169,7 +169,7 @@ export function useCodeMode({ support, conversationId, modelId }: { support: Cod
     await action?.();
   }
 
-  return { code, available, gate, caution, dismissCaution: () => { afterCaution.current = null; setCaution(false); }, confirmCaution, starting, plan, toggle, autoStart, changeFolder, switchProject, togglePlan, end };
+  return { code, available, unavailableReason: reason ?? null, gate, caution, dismissCaution: () => { afterCaution.current = null; setCaution(false); }, confirmCaution, starting, plan, toggle, autoStart, changeFolder, switchProject, togglePlan, end };
 }
 
 export type CodeMode = ReturnType<typeof useCodeMode>;

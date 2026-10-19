@@ -1,4 +1,4 @@
-import { ListChecks } from 'lucide-react';
+import { FolderLock, ListChecks } from 'lucide-react';
 import type { CodeSession } from '../agent/session';
 import type { CodeProject } from '../native';
 import { ProjectMenu } from './chat/ProjectMenu';
@@ -14,6 +14,8 @@ interface CodeChipProps {
   onSwitchProject: (project: CodeProject) => void;
   onChooseFolder: () => void;
   onRemove: () => void;
+  /** Why there can be no folder with this model: shown instead of the folder, disabled. */
+  unavailable?: string | null;
 }
 
 /**
@@ -21,7 +23,14 @@ interface CodeChipProps {
  * Code mode on: adding a folder is what makes it available, and the model uses it when the request needs it. Sending a
  * message that is about the project adds the folder used last by itself (useCodeMode.autoStart).
  */
-export function CodeChip({ starting, disabled, session, plan, onTogglePlan, onSwitchProject, onChooseFolder, onRemove }: CodeChipProps) {
+export function CodeChip({ starting, disabled, session, plan, onTogglePlan, onSwitchProject, onChooseFolder, onRemove, unavailable }: CodeChipProps) {
+  if (unavailable) {
+    return (
+      <button type="button" className="chip empty" aria-disabled="true" title={unavailable} onClick={event => event.preventDefault()}>
+        <FolderLock size={14} /> <span className="chip-name">No folder</span>
+      </button>
+    );
+  }
   return (
     <>
       <ProjectMenu project={session?.project ?? null} info={session?.info ?? null} disabled={disabled} starting={starting} onPick={onSwitchProject} onBrowse={onChooseFolder} onRemove={onRemove} />

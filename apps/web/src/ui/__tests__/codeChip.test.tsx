@@ -24,3 +24,14 @@ describe('the folder next to the message box', () => {
     expect(html).not.toContain('No folder');
   });
 });
+
+describe('the folder when the model cannot use it', () => {
+  it('shows a disabled chip that says why, instead of nothing', () => {
+    const reason = 'GPT-6 Luna can’t work in a project folder: choose a stronger model.';
+    const html = renderToStaticMarkup(createElement(CodeChip, { ...base, session: null, unavailable: reason }));
+    expect(html).toContain('No folder');
+    expect(html).toContain('aria-disabled="true"');
+    expect(html).toContain('choose a stronger model');
+    expect(html).not.toContain('aria-haspopup');
+  });
+});

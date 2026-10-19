@@ -16,6 +16,8 @@ export interface CodeSupport {
   available: boolean;
   /** The model has a small context window: tool results are kept short. */
   compact: boolean;
+  /** Why Code mode can't be used with this model, in words, when the desktop app could otherwise do it. */
+  reason?: string;
   gate: CodeGate | null;
 }
 
@@ -24,7 +26,18 @@ const NONE: CodeSupport = { available: false, compact: false, gate: null };
 /** Whether, and how, Code mode works with the model a chat is using. */
 export function codeSupport(choice: ModelChoice | null): CodeSupport {
   if (!choice || !agentBridge()) return NONE;
-  if (choice.kind === 'cloud' || choice.kind === 'own') return { available: choice.model.agent, compact: false, gate: null };
+  if (choice.kind === 'cloud' || choice.kind === 'own') {
+    if (choice.model.agent) return { available: true, compact: false, gate: null };
+    const name = choice.model.name;
+    return {
+      available: false,
+      compact: false,
+      gate: null,
+      reason: choice.kind === 'cloud'
+        ? `${name} can’t work in a project folder: Code mode needs one of the stronger models (Claude, GPT-6 Astra and others), or an offline model. Choose one from the model menu.`
+        : `${name} isn’t marked as able to use tools, so Code mode is off for it. Choose another model from the model menu.`,
+    };
+  }
   if (!hasNativeEngine()) return NONE;
   const model = choice.model;
   return {

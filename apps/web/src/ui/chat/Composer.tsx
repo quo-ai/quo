@@ -201,8 +201,9 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
               {voice.state === 'transcribing' ? <Loader2 size={18} className="spin" /> : voice.state === 'recording' ? <Square size={13} fill="currentColor" /> : <Mic size={18} />}
             </button>
           )}
-          {codeAvailable && (
+          {(codeAvailable || codeMode.unavailableReason) && (
             <CodeChip
+              unavailable={codeAvailable ? null : codeMode.unavailableReason}
               starting={codeMode.starting}
               disabled={busy}
               session={code}
