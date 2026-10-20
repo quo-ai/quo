@@ -9,6 +9,7 @@ Notable changes to Quo. Quo Web and the desktop app ship together under the desk
 
 ### Improved
 - **Clearer replies** — every model is asked to write plainly: the answer first, short sentences, no filler, and the same style in the code and text it writes.
+- **Small details** — the background glow fades out through a fine dither (Light and Midnight), changing the look dissolves the new one in, terminal output matches the dark style, and text selection, the text cursor and scrollbars take the accent.
 - **Easier to read** — small grey text and green labels pass contrast checks in both themes; sheets stay readable where the browser can't blur.
 
 ## [Desktop 1.4.0] - 2026-10-20

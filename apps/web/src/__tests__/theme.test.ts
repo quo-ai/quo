@@ -67,4 +67,25 @@ describe('the appearance setting', () => {
     theme.setAppearance({ dark: 'midnight' });
     expect(sent).toEqual([['light', 'black'], ['light', 'midnight']]);
   });
+
+  it('dissolves the new look in where the browser can, keeps two quick choices, and changes at once when motion is reduced', async () => {
+    localStorage.clear();
+    const dataset: Record<string, string> = {};
+    const pending: (() => void)[] = [];
+    let reduced = false;
+    vi.stubGlobal('document', { documentElement: { dataset }, startViewTransition: (change: () => void) => { pending.push(change); } });
+    vi.stubGlobal('window', {});
+    vi.stubGlobal('matchMedia', () => ({ matches: reduced }));
+    const theme = await fresh();
+    theme.setAppearance({ dark: 'midnight' });
+    theme.setAppearance({ accent: 'mono' });
+    expect(theme.appearance()).toEqual({ mode: 'system', dark: 'midnight', accent: 'mono' });
+    expect(dataset).toEqual({});
+    pending.forEach(change => change());
+    expect(dataset).toEqual({ dark: 'midnight', accent: 'mono' });
+    reduced = true;
+    theme.setAppearance({ accent: 'indigo' });
+    expect(pending).toHaveLength(2);
+    expect(dataset).toEqual({ dark: 'midnight' });
+  });
 });

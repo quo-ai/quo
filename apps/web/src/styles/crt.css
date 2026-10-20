@@ -61,10 +61,11 @@
 
 /* Terminal output: dark, with scanlines and a faint glow. */
 .step-pre.output {
-  background-color: #0e0e1f; color: #cfd0ff; text-shadow: 0 0 6px rgba(124, 116, 255, 0.35); border: 1px solid rgba(124, 116, 255, 0.18);
+  background-color: var(--term-bg); color: var(--term-ink); text-shadow: 0 0 6px color-mix(in srgb, var(--term-glow) 35%, transparent); border: 1px solid color-mix(in srgb, var(--term-glow) 18%, transparent);
   background-image: repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.04) 0 1px, transparent 1px 3px);
 }
-.step-pre.output::selection, .step-pre.output *::selection { background: rgba(124, 116, 255, 0.4); }
+.step-pre.output::selection, .step-pre.output *::selection { background: color-mix(in srgb, var(--term-glow) 40%, transparent); }
+.step-pre.output, .code { scrollbar-color: rgba(255, 255, 255, 0.2) transparent; }
 
 /* Code in replies: a header with the language and a copy button, and the same scanlines. */
 .code { margin: 14px 0; border-radius: 16px; overflow: hidden; background: var(--code-bg); box-shadow: 0 0 0 0.5px var(--edge); }
@@ -81,8 +82,10 @@
 .cmd-hint { color: var(--text-3); font-size: 13px; }
 .jump { position: absolute; left: 50%; bottom: 168px; z-index: 5; margin-left: -48px; display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 14px; border: 0; border-radius: 999px; font: 600 13px/1 inherit; color: var(--ink); cursor: pointer; }
 
-/* The background gets a faint dither, so its soft glow reads as part of the same world. */
-.lightfield::after { content: ''; position: absolute; inset: 0; background: var(--indigo); opacity: 0.035; -webkit-mask: var(--dither-grain) 0 0 / 8px 8px; mask: var(--dither-grain) 0 0 / 8px 8px; }
+/* Changing the look (Settings → Appearance) dissolves the new one in over the old (theme.ts, View Transitions). */
+::view-transition-old(root), ::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
+::view-transition-new(root) { -webkit-mask-size: 8px 8px; mask-size: 8px 8px; animation: dissolve 0.42s step-end both; }
+@media (prefers-reduced-motion: reduce) { ::view-transition-new(root) { animation: none; } }
 
 /* Steps: the counts as badges, and a fold for the older ones. */
 .diffstat { flex: none; display: inline-flex; gap: 6px; font: 600 11.5px/1 ui-monospace, SFMono-Regular, Menlo, monospace; }

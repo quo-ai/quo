@@ -13,6 +13,10 @@
   --on-brand: #ffffff;
   --glow: #3b2eff; /* coloured shadows under brand fills and the cursor, mixed down to the alpha each one needs */
   --shade: #281e8c; /* the tint of the glass's shadow in light */
+  /* Terminal output (always a dark block): indigo phosphor in light, neutral white phosphor on Black. */
+  --term-bg: light-dark(#0e0e1f, #0a0a0b);
+  --term-ink: light-dark(#cfd0ff, #e4e4e7);
+  --term-glow: light-dark(#7c74ff, rgba(255, 255, 255, 0.6));
   /* Indigo as text, icons, rings and decoration: lighter in the dark so it reads. */
   --indigo: light-dark(#3b2eff, #a8a2ff);
   --bg: light-dark(#f5f5fb, #000000);
@@ -85,10 +89,25 @@ body {
 button { font: inherit; color: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 button:disabled { cursor: default; opacity: 0.4; }
 :focus-visible { outline: 2px solid var(--indigo); outline-offset: 2px; }
+/* Selection, the text cursor, native controls and scrollbars take the accent, not the browser's blue and grey. */
+:root { caret-color: var(--indigo); accent-color: var(--indigo); scrollbar-color: color-mix(in srgb, var(--text) 22%, transparent) transparent; }
+::selection { background: color-mix(in srgb, var(--indigo) 28%, transparent); }
 svg { flex: none; }
 
-/* Light-field behind the glass: faint indigo/violet blooms. */
+/* Light-field behind the glass: two faint blooms, indigo top left and violet bottom right (::before), and the same
+   blooms again as a sparse pixel grain (::after, crt.css's --dither-grain), so the glow fades out through dither dots.
+   Both follow --bloom: none in Black, so its pixels stay off. */
 .lightfield { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
-.lightfield::before, .lightfield::after { content: ''; position: absolute; border-radius: 50%; filter: blur(80px); opacity: var(--bloom); }
-.lightfield::before { width: 60vw; height: 60vw; left: -18vw; top: -26vw; background: radial-gradient(closest-side, color-mix(in srgb, var(--brand-2) 28%, transparent), transparent); }
-.lightfield::after { width: 55vw; height: 55vw; right: -20vw; bottom: -28vw; background: radial-gradient(closest-side, color-mix(in srgb, var(--violet) 30%, transparent), transparent); }
+.lightfield::before, .lightfield::after { content: ''; position: absolute; inset: 0; opacity: var(--bloom); }
+.lightfield::before {
+  filter: blur(80px);
+  background:
+    radial-gradient(circle 30vw at 12vw 4vw, color-mix(in srgb, var(--brand-2) 28%, transparent), transparent),
+    radial-gradient(circle 27.5vw at 92.5vw calc(100% + 0.5vw), color-mix(in srgb, var(--violet) 30%, transparent), transparent);
+}
+.lightfield::after {
+  background:
+    radial-gradient(circle 36vw at 12vw 4vw, color-mix(in srgb, var(--brand-2) 40%, transparent), transparent),
+    radial-gradient(circle 33vw at 92.5vw calc(100% + 0.5vw), color-mix(in srgb, var(--violet) 45%, transparent), transparent);
+  -webkit-mask: var(--dither-grain) 0 0 / 8px 8px; mask: var(--dither-grain) 0 0 / 8px 8px;
+}

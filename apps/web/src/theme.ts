@@ -76,9 +76,15 @@ export function setAppearance(patch: Partial<Appearance>): void {
       // Private mode: it applies now and won't survive a reload.
     }
   }
-  current = next;
-  applyAppearance(next);
-  listeners.forEach(listener => listener());
+  current = next; // now, so a second choice made during the dissolve builds on this one
+  const change = () => {
+    applyAppearance(next);
+    listeners.forEach(listener => listener());
+  };
+  // The new look dissolves in over the old (crt.css); at once where that isn't supported or motion is reduced.
+  const calm = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (typeof document !== 'undefined' && document.startViewTransition && !calm) document.startViewTransition(change);
+  else change();
 }
 
 export function useAppearance(): Appearance {
