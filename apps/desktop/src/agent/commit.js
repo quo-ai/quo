@@ -13,11 +13,12 @@ const { git } = require('./gitcmd');
  * in the person's own repository; nothing is sent anywhere, and nothing here pushes (git_push, push.js, is its own tool
  * with its own approval).
  *
- * `quo-ai[bot]` is the GitHub App registered for Quo; the number is that bot account's id, which is what makes GitHub
- * show Quo's picture next to the commit. Change it only together with the app.
+ * The address is the noreply email of `quo-code`, the GitHub user account that stands for Quo (an ordinary user, as
+ * Claude's `claude` is, so GitHub shows "quo-code" with Quo's picture and no "[bot]"). The number is that account's id;
+ * change it only together with the account.
  */
 
-const QUO_CREDIT = 'Co-Authored-By: Quo <344842314+quo-ai[bot]@users.noreply.github.com>';
+const QUO_CREDIT = 'Co-Authored-By: Quo <345051252+quo-code@users.noreply.github.com>';
 const MAX_FILES = 50;
 const MAX_MESSAGE = 4000;
 
@@ -29,7 +30,7 @@ function cleanMessage(input) {
   if (message.length > MAX_MESSAGE) throw new AgentError('bad_args', 'That commit message is too long.');
   if (redactSecrets(message) !== message) throw new AgentError('secret', 'That message contains something that looks like a secret. Write it again without it.');
   // The credit is the app's to add: drop any copy the model wrote, and any lookalike aimed at the same address.
-  const kept = message.split('\n').filter(line => !/^\s*co-authored-by:.*quo-ai(\[bot\])?|^\s*co-authored-by:\s*quo\b/i.test(line));
+  const kept = message.split('\n').filter(line => !/^\s*co-authored-by:.*(quo-ai(\[bot\])?|quo-code)|^\s*co-authored-by:\s*quo\b/i.test(line));
   return kept.join('\n').trim();
 }
 

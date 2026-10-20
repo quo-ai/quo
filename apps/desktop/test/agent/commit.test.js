@@ -43,7 +43,7 @@ describe('git_commit', () => {
     assert.equal(git(root, 'log', '-1', '--format=%an <%ae>'), 'Pat Person <pat' + '@example.test>');
     assert.equal(git(root, 'log', '-1', '--format=%cn'), 'Pat Person');
     assert.equal(git(root, 'status', '--porcelain'), '?? b.js', 'only the listed file was committed');
-    assert.match(asked.at(-1).detail, /Co-Authored-By: Quo <344842314\+quo-ai\[bot\]@users\.noreply\.github\.com>/);
+    assert.match(asked.at(-1).detail, /Co-Authored-By: Quo <345051252\+quo-code@users\.noreply\.github\.com>/);
   });
 
   it('adds no credit when the setting is off', async () => {
@@ -68,6 +68,7 @@ describe('git_commit', () => {
   it('writes the credit itself: a copy or lookalike from the model is dropped, not doubled', async () => {
     assert.equal(cleanMessage(`Fix\n\n${QUO_CREDIT}`), 'Fix');
     assert.equal(cleanMessage('Fix\n\nCo-authored-by: Quo <x+quo-ai[bot]' + '@users.noreply.github.com>'), 'Fix');
+    assert.equal(cleanMessage('Fix\n\nCo-authored-by: Someone <1+quo-code' + '@users.noreply.github.com>'), 'Fix', 'any line aimed at the account is the app’s to write');
     assert.equal(cleanMessage('Fix\n\nCo-Authored-By: Quo <someone' + '@else.test>'), 'Fix');
     const root = repo();
     write(root, 'a.js', 'a\n');
