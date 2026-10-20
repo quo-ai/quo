@@ -5,7 +5,7 @@ import { listMemories, onMemoriesChanged } from '../memory/store';
 import { agentBridge } from '../native';
 import { useSyncStatus } from '../sync';
 import type { ModelsTab } from './ModelsSheet';
-import { THEME_MODES, setThemeMode, useThemeMode } from '../theme';
+import { AppearancePicker } from './AppearancePicker';
 
 /** What a row of Settings opens. */
 export type SettingsTarget = { kind: 'models'; tab: ModelsTab } | { kind: 'memories' } | { kind: 'sync' } | { kind: 'account' } | { kind: 'pro' } | { kind: 'getapp' } | { kind: 'shortcuts' };
@@ -63,7 +63,6 @@ export function SettingsSheet({ account, installedCount, hasCloud, onOpen, onClo
     };
   }, []);
 
-  const theme = useThemeMode();
   const syncNeedsAttention = sync.phase === 'error' && sync.error?.code !== 'offline';
   const syncText = sync.phase === 'off' ? 'Off' : sync.phase === 'syncing' ? 'Syncing…' : sync.phase === 'error' ? (sync.error?.code === 'offline' ? 'Offline' : 'Needs attention') : 'On';
   const models = (tab: ModelsTab): SettingsTarget => ({ kind: 'models', tab });
@@ -77,9 +76,7 @@ export function SettingsSheet({ account, installedCount, hasCloud, onOpen, onClo
         </div>
         <div className="sheet-body">
           <div className="sheet-section-title">Appearance</div>
-          <div className="segmented appearance" role="radiogroup" aria-label="Appearance">
-            {THEME_MODES.map(mode => <button key={mode.id} type="button" role="radio" aria-checked={theme === mode.id} aria-selected={theme === mode.id} onClick={() => setThemeMode(mode.id)}>{mode.label}</button>)}
-          </div>
+          <AppearancePicker />
 
           <div className="sheet-section-title">Chat</div>
           <Row icon={<Brain size={18} />} label="Memories" detail="Things you’ve asked Quo to remember" value={memoryCount === null ? undefined : memoryCount === 0 ? 'None yet' : `${memoryCount} saved`} onClick={() => onOpen({ kind: 'memories' })} />

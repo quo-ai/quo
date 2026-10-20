@@ -9,7 +9,7 @@
 .install-nudge.leaving { animation: nudge-out var(--t-quick) var(--ease) forwards; }
 @keyframes nudge-in { from { opacity: 0; transform: translateY(24px) scale(0.92); } }
 @keyframes nudge-out { to { opacity: 0; transform: translateY(12px) scale(0.96); } }
-.nudge-icon { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 14px; margin-bottom: 12px; color: #fff; background: linear-gradient(180deg, var(--brand-2), var(--brand)); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 10px 22px -10px rgba(59, 46, 255, 0.8); }
+.nudge-icon { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 14px; margin-bottom: 12px; color: var(--on-brand); background: linear-gradient(180deg, var(--brand-2), var(--brand)); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 10px 22px -10px color-mix(in srgb, var(--glow) 80%, transparent); }
 .install-nudge h3 { margin: 0 0 4px; font-size: 16.5px; letter-spacing: -0.015em; padding-right: 28px; }
 .install-nudge p { margin: 0 0 14px; font-size: 13px; color: var(--text-2); line-height: 1.5; }
 .nudge-actions { display: flex; gap: 6px; }

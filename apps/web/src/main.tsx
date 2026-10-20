@@ -5,12 +5,12 @@ import './install';
 import { App } from './App';
 import { isDesktopApp } from './platform';
 import './styles/index.css';
-import { applyTheme } from './theme';
+import { applyAppearance } from './theme';
 
 // The page title is the desktop app's window title.
 if (isDesktopApp()) document.title = 'Quo';
 
-applyTheme(); // before the first render, so the chosen scheme is there from the start
+applyAppearance(); // before the first render, so the chosen look is there from the start
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

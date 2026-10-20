@@ -3,7 +3,7 @@
 .msg { margin: 0 0 26px; animation: rise var(--t-spring) var(--ease) both; }
 @keyframes rise { from { opacity: 0; transform: translateY(10px) scale(0.985); } }
 .msg.user { display: flex; flex-direction: column; align-items: flex-end; }
-.bubble { max-width: 82%; padding: 11px 17px; border-radius: 22px 22px 8px 22px; color: #fff; background: linear-gradient(180deg, var(--brand-2), var(--brand)); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), 0 10px 24px -14px rgba(59, 46, 255, 0.7); white-space: pre-wrap; overflow-wrap: anywhere; }
+.bubble { max-width: 82%; padding: 11px 17px; border-radius: 22px 22px 8px 22px; color: var(--on-brand); background: linear-gradient(180deg, var(--brand-2), var(--brand)); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), 0 10px 24px -14px color-mix(in srgb, var(--glow) 70%, transparent); white-space: pre-wrap; overflow-wrap: anywhere; }
 .msg-actions { display: flex; align-items: center; gap: 2px; margin-top: 6px; opacity: 0; transition: opacity var(--t-quick) var(--ease); }
 .msg:hover .msg-actions, .msg-actions:focus-within, .msg.last .msg-actions { opacity: 1; }
 .msg-actions .icon-btn { width: 30px; height: 30px; border-radius: 10px; }
@@ -58,7 +58,7 @@
 .chip { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 999px; border: 0; font-size: 13px; font-weight: 600; color: var(--text-2); background: var(--fill); }
 .chip[aria-pressed="true"] { color: var(--indigo); background: var(--accent-tint); }
 .engine-note { font-size: 12.5px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.send { display: grid; place-items: center; width: 40px; height: 40px; border: 0; border-radius: 999px; color: #fff; background: linear-gradient(180deg, var(--brand-2), var(--brand)); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 8px 18px -8px rgba(59, 46, 255, 0.7); transition: transform var(--t-spring) var(--jelly), background var(--t-quick) var(--ease), box-shadow var(--t-quick) var(--ease); }
+.send { display: grid; place-items: center; width: 40px; height: 40px; border: 0; border-radius: 999px; color: var(--on-brand); background: linear-gradient(180deg, var(--brand-2), var(--brand)); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 8px 18px -8px color-mix(in srgb, var(--glow) 70%, transparent); transition: transform var(--t-spring) var(--jelly), background var(--t-quick) var(--ease), box-shadow var(--t-quick) var(--ease); }
 .send:disabled { opacity: 1; color: var(--text-3); background: var(--fill-strong); box-shadow: none; }
 .send.stop { color: var(--bg); background: var(--ink); box-shadow: 0 8px 18px -8px rgba(14, 14, 40, 0.6); }
 .send svg { animation: icon-pop var(--t-spring) var(--jelly); }

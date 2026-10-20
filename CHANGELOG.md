@@ -5,7 +5,7 @@ Notable changes to Quo. Quo Web and the desktop app ship together under the desk
 ## [Unreleased] (web and desktop)
 
 ### Added
-- **Dark mode** — follows your system, or choose Light or Dark in Settings → Appearance. In the desktop app the approval window follows the same choice.
+- **Dark mode and themes** — follows your system, or choose Light or Dark in Settings → Appearance. Dark is true black by default (clean on OLED screens), or Midnight, the indigo night with frosted glass. The accent is Indigo or Mono (greys, no glow). In the desktop app the window and the approval window follow the same choice.
 
 ### Improved
 - **Clearer replies** — every model is asked to write plainly: the answer first, short sentences, no filler, and the same style in the code and text it writes.

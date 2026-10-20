@@ -161,8 +161,9 @@ function start() {
   handleAppProtocol(session.defaultSession, webRoot);
   restrictPermissions(session.defaultSession);
   loadTheme();
-  setupTheme();
-  nativeTheme.on('updated', () => { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.setBackgroundColor(windowBackground()); });
+  const matchWindow = () => { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.setBackgroundColor(windowBackground()); };
+  setupTheme(matchWindow);
+  nativeTheme.on('updated', matchWindow);
   const { keys } = setupProviders();
   setupAgent({ web: setupWeb({ keys }) });
   hasEngine = engineAvailable();
