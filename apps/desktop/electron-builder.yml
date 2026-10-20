@@ -22,6 +22,8 @@ extraResources:
       - "!sw.js"
       - "!workbox-*.js"
       - "!registerSW.js"
+      # wllama's build for browsers without JSPI: Electron's Chromium never needs it.
+      - "!assets/wllama-compat-*"
 
 # Harden the shipped binary: it can't be reused as a plain Node runtime or
 # debugger target (https://www.electronjs.org/docs/latest/tutorial/fuses).

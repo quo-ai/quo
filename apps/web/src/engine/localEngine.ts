@@ -5,6 +5,7 @@ import { getDeviceProfile } from '../device';
 import { hasNativeEngine } from '../native';
 import { getModelBlobs } from '../storage/modelStore';
 import { NativeEngine } from './nativeEngine';
+import { runsMainBuild } from './wasm';
 
 /**
  * In-browser inference via wllama (llama.cpp → WebAssembly): WebGPU when the
@@ -72,6 +73,15 @@ export interface InferenceEngine {
   ): Promise<GenerationResult>;
 }
 
+/**
+ * The build this browser runs: wllama's main one needs JSPI and 64-bit memory, and falls back to a compatibility build
+ * without them, except in Firefox (wllama runs the main build there). Quo hosts that build (compat.ts); never let wllama
+ * fetch it from its CDN.
+ */
+const needsCompat = (): boolean => !/firefox/i.test(navigator.userAgent) && !runsMainBuild();
+
+const compatBuild = async () => (needsCompat() ? (await import('./compat')).WLLAMA_COMPAT : null);
+
 class LocalEngine implements InferenceEngine {
   private wllama: Wllama | null = null;
   private loadedModelId: string | null = null;
@@ -92,6 +102,7 @@ class LocalEngine implements InferenceEngine {
       await this.unload();
       const device = await getDeviceProfile();
       const wllama = new Wllama({ default: wasmUrl }, { suppressNativeLog: !import.meta.env.DEV });
+      wllama.setCompat(await compatBuild());
       const blobs = await getModelBlobs(model);
       await wllama.loadModel(blobs, {
         n_ctx: model.contextSize,

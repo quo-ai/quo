@@ -6,6 +6,8 @@ const { contextFor, maxTokensFor, samplingFor, KV_SHARE, MIN_CONTEXT, THINKING_T
 
 const model = (id: string) => DESKTOP_MODELS.find(m => m.id === id)!;
 
+const pick = (s: ReturnType<typeof samplingFor>) => [s.temperature, s.top_p, s.top_k, s.min_p, s.penalty_present];
+
 describe('the window a model gets', () => {
   it('is the one asked for when the computer can hold it', () => {
     expect(contextFor(model('qwen35-9b'), 32768, 16)).toBe(32768);
@@ -55,7 +57,6 @@ describe('how long a reply may be', () => {
 });
 
 describe('sampling, the way each family recommends', () => {
-  const pick = (s: ReturnType<typeof samplingFor>) => [s.temperature, s.top_p, s.top_k, s.min_p, s.penalty_present];
 
   it('uses Qwen’s own sets for the Qwen3.5 models that are left: without thinking, and with it', () => {
     for (const id of ['qwen35-4b', 'qwen35-9b', 'qwen35-27b']) {
@@ -77,6 +78,18 @@ describe('the catalog', () => {
     for (const id of ['qwen35-4b', 'qwen35-9b', 'qwen35-27b', 'gemma4-e2b']) expect(model(id).contextSize, id).toBe(32768);
     expect(model('llama32-3b').contextSize).toBe(16384);
     expect(model('phi4-mini').contextSize).toBe(16384);
+  });
+
+  it('gives Gemma 4’s larger sizes their memory per token (full-attention layers × 2 × KV heads × 512 × 2 bytes), the long window and thinking', () => {
+    expect(model('gemma4-12b').kvBytesPerToken).toBe(8 * 2 * 1 * 512 * 2);
+    expect(model('gemma4-26b-a4b').kvBytesPerToken).toBe(5 * 2 * 2 * 512 * 2);
+    for (const id of ['gemma4-e2b', 'gemma4-12b', 'gemma4-26b-a4b']) {
+      expect(model(id).contextSize, id).toBe(32768);
+      expect(model(id).supportsThinking, id).toBe(true);
+      expect(pick(samplingFor(model(id), { thinking: true })), id).toEqual([1.0, 0.95, 64, 0, undefined]);
+    }
+    expect(model('gemma4-12b').files.map(f => f.sizeBytes)).toEqual([6716356800, 175115840]);
+    expect(model('gemma4-26b-a4b').files.map(f => f.sizeBytes)).toEqual([14249047104, 1193058784]);
   });
 
   it('never asks for more window than a model has', () => {

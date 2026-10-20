@@ -64,7 +64,13 @@ function chunkName(chunk: { facadeModuleId?: string | null; moduleIds?: string[]
   const ids = chunk.moduleIds?.length ? chunk.moduleIds : [chunk.facadeModuleId ?? ''];
   if (ids.some(id => /\/node_modules\/(shiki|@shikijs)\//.test(id))) return 'assets/lang-[name]-[hash].js';
   if ((chunk.facadeModuleId ?? '').endsWith('/src/math/load.ts')) return 'assets/math-[hash].js';
+  if (ids.some(id => id.includes('/node_modules/@wllama/wllama-compat/'))) return 'assets/wllama-compat-[hash].js';
   return 'assets/[name]-[hash].js';
+}
+
+/** wllama's compatibility build (engine/compat.ts) is named apart from its main wasm, so only browsers that need it load it. */
+function assetName(asset: { originalFileNames?: string[] }): string {
+  return asset.originalFileNames?.some(name => name.includes('@wllama/wllama-compat/')) ? 'assets/wllama-compat-[hash][extname]' : 'assets/[name]-[hash][extname]';
 }
 
 export default defineConfig({
@@ -106,11 +112,11 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,wasm,png,svg}'],
-        // Voice input and PDF reading load on demand; they're cached when first used (below).
-        // So do code colours (one file per language) and maths (KaTeX and its fonts).
-        globIgnores: ['checkout.html', 'screenshots/**', '**/ort-wasm-*', '**/pdf.worker*', '**/pdf-*.js', '**/lang-*', '**/math-*'],
+        // Voice input, PDF reading and wllama's build for older browsers load on demand; they're cached when first used
+        // (below). So do code colours (one file per language) and maths (KaTeX and its fonts).
+        globIgnores: ['checkout.html', 'screenshots/**', '**/ort-wasm-*', '**/pdf.worker*', '**/pdf-*.js', '**/wllama-compat-*', '**/lang-*', '**/math-*'],
         runtimeCaching: [{
-          urlPattern: ({ url }: { url: URL }) => /\/assets\/(ort-wasm-|pdf)/.test(url.pathname),
+          urlPattern: ({ url }: { url: URL }) => /\/assets\/(ort-wasm-|pdf|wllama-compat-)/.test(url.pathname),
           handler: 'CacheFirst',
           options: { cacheName: 'quo-optional-features', expiration: { maxEntries: 12 } },
         }, {
@@ -126,7 +132,7 @@ export default defineConfig({
       },
     }),
   ],
-  build: { target: 'esnext', rolldownOptions: { output: { chunkFileNames: chunkName } } },
+  build: { target: 'esnext', rolldownOptions: { output: { chunkFileNames: chunkName, assetFileNames: assetName } } },
   // The API tests start an in-memory Postgres and stream simulated replies; a shared CI runner needs more than the 5 s default.
   test: { testTimeout: 30_000, hookTimeout: 30_000, exclude: [...configDefaults.exclude, 'interop/**'] },
   worker: { format: 'es' },

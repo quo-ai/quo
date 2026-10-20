@@ -72,9 +72,11 @@ Open models, downloaded once and kept on your device. Quo checks your hardware a
 | Llama 3.2 3B | 2.0 GB | 8 GB phones and computers | everywhere | Llama 3.2 Community |
 | Ministral 3B (vision) | 2.1 GB | 8 GB phones | phone | Apache 2.0 |
 | Qwen3.5 4B (vision, thinking) | 2.7 GB | 8 GB phones and computers | phone, desktop | Apache 2.0 |
-| Gemma 4 E2B (vision) | 3.1 GB | 8 GB phones and computers | phone, desktop | Gemma terms |
+| Gemma 4 E2B (vision, thinking) | 2.6–3.1 GB | 8 GB phones and computers | everywhere | Gemma terms |
 | Phi-4 Mini | 2.5 GB | 8 GB phones and computers | phone, desktop | MIT |
 | Qwen3.5 9B (vision, thinking) | 5.9 GB | 16 GB computers, or an 8 GB graphics card | desktop | Apache 2.0 |
+| Gemma 4 12B (vision, thinking) | 6.9 GB | 16 GB computers, or an 8 GB graphics card | desktop | Gemma terms |
+| Gemma 4 26B A4B (vision, thinking) | 15.4 GB | 24 GB computers | desktop | Gemma terms |
 | Qwen3.5 27B (vision, thinking) | 17.1 GB | 32 GB computers | desktop | Apache 2.0 |
 
 Full lists: [`apps/mobile/constants/models.ts`](apps/mobile/constants/models.ts) (phone) and [`apps/web/src/catalog.ts`](apps/web/src/catalog.ts) (web and desktop).

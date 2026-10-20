@@ -94,7 +94,7 @@ describe('desktop app (native engine)', () => {
     expect(['llama32-3b', 'qwen35-4b']).toContain(recommendedModelId(machine(null, 4), DESKTOP_MODELS));
   });
   it('(after the two smallest Qwens were taken out) no longer offers Qwen3.5 0.8B or 2B, and starts people on the 4B', async () => {
-    expect(DESKTOP_MODELS.map(m => m.id)).toEqual(['qwen35-4b', 'qwen35-9b', 'qwen35-27b', 'gemma4-e2b', 'llama32-3b', 'phi4-mini']);
+    expect(DESKTOP_MODELS.map(m => m.id)).toEqual(['qwen35-4b', 'qwen35-9b', 'qwen35-27b', 'gemma4-e2b', 'gemma4-12b', 'gemma4-26b-a4b', 'llama32-3b', 'phi4-mini']);
     const { DEFAULT_NATIVE_MODEL_ID } = await import('../catalog');
     expect(DEFAULT_NATIVE_MODEL_ID).toBe('qwen35-4b');
     expect(DESKTOP_MODELS.some(m => m.id === DEFAULT_NATIVE_MODEL_ID)).toBe(true); // the desktop app's default is a model it offers

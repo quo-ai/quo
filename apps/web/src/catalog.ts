@@ -1,5 +1,6 @@
 import { hasNativeEngine } from './native';
 import { getCustomModel, getCustomModels } from './customModels';
+import { runsMainBuild } from './engine/wasm';
 
 /**
  * Local model catalogs: the browser's (below), and the desktop app's larger
@@ -9,9 +10,8 @@ import { getCustomModel, getCustomModels } from './customModels';
  * the mobile catalog (apps/mobile/constants/models.ts); sizes are exact byte counts and
  * are what downloads are validated against.
  *
- * wllama reads files under 2 GiB as-is. Bigger models (Qwen3.5 4B, Gemma 4
- * E2B) need to be split with llama-gguf-split and hosted as parts before
- * they can be listed here.
+ * A file of 2 GiB or more loads only in wllama's main build (current Chrome,
+ * Edge and Firefox; engine/wasm.ts): elsewhere such a model isn't offered.
  */
 
 export interface ModelFile {
@@ -71,7 +71,9 @@ const QWEN_THINKING: Partial<Sampling> = { temperature: 1.0, top_p: 0.95, top_k:
 const QWEN_SMALL: Sampling = { temperature: 1.0, top_p: 1.0, top_k: 20, min_p: 0, penalty_present: 2.0, penalty_last_n: 256 };
 // What one token of window costs in memory, from each architecture (only full-attention layers keep a cache in Qwen3.5; the
 // MTP editions have one more, the prediction head's).
-const KV = { qwenMid: 36_864, qwenLarge: 69_632, gemmaE2B: 8_192, llama3b: 114_688, phi4mini: 131_072 };
+const KV = { qwenMid: 36_864, qwenLarge: 69_632, gemmaE2B: 8_192, gemma12b: 16_384, gemma26b: 20_480, llama3b: 114_688, phi4mini: 131_072 };
+// Google's advice for Gemma 4, the same with or without thinking (thinking is the chat template's enable_thinking).
+const GEMMA: Sampling = { temperature: 1.0, top_p: 0.95, top_k: 64, min_p: 0 };
 
 const WEB_MODELS: LocalModel[] = [
   {
@@ -121,7 +123,27 @@ const WEB_MODELS: LocalModel[] = [
     supportsThinking: false,
     minMemoryGB: 8,
   },
+  {
+    // The quantization-aware edition: Google trained it for 4-bit, so it is smaller than the desktop's file and as good.
+    id: 'gemma4-e2b',
+    name: 'Gemma 4 E2B',
+    description: 'Google’s small model, at home in 140+ languages. Best with a graphics card.',
+    files: [{
+      url: `${HF}/unsloth/gemma-4-E2B-it-qat-GGUF/resolve/main/gemma-4-E2B-it-qat-UD-Q4_K_XL.gguf`,
+      name: 'model.gguf',
+      sizeBytes: 2620370976,
+    }],
+    contextSize: 8192,
+    maxTokens: 3072,
+    sampling: GEMMA,
+    kvBytesPerToken: KV.gemmaE2B,
+    supportsThinking: true,
+    minMemoryGB: 8,
+  },
 ];
+
+/** The browser's models that load here: a file of 2 GiB or more needs wllama's main build. */
+const loadsInThisBrowser = (model: LocalModel) => runsMainBuild() || model.files.every(file => file.sizeBytes < 2 ** 31);
 
 // ---------- Desktop (native engine) ----------
 // Same GGUF files as the phone apps' catalog (apps/mobile/constants/models.ts),
@@ -132,7 +154,6 @@ const WEB_MODELS: LocalModel[] = [
 // window back further where memory is short. Qwen3.5 and Gemma 4 keep a small cache per token, so they get a longer window.
 const NATIVE_LIMITS = { contextSize: 16384, maxTokens: 4096 };
 const LONG_WINDOW = 32768;
-const GEMMA: Sampling = { temperature: 1.0, top_p: 0.95, top_k: 64, min_p: 0 };
 const LLAMA: Sampling = { temperature: 0.6, top_p: 0.9, top_k: 40, min_p: 0.05 };
 const PHI: Sampling = { temperature: 0.3, top_p: 0.95, top_k: 40, min_p: 0.05 };
 
@@ -169,7 +190,12 @@ export const DESKTOP_MODELS: LocalModel[] = [
   qwen('qwen35-9b', '9B', 'A big step up in quality and reasoning. Reads images. Wants a graphics card with 8 GB or more, or 16 GB of memory.', 5868826976, 918165984, 12, KV.qwenMid, { model: 5680522464, projector: 918166080 }, 'good'),
   qwen('qwen35-27b', '27B', 'The most capable model here. Reads images. For computers with 32 GB or more of memory, or a high-end graphics card.', 17106773056, 927607392, 32, KV.qwenLarge, { model: 16740812704, projector: 927607040 }, 'good'),
   nativeModel('gemma4-e2b', 'Gemma 4 E2B', 'Google’s small multilingual model. Reads images and speaks 140+ languages.', 'unsloth/gemma-4-E2B-it-GGUF',
-    { name: 'gemma-4-E2B-it-Q4_K_M.gguf', bytes: 3106738272 }, { bytes: 985654080 }, 8, { sampling: GEMMA, contextSize: LONG_WINDOW, kvBytesPerToken: KV.gemmaE2B }),
+    { name: 'gemma-4-E2B-it-Q4_K_M.gguf', bytes: 3106738272 }, { bytes: 985654080 }, 8, { sampling: GEMMA, contextSize: LONG_WINDOW, kvBytesPerToken: KV.gemmaE2B, supportsThinking: true }),
+  // Gemma 4's larger sizes, in the quantization-aware editions (trained for 4-bit).
+  nativeModel('gemma4-12b', 'Gemma 4 12B', 'Google’s mid-size model: clear writing in 140+ languages. Reads images. Wants a graphics card with 8 GB or more, or 16 GB of memory.', 'unsloth/gemma-4-12B-it-qat-GGUF',
+    { name: 'gemma-4-12B-it-qat-UD-Q4_K_XL.gguf', bytes: 6716356800 }, { bytes: 175115840 }, 12, { sampling: GEMMA, contextSize: LONG_WINDOW, kvBytesPerToken: KV.gemma12b, supportsThinking: true, agent: 'limited' }),
+  nativeModel('gemma4-26b-a4b', 'Gemma 4 26B A4B', 'Google’s larger model, quick for its size: it uses only part of itself for each word. Reads images. For computers with 24 GB or more of memory.', 'unsloth/gemma-4-26B-A4B-it-qat-GGUF',
+    { name: 'gemma-4-26B-A4B-it-qat-UD-Q4_K_XL.gguf', bytes: 14249047104 }, { bytes: 1193058784 }, 24, { sampling: GEMMA, contextSize: LONG_WINDOW, kvBytesPerToken: KV.gemma26b, supportsThinking: true, agent: 'limited' }),
   nativeModel('llama32-3b', 'Llama 3.2 3B', 'Dependable all-rounder for writing and summarising.', 'unsloth/Llama-3.2-3B-Instruct-GGUF',
     { name: 'Llama-3.2-3B-Instruct-Q4_K_M.gguf', bytes: 2019377600 }, null, 8, { sampling: LLAMA, kvBytesPerToken: KV.llama3b }),
   nativeModel('phi4-mini', 'Phi-4 Mini', 'Microsoft’s compact reasoning model. Strong at maths, logic and structured answers.', 'unsloth/Phi-4-mini-instruct-GGUF',
@@ -177,7 +203,7 @@ export const DESKTOP_MODELS: LocalModel[] = [
 ];
 
 /** The models offered here: the desktop app's native catalog, or the browser's. */
-export const LOCAL_MODELS: LocalModel[] = hasNativeEngine() ? DESKTOP_MODELS : WEB_MODELS;
+export const LOCAL_MODELS: LocalModel[] = hasNativeEngine() ? DESKTOP_MODELS : WEB_MODELS.filter(loadsInThisBrowser);
 
 // The desktop app starts people on Qwen3.5 4B: the two smaller Qwens were taken out of it (too weak: confident wrong answers).
 export const DEFAULT_NATIVE_MODEL_ID = 'qwen35-4b';

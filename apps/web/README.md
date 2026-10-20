@@ -63,8 +63,8 @@ The server reports what's switched on in `/api/me` (`features`). Services that a
 | Storage | OPFS (`models/<id>/`): not cleared by "clear cached images and files". `navigator.storage.persist()` requested on first download so the browser won't evict it. |
 | Survives "clear site data" | Chromium: optional "keep models in a folder on this computer" (File System Access API) — not built yet. Other browsers: re-download or import from file. |
 | Safari | Install to Dock/Home Screen (PWA) to escape the 7-day storage cap. |
-| Size limit | Files must be < 2 GiB; larger models (Qwen3.5 4B, Gemma 4 E2B) need splitting with `llama-gguf-split` and hosting as parts (Cloudflare R2, zero egress). The desktop app has no such limit. |
-| Desktop app | `window.quoDesktop.engine` (see `src/native.ts`) switches the app to llama.cpp running natively: a larger catalog (Qwen3.5 up to 27B, Gemma 4, Llama 3.2, Phi-4 mini) with image input, real GPU memory for recommendations, and models you already have from LM Studio or Ollama. Same `InferenceEngine` interface (`src/engine/`), so the chat code doesn't know the difference. See `apps/desktop/README.md`. |
+| Size limit | wllama's main build (JSPI and 64-bit memory: current Chrome, Edge, Firefox) reads model files in pieces, so files of 2 GiB or more load (Gemma 4 E2B, 2.6 GB). Its compatibility build (Safari, older browsers; hosted by the app, `src/engine/compat.ts`) holds at most 4 GB and can't, so such models aren't offered there (`src/engine/wasm.ts`). The desktop app has no such limit. |
+| Desktop app | `window.quoDesktop.engine` (see `src/native.ts`) switches the app to llama.cpp running natively: a larger catalog (Qwen3.5 up to 27B, Gemma 4 up to 26B A4B, Llama 3.2, Phi-4 mini) with image input, real GPU memory for recommendations, and models you already have from LM Studio or Ollama. Same `InferenceEngine` interface (`src/engine/`), so the chat code doesn't know the difference. See `apps/desktop/README.md`. |
 | Files | Paperclip or drag and drop: PDFs (pdf.js, loaded only when used) and text files are read to text in `<document>` tags; photos are shrunk to 1024 px JPEGs for models that read images (desktop). Offline models only: files never go to cloud models. |
 | Voice | Mic button: Whisper (base, multilingual) via Transformers.js in a worker on the processor, about 8x faster than real time. ~80 MB downloaded on first use and cached. Its WebAssembly runtime ships with the app (not a CDN). Read aloud uses the system's built-in voices. |
 | Offline | Service worker caches the app shell (not built yet); models already local. |
@@ -79,7 +79,7 @@ Sampling follows each maker's own model card; the catalog (`src/catalog.ts`) hol
 |---|---|---|---|---|---|
 | Qwen3.5 4B, 9B | 32,768 | 36 KB | 0.7 / 0.8 / 20 / 1.5 | 1.0 / 0.95 / 20 / 1.5 | Qwen model card |
 | Qwen3.5 27B | 32,768 | 68 KB | 0.7 / 0.8 / 20 / 1.5 | 1.0 / 0.95 / 20 / 1.5 | Qwen model card |
-| Gemma 4 E2B | 32,768 | 8 KB | 1.0 / 0.95 / 64 | (not offered) | Gemma model card |
+| Gemma 4 E2B (8,192 in the browser), 12B, 26B A4B | 32,768 | 8 KB, 16 KB, 20 KB | 1.0 / 0.95 / 64 | the same | Gemma model card |
 | Llama 3.2 3B | 16,384 | 112 KB | 0.6 / 0.9 / 40 / min_p 0.05 | not a thinking model | Meta's generation config |
 | Phi-4 mini | 16,384 | 128 KB | 0.3 / 0.95 / 40 / min_p 0.05 | not a thinking model | no vendor advice; Microsoft's examples use 0 |
 
