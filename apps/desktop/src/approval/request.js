@@ -6,8 +6,8 @@
  * textContent, never as markup, so nothing in it can pretend to be a button.
  */
 
-const LIMITS = { title: 200, short: 300, label: 120, diff: 60_000, command: 4000, message: 4000, files: 50 };
-const KINDS = new Set(['edit', 'command', 'commit', 'read', 'open', 'folder']);
+const LIMITS = { title: 200, short: 300, label: 120, diff: 60_000, command: 4000, message: 4000, files: 50, commits: 30 };
+const KINDS = new Set(['edit', 'command', 'commit', 'push', 'read', 'open', 'folder']);
 
 const text = (value, max) => (typeof value === 'string' ? (value.length > max ? `${value.slice(0, max)}…` : value) : '');
 const count = value => (Number.isFinite(value) && value >= 0 ? Math.min(Math.floor(value), 1e9) : 0);
@@ -26,7 +26,7 @@ function shapeRequest(request) {
   if (request.kind === 'edit') {
     shaped.view = { kind: 'edit', action: ['create', 'edit', 'replace'].includes(view.action) ? view.action : 'edit', file: text(view.file, LIMITS.short), added: count(view.added), removed: count(view.removed), diff: text(view.diff, LIMITS.diff) };
   } else if (request.kind === 'command') {
-    shaped.view = { kind: 'command', command: text(view.command, LIMITS.command), background: view.background === true };
+    shaped.view = { kind: 'command', command: text(view.command, LIMITS.command), background: view.background === true, warning: text(view.warning, LIMITS.short) };
   } else if (request.kind === 'commit') {
     shaped.view = {
       kind: 'commit',
@@ -35,6 +35,19 @@ function shapeRequest(request) {
       files: (Array.isArray(view.files) ? view.files : []).slice(0, LIMITS.files).map(file => text(file, LIMITS.short)),
       message: text(view.message, LIMITS.message),
       credit: view.credit ? text(view.credit, LIMITS.short) : '',
+    };
+  } else if (request.kind === 'push') {
+    shaped.view = {
+      kind: 'push',
+      remote: text(view.remote, LIMITS.short),
+      url: text(view.url, LIMITS.short),
+      branch: text(view.branch, LIMITS.short),
+      remoteBranch: text(view.remoteBranch, LIMITS.short),
+      count: count(view.count),
+      commits: (Array.isArray(view.commits) ? view.commits : []).slice(0, LIMITS.commits).map(line => text(line, LIMITS.short)),
+      newBranch: view.newBranch === true,
+      toDefault: view.toDefault === true,
+      defaultBranch: text(view.defaultBranch, LIMITS.short),
     };
   } else if (request.kind === 'folder') {
     shaped.view = { kind: 'folder', mode: view.mode === 'new' ? 'new' : 'existing', name: text(view.name, LIMITS.short), where: text(view.where, LIMITS.short) };

@@ -71,9 +71,9 @@ function setupAgent({ web = null } = {}) {
 
   /** Asks the person, in a window the page can't draw or click, whether to allow something. */
   async function askNative(window, request) {
-    // A commit is always asked about, with no "for this session" choice.
-    const single = request.kind === 'commit';
-    const buttons = single ? ['Commit', 'Don’t commit'] : request.kind === 'command' ? ['Run it', request.rememberLabel, 'Don’t run it'] : ['Allow', request.rememberLabel, 'Don’t allow'];
+    // A commit or a push is always asked about, with no "for this session" choice.
+    const single = request.kind === 'commit' || request.kind === 'push';
+    const buttons = request.kind === 'commit' ? ['Commit', 'Don’t commit'] : request.kind === 'push' ? ['Push', 'Don’t push'] : request.kind === 'command' ? ['Run it', request.rememberLabel, 'Don’t run it'] : ['Allow', request.rememberLabel, 'Don’t allow'];
     try {
       const result = await dialog.showMessageBox(window ?? undefined, {
         type: 'question',
@@ -174,7 +174,7 @@ function setupAgent({ web = null } = {}) {
 
   handle('agent:forget', ({ id }) => projects.remove(String(id)));
 
-  handle('agent:start', async ({ projectId, autoReadOnly, compact, creditQuo, confirm }, event) => {
+  handle('agent:start', async ({ projectId, autoReadOnly, compact, creditQuo, allowPush, confirm }, event) => {
     const project = (await projects.list()).find(entry => entry.id === String(projectId));
     if (!project) throw new AgentError('no_project', 'That project isn’t in the list any more. Choose the folder again.');
     const real = await fsp.realpath(project.path).catch(() => null);
@@ -190,10 +190,10 @@ function setupAgent({ web = null } = {}) {
     if (sessions.size >= MAX_SESSIONS) throw new AgentError('busy', 'Too many Code sessions are open. Close one first.');
     const id = crypto.randomBytes(8).toString('hex');
     const window = BrowserWindow.fromWebContents(event.sender) ?? undefined;
-    const session = new AgentSession({ root: real, name: project.name, repos, web, webSession: id, autoReadOnly: autoReadOnly !== false, compact: compact === true, creditQuo: creditQuo !== false, openExternal: url => shell.openExternal(url), approve: request => ask(window, request) });
+    const session = new AgentSession({ root: real, name: project.name, repos, web, webSession: id, autoReadOnly: autoReadOnly !== false, compact: compact === true, creditQuo: creditQuo !== false, allowPush: allowPush !== false, openExternal: url => shell.openExternal(url), approve: request => ask(window, request) });
     sessions.set(id, { session, owner: event.sender.id, project: project.id, controllers: new Set() });
     event.sender.once('destroyed', () => endSession(id));
-    return { sessionId: id, name: project.name, platform: process.platform, tools: compact === true ? TOOL_NAMES.filter(name => name !== 'update_plan') : TOOL_NAMES, planTools: compact === true ? PLAN_TOOLS.filter(name => name !== 'update_plan') : PLAN_TOOLS, instructions: await readInstructions(real), hint: whereIs(real), git: await gitInfo(real) };
+    return { sessionId: id, name: project.name, platform: process.platform, tools: TOOL_NAMES.filter(name => !(compact === true && name === 'update_plan') && !(allowPush === false && name === 'git_push')), planTools: compact === true ? PLAN_TOOLS.filter(name => name !== 'update_plan') : PLAN_TOOLS, instructions: await readInstructions(real), hint: whereIs(real), git: await gitInfo(real) };
   });
 
   handle('agent:files', ({ sessionId, query }, event) => owned(sessionId, event).session.suggestFiles(query));

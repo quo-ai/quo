@@ -29,7 +29,7 @@ contextBridge.exposeInMainWorld('quoDesktop', {
     pick: () => invoke('agent:pick'),
     workspace: name => invoke('agent:workspace', { name }),
     forget: id => invoke('agent:forget', { id }),
-    start: (projectId, options) => invoke('agent:start', { projectId, autoReadOnly: options?.autoReadOnly, compact: options?.compact, creditQuo: options?.creditQuo, confirm: options?.confirm }),
+    start: (projectId, options) => invoke('agent:start', { projectId, autoReadOnly: options?.autoReadOnly, compact: options?.compact, creditQuo: options?.creditQuo, allowPush: options?.allowPush, confirm: options?.confirm }),
     tool: (sessionId, name, args) => invoke('agent:tool', { sessionId, name, args }),
     mode: (sessionId, mode) => invoke('agent:mode', { sessionId, mode }),
     files: (sessionId, query) => invoke('agent:files', { sessionId, query }),

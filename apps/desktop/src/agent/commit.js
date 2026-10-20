@@ -1,16 +1,17 @@
 'use strict';
 
-const { execFile } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
-const { AgentError, resolveInside, isSecretPath, isProtectedPath, inside, redactSecrets, scrubbedEnv } = require('./safety');
+const { AgentError, resolveInside, isSecretPath, isProtectedPath, inside, redactSecrets } = require('./safety');
+const { git } = require('./gitcmd');
 
 /**
  * The git_commit tool: one commit, made by the app itself with fixed arguments, never by a command the model wrote.
  *
  * The person stays the author. When "Credit Quo in commits" is on, the app adds one `Co-Authored-By` line at the end of
  * the message (the model never writes it, so it can't be left out, changed or pointed at someone else). It is only text
- * in the person's own repository; nothing is sent anywhere, and nothing here pushes.
+ * in the person's own repository; nothing is sent anywhere, and nothing here pushes (git_push, push.js, is its own tool
+ * with its own approval).
  *
  * `quo-ai[bot]` is the GitHub App registered for Quo; the number is that bot account's id, which is what makes GitHub
  * show Quo's picture next to the commit. Change it only together with the app.
@@ -19,14 +20,6 @@ const { AgentError, resolveInside, isSecretPath, isProtectedPath, inside, redact
 const QUO_CREDIT = 'Co-Authored-By: Quo <344842314+quo-ai[bot]@users.noreply.github.com>';
 const MAX_FILES = 50;
 const MAX_MESSAGE = 4000;
-const TIMEOUT_MS = 60_000;
-
-const git = (cwd, args, env) =>
-  new Promise(resolve => {
-    execFile('git', ['--literal-pathspecs', '-c', 'core.fsmonitor=false', ...args], { cwd, timeout: TIMEOUT_MS, maxBuffer: 1024 * 1024, windowsHide: true, env: { ...scrubbedEnv(env), GIT_TERMINAL_PROMPT: '0', GIT_EDITOR: 'true' } }, (error, stdout, stderr) =>
-      resolve({ code: error ? (typeof error.code === 'number' ? error.code : -1) : 0, stdout: String(stdout ?? ''), stderr: String(stderr ?? '') }),
-    );
-  });
 
 /** The message the model wrote, tidied, without any credit line of ours (the app adds that), or a refusal. */
 function cleanMessage(input) {
@@ -84,18 +77,33 @@ async function planCommit({ rootReal, env = process.env, credit = true }, args) 
     if (!files.includes(relative)) files.push(relative);
   }
 
-  // A hooks folder inside the project that has uncommitted edits could run code nobody looked at.
-  const hooks = (await git(rootReal, ['config', 'core.hooksPath'], env)).stdout.trim();
-  if (hooks) {
-    const folder = path.resolve(rootReal, hooks);
-    const relative = path.relative(rootReal, folder);
-    if (inside(relative) && [...changed].some(file => path.resolve(rootReal, file).startsWith(folder + path.sep))) {
-      throw new AgentError('hooks_changed', 'The project’s git hooks have uncommitted changes, so Quo won’t commit while they could run. The user should review and commit those first.');
-    }
-  }
+  await checkHooks(rootReal, env, changed, 'commit');
 
   const branch = (await git(rootReal, ['rev-parse', '--abbrev-ref', 'HEAD'], env)).stdout.trim() || 'HEAD';
   return { message, files, credit, text: fullMessage(message, credit), author: `${name} <${email}>`, branch };
+}
+
+/** A hooks folder inside the project that has uncommitted edits could run code nobody looked at: refuse while it does. */
+async function checkHooks(rootReal, env, changed, verb) {
+  const hooks = (await git(rootReal, ['config', 'core.hooksPath'], env)).stdout.trim();
+  if (!hooks) return;
+  const folder = path.resolve(rootReal, hooks);
+  const relative = path.relative(rootReal, folder);
+  if (inside(relative) && [...changed].some(file => path.resolve(rootReal, file).startsWith(folder + path.sep))) {
+    throw new AgentError('hooks_changed', `The project’s git hooks have uncommitted changes, so Quo won’t ${verb} while they could run. The user should review and commit those first.`);
+  }
+}
+
+/** Whether the repository has an executable hook of this name (git doesn't say a hook stopped it; it prints the hook's words). */
+async function hasHook(rootReal, env, name) {
+  const where = (await git(rootReal, ['rev-parse', '--git-path', `hooks/${name}`], env)).stdout.trim();
+  if (!where) return false;
+  try {
+    fs.accessSync(path.resolve(rootReal, where), fs.constants.X_OK);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /** Stages exactly the planned files and commits exactly those, nothing else that happened to be staged. */
@@ -103,9 +111,14 @@ async function applyCommit({ rootReal, env = process.env }, plan) {
   const add = await git(rootReal, ['add', '--', ...plan.files], env);
   if (add.code !== 0) throw new AgentError('git_failed', `git add failed: ${redactSecrets(add.stderr.trim()).slice(0, 400)}`);
   const commit = await git(rootReal, ['commit', '--only', '-m', plan.text, '--', ...plan.files], env);
-  if (commit.code !== 0) throw new AgentError('git_failed', `git commit failed: ${redactSecrets((commit.stderr || commit.stdout).trim()).slice(0, 600)}`);
+  if (commit.code !== 0) {
+    const said = redactSecrets(`${commit.stderr}\n${commit.stdout}`.trim()).slice(0, 1500);
+    const hooked = (await hasHook(rootReal, env, 'pre-commit')) || (await hasHook(rootReal, env, 'commit-msg'));
+    if (hooked && !/nothing (added )?to commit|no changes added/i.test(said)) throw new AgentError('hook_failed', `A git hook stopped the commit, so nothing was committed. Fix what it reports, then call git_commit again (a new commit; never bypass hooks):\n${said}`);
+    throw new AgentError('git_failed', `git commit failed: ${said.slice(0, 600)}`);
+  }
   const hash = (await git(rootReal, ['rev-parse', '--short', 'HEAD'], env)).stdout.trim();
   return { hash };
 }
 
-module.exports = { planCommit, applyCommit, cleanMessage, fullMessage, QUO_CREDIT };
+module.exports = { planCommit, applyCommit, cleanMessage, fullMessage, checkHooks, hasHook, parseStatus, QUO_CREDIT };

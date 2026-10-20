@@ -5,6 +5,8 @@ const files = require('./files');
 const { hideSecretDiffs, isReadOnlyCommand } = require('./commands');
 const { runCommand } = require('./exec');
 const commits = require('./commit');
+const pushes = require('./push');
+const { checkGitCommand } = require('./gitGuard');
 const { readScopedNotes } = require('./instructions');
 const { BackgroundCommands } = require('./background');
 const { ExternalReads } = require('./external');
@@ -26,11 +28,11 @@ const { AgentError, redactSecrets, scrubbedEnv } = require('./safety');
  * can adjust.
  */
 
-const TOOL_NAMES = ['list_directory', 'read_file', 'find_files', 'search_text', 'edit_file', 'write_file', 'run_command', 'command_output', 'stop_command', 'git_commit', 'open_in_browser', 'update_plan', 'open_repo', 'web_search', 'fetch_url'];
+const TOOL_NAMES = ['list_directory', 'read_file', 'find_files', 'search_text', 'edit_file', 'write_file', 'run_command', 'command_output', 'stop_command', 'git_commit', 'git_push', 'open_in_browser', 'update_plan', 'open_repo', 'web_search', 'fetch_url'];
 const PLAN_TOOLS = ['list_directory', 'read_file', 'find_files', 'search_text', 'update_plan', 'open_repo', 'web_search', 'fetch_url'];
 const PLAN_STATUSES = ['pending', 'in_progress', 'completed'];
 const MAX_PLAN_ITEMS = 12;
-const CHANGING_TOOLS = new Set(['edit_file', 'write_file', 'run_command', 'git_commit', 'open_in_browser']);
+const CHANGING_TOOLS = new Set(['edit_file', 'write_file', 'run_command', 'git_commit', 'git_push', 'open_in_browser']);
 const MAX_CALLS = 500;
 const COMMAND_CHARS = 4000;
 // What a small context window can afford for one tool result (about 4,000 tokens at most).
@@ -45,10 +47,11 @@ const preview = diff => {
 };
 
 class AgentSession {
-  constructor({ root, name, approve, repos, web = null, webSession = 'code', env = process.env, autoReadOnly = true, compact = false, creditQuo = true, openExternal = null }) {
+  constructor({ root, name, approve, repos, web = null, webSession = 'code', env = process.env, autoReadOnly = true, compact = false, creditQuo = true, allowPush = true, openExternal = null }) {
     this.openExternal = openExternal; // hands an address to the system's browser (the app supplies it; none here means this can't open anything)
     this.allowOpen = false; // "Allow opening pages for this session"
     this.creditQuo = creditQuo; // add Quo as co-author to commits made with git_commit (a setting, on by default)
+    this.allowPush = allowPush; // git_push and its pull-request link (a setting, on by default); off: Quo never pushes
     this.web = web; // search and page reading (web/service.js), or none
     this.webSession = webSession;
     this.rootReal = fs.realpathSync.native(root);
@@ -144,6 +147,7 @@ class AgentSession {
         case 'stop_command': return this.stopCommand(args);
         case 'run_command': return await this.command(args, signal);
         case 'git_commit': return await this.commit(args);
+        case 'git_push': return await this.push();
         case 'open_in_browser': return await this.openTarget(args.target);
         case 'open_repo': return await this.openRepo(args);
         case 'web_search': return ok(await this.needWeb().search(this.webSession, args.query, { count: args.count, maxChars: this.webChars }));
@@ -251,15 +255,16 @@ class AgentSession {
     const timeoutMs = Math.min(600, Math.max(1, Number(args.timeout_seconds) || 120)) * 1000;
     const background = args.background === true;
     if (background) this.background.assertRoom();
+    const warning = checkGitCommand(command, { allowPush: this.allowPush }); // commits and pushes have their own tools
     const readOnly = !background && this.autoReadOnly && isReadOnlyCommand(command);
     let answer = readOnly || this.allowedCommands.has(command) ? 'once' : 'ask';
     if (answer === 'ask') {
       answer = await this.approve({
         kind: 'command',
         title: background ? 'Start this command in the background?' : 'Run this command?',
-        detail: `In the project ${this.name}${background ? '\nIt keeps running while Quo works, and stops when you end Code mode.' : ''}\n\n${clip(command, 1500)}`,
+        detail: `In the project ${this.name}${background ? '\nIt keeps running while Quo works, and stops when you end Code mode.' : ''}${warning ? `\n\n⚠ ${warning}` : ''}\n\n${clip(command, 1500)}`,
         project: this.name,
-        view: { kind: 'command', command, background },
+        view: { kind: 'command', command, background, ...(warning ? { warning } : {}) },
         rememberLabel: 'Allow this exact command for this session',
       });
     }
@@ -288,7 +293,25 @@ class AgentSession {
     });
     if (answer !== 'once') return fail('denied', 'The user didn’t allow that commit. Don’t try it again; ask what they’d like instead.', { kind: 'commit', denied: true, files: plan.files });
     const { hash } = await commits.applyCommit({ rootReal: this.rootReal, env: this.env }, plan);
-    return { ok: true, text: `Committed ${hash} on ${plan.branch} (${plan.files.length} ${plan.files.length === 1 ? 'file' : 'files'}). Nothing was pushed.`, display: { kind: 'commit', hash, branch: plan.branch, files: plan.files, message: plan.text, credited: plan.credit } };
+    return { ok: true, text: `Committed ${hash} on ${plan.branch} (${plan.files.length} ${plan.files.length === 1 ? 'file' : 'files'}). Nothing was pushed${this.allowPush ? '; push with git_push only if the user asked for it' : ''}.`, display: { kind: 'commit', hash, branch: plan.branch, files: plan.files, message: plan.text, credited: plan.credit } };
+  }
+
+  /** Shows what would go up (remote, branch, commits) and pushes only if the user agrees. Every push asks; it never forces. */
+  async push() {
+    if (!this.allowPush) throw new AgentError('push_off', 'Pushing is turned off in the user’s settings (Models & storage → Code). Tell the user the commits are ready to push.');
+    const plan = await pushes.planPush({ rootReal: this.rootReal, env: this.env, credit: this.creditQuo });
+    const target = `${plan.remote}/${plan.remoteBranch}`;
+    const answer = await this.approve({
+      kind: 'push',
+      title: `Push ${plan.count} ${plan.count === 1 ? 'commit' : 'commits'} to ${target}?`,
+      detail: `In the project ${this.name}\nTo ${plan.url}${plan.setUpstream ? `\nA new branch on ${plan.remote}.` : ''}${plan.toDefault ? `\nStraight to ${plan.defaultBranch}, the default branch.` : ''}\n\n${plan.commits.join('\n')}${plan.count > plan.commits.length ? `\n… and ${plan.count - plan.commits.length} more` : ''}\n\nNever forced.`,
+      project: this.name,
+      view: { kind: 'push', remote: plan.remote, url: plan.url, branch: plan.branch, remoteBranch: plan.remoteBranch, count: plan.count, commits: plan.commits, newBranch: plan.setUpstream, toDefault: plan.toDefault, defaultBranch: plan.defaultBranch ?? '' },
+    });
+    if (answer !== 'once') return fail('denied', 'The user didn’t allow that push. Don’t try again; ask what they’d like instead.', { kind: 'push', denied: true, target });
+    await pushes.applyPush({ rootReal: this.rootReal, env: this.env }, plan);
+    const pr = plan.pullRequest ? `\nTo open a pull request: ${plan.pullRequest}\nGive the user this link (as a markdown link) unless they already have a pull request for this branch.` : '';
+    return { ok: true, text: `Pushed ${plan.count} ${plan.count === 1 ? 'commit' : 'commits'} from ${plan.branch} to ${target}${plan.setUpstream ? ' (new branch; upstream set)' : ''}.${pr}`, display: { kind: 'push', target, count: plan.count, commits: plan.commits, newBranch: plan.setUpstream, ...(plan.pullRequest ? { pullRequest: plan.pullRequest } : {}) } };
   }
 
   /** What a background command printed since the last look, and whether it is still going. */

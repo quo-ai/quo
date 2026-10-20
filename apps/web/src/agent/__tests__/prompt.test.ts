@@ -137,3 +137,43 @@ describe('opening a page for the person', () => {
     expect(describeDone('open_in_browser', {}, { ok: false, text: '', display: { denied: true, target: 'index.html' } }).title).toBe('You declined opening index.html');
   });
 });
+
+describe('committing and pushing', () => {
+  const PUSHING = [...WORKING, 'git_push'];
+
+  it('has a push tool that takes no arguments, so nothing about the push is the model’s to choose', () => {
+    const [push] = toolDefinitions(['git_push']);
+    expect(push.function.parameters).toEqual({ type: 'object', properties: {} });
+    expect(push.function.description).toMatch(/never forces/);
+  });
+
+  it('tells the model to commit and push with the tools, only when asked, and never to rewrite history', () => {
+    const system = agentSystemPrompt('demo', 'linux', PUSHING);
+    expect(system).toMatch(/push with git_push, only when the user asks/);
+    expect(system).toMatch(/Never run git commit or git push as commands/);
+    expect(system).toMatch(/no force pushes, amends, rebases of pushed commits or skipped hooks/);
+    expect(system).toMatch(/suggest a new branch/);
+    expect(system).toMatch(/every commit and push/);
+  });
+
+  it('says pushing is off when the setting is, and says nothing about git in plan mode', () => {
+    const off = agentSystemPrompt('demo', 'linux', WORKING);
+    expect(off).toMatch(/Pushing is turned off in the user’s settings/);
+    expect(off).not.toMatch(/git_push/);
+    expect(agentSystemPrompt('demo', 'linux', ['read_file', 'update_plan'])).not.toMatch(/Never rewrite or throw away history/);
+  });
+
+  it('asks the model to match the project’s commit style and fix failing hooks', () => {
+    const [commit] = toolDefinitions(['git_commit']);
+    expect(commit.function.description).toMatch(/git log -5/);
+    expect(commit.function.description).toMatch(/If a hook stops the commit, fix what it reports/);
+  });
+
+  it('shows a push, its commits and the pull-request link in the chat', () => {
+    expect(describeRunning('git_push', {})).toBe('Waiting for your OK to push…');
+    const done = describeDone('git_push', {}, { ok: true, text: '', display: { kind: 'push', target: 'origin/feature', count: 2, commits: ['a1 Add a', 'b2 Add b'], newBranch: true, pullRequest: 'https://github.com/a/b/compare/main...feature?expand=1' } });
+    expect(done.title).toBe('Pushed 2 commits to origin/feature (new branch)');
+    expect(done.detail?.body).toContain('Open a pull request: https://github.com/a/b/compare/main...feature?expand=1');
+    expect(describeDone('git_push', {}, { ok: false, text: '', display: { kind: 'push', denied: true } }).title).toBe('You declined the push');
+  });
+});

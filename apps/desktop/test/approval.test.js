@@ -10,10 +10,19 @@ describe('what the approval window is told', () => {
   it('keeps the shape of each kind and nothing else', () => {
     const shaped = shapeRequest({ ...edit, extra: '<script>', view: { ...edit.view, html: '<b>x</b>', onclick: 'x' } });
     assert.deepEqual(shaped, { kind: 'edit', title: 'Edit a.js?', project: 'demo', rememberLabel: 'Allow edits', view: { kind: 'edit', action: 'edit', file: 'a.js', added: 2, removed: 1, diff: '-a\n+b' } });
-    assert.deepEqual(shapeRequest({ kind: 'command', title: 'Run?', view: { kind: 'command', command: 'npm test', background: true } }).view, { kind: 'command', command: 'npm test', background: true });
+    assert.deepEqual(shapeRequest({ kind: 'command', title: 'Run?', view: { kind: 'command', command: 'npm test', background: true } }).view, { kind: 'command', command: 'npm test', background: true, warning: '' });
     const commit = shapeRequest({ kind: 'commit', title: 'Commit?', view: { kind: 'commit', branch: 'main', author: 'Pat', files: ['a', 'b'], message: 'Fix', credit: 'Co-Authored-By: Quo' } });
     assert.deepEqual(commit.view.files, ['a', 'b']);
     assert.equal(shapeRequest({ kind: 'read', title: 'Read?', view: { kind: 'read', folder: '/x' } }).view.folder, '/x');
+  });
+
+  it('draws a push as remote, branch and commits only, with a capped list and no way to remember the answer', () => {
+    const push = shapeRequest({ kind: 'push', title: 'Push?', rememberLabel: 'always', view: { kind: 'push', remote: 'origin', url: 'https://github.com/a/b.git', branch: 'f', remoteBranch: 'f', count: 40, commits: Array(100).fill('abc123 Fix'), newBranch: true, toDefault: 'yes', defaultBranch: 'main', html: '<b>' } });
+    assert.deepEqual(Object.keys(push.view).sort(), ['branch', 'commits', 'count', 'defaultBranch', 'kind', 'newBranch', 'remote', 'remoteBranch', 'toDefault', 'url']);
+    assert.equal(push.view.commits.length, LIMITS.commits);
+    assert.equal(push.view.toDefault, false, 'only a real true counts');
+    assert.equal(normalizeChoice({ ...push, rememberLabel: '' }, 'session'), 'deny');
+    assert.equal(shapeRequest({ kind: 'command', title: 'Run?', view: { kind: 'command', command: 'git reset --hard', warning: 'Throws away uncommitted changes (reset --hard).' } }).view.warning, 'Throws away uncommitted changes (reset --hard).');
   });
 
   it('clips what is long, and counts only sensible numbers', () => {

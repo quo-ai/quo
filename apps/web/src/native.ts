@@ -195,7 +195,7 @@ export interface DesktopAgent {
   /** Makes a new empty project folder under Documents/Quo Projects, named from these words. */
   workspace: (name: string) => Promise<NativeResult<CodeProject>>;
   forget: (id: string) => Promise<NativeResult<unknown>>;
-  start: (projectId: string, options?: { autoReadOnly?: boolean; compact?: boolean; creditQuo?: boolean; confirm?: boolean }) => Promise<NativeResult<CodeSessionInfo>>;
+  start: (projectId: string, options?: { autoReadOnly?: boolean; compact?: boolean; creditQuo?: boolean; allowPush?: boolean; confirm?: boolean }) => Promise<NativeResult<CodeSessionInfo>>;
   tool: (sessionId: string, name: string, args: Record<string, unknown>) => Promise<NativeResult<{ ok: boolean; text: string; display?: Record<string, unknown> }>>;
   mode: (sessionId: string, mode: 'work' | 'plan') => Promise<NativeResult<unknown>>;
   /** Files in the project matching part of a name, best first. */

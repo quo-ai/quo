@@ -12,6 +12,8 @@ export interface CodeSettings {
   autoStart: boolean;
   /** Add Quo as co-author on commits it makes (a Co-Authored-By line at the end of the message). On by default; shown in every commit's approval window. */
   creditQuo: boolean;
+  /** Let Quo push the current branch (git_push, every push approved, never forced) and give a link to open a pull request. On by default. Off: Quo commits but never pushes. */
+  allowPush: boolean;
   /** Follow the project's AGENTS.md or CLAUDE.md. */
   useNotes: boolean;
   /** Start every Code session in plan mode (read-only). */
@@ -20,7 +22,7 @@ export interface CodeSettings {
   maxSteps: number;
 }
 
-export const DEFAULT_CODE_SETTINGS: CodeSettings = { autoReadOnly: true, autoStart: true, creditQuo: true, useNotes: true, startInPlan: false, maxSteps: 40 };
+export const DEFAULT_CODE_SETTINGS: CodeSettings = { autoReadOnly: true, autoStart: true, creditQuo: true, allowPush: true, useNotes: true, startInPlan: false, maxSteps: 40 };
 export const STEP_CHOICES = [10, 20, 40, 80, 150] as const;
 
 const KEY = 'quo.codeSettings';
@@ -32,6 +34,7 @@ function read(): CodeSettings {
       autoReadOnly: typeof saved.autoReadOnly === 'boolean' ? saved.autoReadOnly : DEFAULT_CODE_SETTINGS.autoReadOnly,
       autoStart: typeof saved.autoStart === 'boolean' ? saved.autoStart : DEFAULT_CODE_SETTINGS.autoStart,
       creditQuo: typeof saved.creditQuo === 'boolean' ? saved.creditQuo : DEFAULT_CODE_SETTINGS.creditQuo,
+      allowPush: typeof saved.allowPush === 'boolean' ? saved.allowPush : DEFAULT_CODE_SETTINGS.allowPush,
       useNotes: typeof saved.useNotes === 'boolean' ? saved.useNotes : DEFAULT_CODE_SETTINGS.useNotes,
       startInPlan: typeof saved.startInPlan === 'boolean' ? saved.startInPlan : DEFAULT_CODE_SETTINGS.startInPlan,
       maxSteps: STEP_CHOICES.includes(saved.maxSteps as (typeof STEP_CHOICES)[number]) ? (saved.maxSteps as number) : DEFAULT_CODE_SETTINGS.maxSteps,

@@ -172,3 +172,18 @@ describe('git_commit', () => {
     assert.ok(path.isAbsolute(remote));
   });
 });
+
+describe('a hook that stops a commit', () => {
+  it('comes back as the hook’s own words, for the model to fix and commit again, never skip', { skip: process.platform === 'win32' }, async () => {
+    const root = repo();
+    write(root, '.githooks/pre-commit', '#!/bin/sh\necho "format check failed: a.js" >&2\nexit 1\n');
+    execFileSync('chmod', ['+x', path.join(root, '.githooks', 'pre-commit')]);
+    git(root, 'add', '.githooks');
+    git(root, 'commit', '-q', '--no-verify', '-m', 'hooks');
+    git(root, 'config', 'core.hooksPath', '.githooks');
+    write(root, 'a.js', 'a\n');
+    const result = await new AgentSession({ root, name: 'demo', approve: async () => 'once' }).callTool('git_commit', { message: 'Add a', files: ['a.js'] });
+    assert.equal(result.ok, false);
+    assert.match(result.text, /hook stopped the commit[\s\S]*never bypass hooks[\s\S]*format check failed/);
+  });
+});

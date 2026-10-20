@@ -193,7 +193,7 @@ export const AGENT_TOOLS: AgentTool[] = [
   },
   {
     name: 'git_commit',
-    description: 'Commit changes you made to the project, once a piece of work is finished and checked. Give the files to commit and a clear message (a short summary line, then if needed a blank line and details). The user approves every commit in a window showing the files and message. Only the files you list are committed. Nothing is pushed. Do not add a Co-Authored-By line; the app handles that.',
+    description: 'Commit changes you made to the project, once a piece of work is finished and checked. First look at git status, git diff and git log -5 (they run without asking) so the message matches the project’s style: a short summary line of what changed and why, then if needed a blank line and details. Give the files to commit and the message. The user approves every commit in a window showing the files and message. Only the files you list are committed. Nothing is pushed. Do not add a Co-Authored-By line; the app handles that. If a hook stops the commit, fix what it reports and call git_commit again.',
     parameters: {
       type: 'object',
       properties: {
@@ -202,6 +202,11 @@ export const AGENT_TOOLS: AgentTool[] = [
       },
       required: ['message', 'files'],
     },
+  },
+  {
+    name: 'git_push',
+    description: 'Push the current branch to its remote, after committing. Only when the user asks to push or for a pull request, or the task clearly includes it. It takes no arguments: the app pushes this branch to its upstream (or origin, setting the upstream on a new branch), and never forces. The user approves every push in a window showing the remote, branch and commits. For GitHub it returns a link to open a pull request: give that link to the user.',
+    parameters: { type: 'object', properties: {} },
   },
   {
     name: 'open_repo',
@@ -311,7 +316,15 @@ export function agentSystemPrompt(project: string, platform: Platform, tools: st
           ...(tools.includes('update_plan') ? ['- For work with several steps, keep a short checklist with update_plan: one step in_progress, mark each done as you finish it, and do not repeat the list in your reply.'] : []),
         ]
       : []),
-    can ? '- The user approves every edit, every command and every commit, except read-only commands like git status. Commit finished work with git_commit only when the user asks for it or the task clearly includes it; never run git commit yourself. If they decline one, do not try it again: say what you were trying to do and ask what they would prefer.' : '- The user can switch plan mode off to carry the plan out.',
+    can ? `- The user approves every edit, every command and every commit${tools.includes('git_push') ? ' and push' : ''}, except read-only commands like git status. If they decline one, do not try it again: say what you were trying to do and ask what they would prefer.` : '- The user can switch plan mode off to carry the plan out.',
+    ...(can && tools.includes('git_commit')
+      ? [
+          tools.includes('git_push')
+            ? '- Git: commit finished work with git_commit, and push with git_push, only when the user asks or the task clearly includes it (a pull request includes pushing). Never run git commit or git push as commands. Before pushing to the default branch (main, master), suggest a new branch unless the user asked for that; make one with git switch -c. After a push, give the user the pull-request link it returns.'
+            : '- Git: commit finished work with git_commit only when the user asks or the task clearly includes it; never run git commit yourself. Pushing is turned off in the user’s settings: when work is ready, say the commits can be pushed.',
+          '- Never rewrite or throw away history: no force pushes, amends, rebases of pushed commits or skipped hooks (--no-verify). Make new commits instead. If a hook fails, fix what it reports and try again.',
+        ]
+      : []),
     ...(tools.includes('web_search') ? ['- Use the web for current facts, documentation and error messages you don’t know, not for what the project’s own files answer.'] : []),
     ...(where === 'local' ? ['- Your memory is small. Do not read whole files: find the place with search_text or find_files, then read just that part with read_file (start_line and end_line). Keep each reply short.'] : []),
     '- To learn from open-source code, open a public repository with open_repo and read it with the repo argument. Understand the ideas and write your own code. Do not paste large parts of someone else’s code, and mention the licence if it matters.',

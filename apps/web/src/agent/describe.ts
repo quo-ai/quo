@@ -36,6 +36,7 @@ export function describeRunning(tool: string, args: Args): string {
     case 'task': return `Helper: ${clip(text(args.description, 'looking into it'), 60)}…`;
     case 'update_plan': return 'Updating the plan…';
     case 'git_commit': return 'Waiting for your OK to commit…';
+    case 'git_push': return 'Waiting for your OK to push…';
     case 'open_repo': return `Downloading ${text(args.repo)}…`;
     case 'web_search': return `Searching the web for “${clip(text(args.query), 50)}”…`;
     case 'fetch_url': return `Reading ${host(text(args.url))}…`;
@@ -46,7 +47,7 @@ export function describeRunning(tool: string, args: Args): string {
 export function describeDone(tool: string, args: Args, result: ToolResult): Pick<AgentStep, 'title' | 'status' | 'detail'> {
   const display = result.display ?? {};
   if (display.denied) {
-    return { status: 'declined', title: tool === 'run_command' ? `You declined: ${clip(text(display.command), 60)}${args.background ? ' (background)' : ''}` : tool === 'git_commit' ? 'You declined the commit' : tool === 'open_in_browser' ? `You declined opening ${clip(text(display.target), 50)}` : `You declined the change to ${text(display.path)}` };
+    return { status: 'declined', title: tool === 'run_command' ? `You declined: ${clip(text(display.command), 60)}${args.background ? ' (background)' : ''}` : tool === 'git_commit' ? 'You declined the commit' : tool === 'git_push' ? 'You declined the push' : tool === 'open_in_browser' ? `You declined opening ${clip(text(display.target), 50)}` : `You declined the change to ${text(display.path)}` };
   }
   if (!result.ok) return { status: 'failed', title: `${verb(tool, args)} didn’t work: ${clip(result.text.split('\n')[0], 110)}` };
   switch (display.kind) {
@@ -69,6 +70,11 @@ export function describeDone(tool: string, args: Args, result: ToolResult): Pick
       return { status: 'done', title: `Plan: ${done} of ${plural(items.length, 'step')} done`, detail: { kind: 'plan', body: planToText(items.map(item => ({ step: text(item.step), status: item.status === 'completed' || item.status === 'in_progress' ? item.status : 'pending' }))) } };
     }
     case 'commit': return { status: 'done', title: `Committed ${plural(Array.isArray(display.files) ? display.files.length : 0, 'file')} (${text(display.hash)})`, detail: text(display.message) ? { kind: 'output', body: text(display.message) } : undefined };
+    case 'push': {
+      const commits = Array.isArray(display.commits) ? display.commits.map(line => text(line)).filter(Boolean) : [];
+      const body = [...commits, ...(text(display.pullRequest) ? ['', `Open a pull request: ${text(display.pullRequest)}`] : [])].join('\n');
+      return { status: 'done', title: `Pushed ${plural(Number(display.count ?? 0), 'commit')} to ${text(display.target)}${display.newBranch ? ' (new branch)' : ''}`, detail: body ? { kind: 'output', body } : undefined };
+    }
     case 'repo': return { status: 'done', title: `Opened ${text(display.repo)}` };
     case 'web_search': {
       const results = Array.isArray(display.results) ? display.results as { title?: string; url?: string }[] : [];
@@ -105,6 +111,7 @@ function verb(tool: string, args: Args): string {
     case 'task': return `Helper: ${clip(text(args.description, 'looking into it'), 60)}`;
     case 'update_plan': return 'Updating the plan';
     case 'git_commit': return 'Committing';
+    case 'git_push': return 'Pushing';
     case 'open_repo': return `Opening ${text(args.repo)}`;
     case 'web_search': return 'Searching the web';
     case 'fetch_url': return `Reading ${host(text(args.url))}`;
