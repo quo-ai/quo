@@ -3,7 +3,7 @@
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { app, BrowserWindow, session, shell, systemPreferences } = require('electron');
+const { app, BrowserWindow, nativeTheme, session, shell, systemPreferences } = require('electron');
 const { APP_HOST, APP_URL, API_ORIGIN, registerScheme, handleAppProtocol, setEngineTarget } = require('./protocol');
 const { setupAgent } = require('./agent/ipc');
 const { setupProviders } = require('./providers/ipc');
@@ -14,6 +14,7 @@ const { buildMenu } = require('./menu');
 const { initAutoUpdates } = require('./updater');
 const { runSmoke } = require('./smoke');
 const { windowIcon } = require('./appIcon');
+const { loadTheme, setupTheme, windowBackground } = require('./theme');
 
 const isSmoke = process.argv.includes('--smoke') || process.env.QUO_SMOKE === '1';
 
@@ -56,7 +57,7 @@ function createWindow({ hidden = false } = {}) {
     minHeight: MIN_SIZE.height,
     title: 'Quo',
     ...(icon ? { icon } : {}),
-    backgroundColor: '#ffffff',
+    backgroundColor: windowBackground(),
     show: false,
     autoHideMenuBar: true,
     webPreferences: {
@@ -159,6 +160,9 @@ function start() {
   }
   handleAppProtocol(session.defaultSession, webRoot);
   restrictPermissions(session.defaultSession);
+  loadTheme();
+  setupTheme();
+  nativeTheme.on('updated', () => { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.setBackgroundColor(windowBackground()); });
   const { keys } = setupProviders();
   setupAgent({ web: setupWeb({ keys }) });
   hasEngine = engineAvailable();

@@ -2,6 +2,15 @@
 
 Notable changes to Quo. Quo Web and the desktop app ship together under the desktop version (`desktop-v*` tags); the phone app has its own numbers. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased] (web and desktop)
+
+### Added
+- **Dark mode** — follows your system, or choose Light or Dark in Settings → Appearance. In the desktop app the approval window follows the same choice.
+
+### Improved
+- **Clearer replies** — every model is asked to write plainly: the answer first, short sentences, no filler, and the same style in the code and text it writes.
+- **Easier to read** — small grey text and green labels pass contrast checks in both themes; sheets stay readable where the browser can't blur.
+
 ## [Desktop 1.4.0] - 2026-10-20
 
 ### Added

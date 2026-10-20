@@ -21,7 +21,7 @@
 .chat-group-label { font-size: 12px; font-weight: 600; color: var(--text-3); padding: 12px 10px 4px; }
 .chat-item { position: relative; display: flex; align-items: center; border-radius: 12px; transition: background-color var(--t-quick) var(--ease); }
 .chat-item:hover { background: var(--fill); }
-.chat-item.active { background: rgba(255, 255, 255, 0.85); box-shadow: 0 1px 2px rgba(14, 14, 60, 0.06), 0 0 0 0.5px rgba(14, 14, 60, 0.06); }
+.chat-item.active { background: var(--surface); box-shadow: 0 1px 2px rgba(14, 14, 60, 0.06), 0 0 0 0.5px var(--edge); }
 .chat-open { flex: 1; min-width: 0; text-align: left; border: 0; background: none; padding: 9px 10px; font-size: 14px; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .chat-item.active .chat-open { color: var(--ink); font-weight: 600; }
 .chat-item .icon-btn { width: 30px; height: 30px; margin-right: 4px; opacity: 0; transition: opacity var(--t-quick) var(--ease); }

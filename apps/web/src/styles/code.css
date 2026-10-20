@@ -15,7 +15,7 @@
 .step-text { margin: 4px 6px 4px 28px; color: var(--text-3); }
 .step-pre { margin: 4px 0 6px 28px; padding: 10px 12px; max-height: 280px; overflow: auto; border-radius: 12px; font: 12.5px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre; color: var(--ink); background: var(--fill); }
 .step-pre .add { color: var(--success); background: rgba(23, 119, 63, 0.1); }
-.step-pre .del { color: #b3243c; background: rgba(196, 36, 63, 0.08); }
+.step-pre .del { color: var(--error); background: rgba(196, 36, 63, 0.08); }
 .undo-chip { margin: 0 0 10px 6px; }
 
 .menu-note { margin: 4px 14px 10px; font-size: 12.5px; color: var(--text-3); max-width: 28ch; }

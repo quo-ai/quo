@@ -67,7 +67,7 @@
 .step-pre.output::selection, .step-pre.output *::selection { background: rgba(124, 116, 255, 0.4); }
 
 /* Code in replies: a header with the language and a copy button, and the same scanlines. */
-.code { margin: 14px 0; border-radius: 16px; overflow: hidden; background: #12121c; }
+.code { margin: 14px 0; border-radius: 16px; overflow: hidden; background: var(--code-bg); box-shadow: 0 0 0 0.5px var(--edge); }
 .code-head { display: flex; align-items: center; justify-content: space-between; padding: 5px 6px 5px 14px; color: #8d8fbf; font: 600 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.08em; text-transform: uppercase; border-bottom: 1px solid rgba(255, 255, 255, 0.07); }
 .code-copy { display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 9px; border: 0; border-radius: 8px; background: transparent; color: inherit; font: inherit; letter-spacing: 0.04em; cursor: pointer; }
 .code-copy:hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
@@ -87,7 +87,7 @@
 /* Steps: the counts as badges, and a fold for the older ones. */
 .diffstat { flex: none; display: inline-flex; gap: 6px; font: 600 11.5px/1 ui-monospace, SFMono-Regular, Menlo, monospace; }
 .diffstat .add { color: var(--success); }
-.diffstat .del { color: #b3243c; }
+.diffstat .del { color: var(--error); }
 .step-fold summary { display: flex; align-items: center; gap: 6px; padding: 4px 6px; border-radius: 10px; color: var(--text-3); font-size: 13px; cursor: pointer; list-style: none; }
 .step-fold summary::-webkit-details-marker { display: none; }
 .step-fold summary:hover { background: var(--accent-soft); }
@@ -115,6 +115,6 @@
 .step-plan li svg { flex: none; }
 .step-plan .completed { color: var(--text-3); }
 .step-plan .completed svg { color: var(--indigo); }
-.step-plan .completed span { text-decoration: line-through; text-decoration-color: rgba(14, 14, 40, 0.25); }
+.step-plan .completed span { text-decoration: line-through; text-decoration-color: var(--text-3); }
 .step-plan .in_progress { color: var(--ink); font-weight: 600; }
 .step-plan .in_progress svg { color: var(--indigo); animation: blink 1s steps(1) infinite; }

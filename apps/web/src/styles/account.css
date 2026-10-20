@@ -3,7 +3,7 @@
 .signin-row .footer-btn { flex: 1; }
 .get-pro { height: 34px; padding: 0 14px; font-size: 13px; }
 .account-btn { gap: 10px; }
-.avatar { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; flex: none; font-weight: 700; font-size: 13px; color: #fff; background: linear-gradient(180deg, var(--indigo-2), var(--indigo)); }
+.avatar { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; flex: none; font-weight: 700; font-size: 13px; color: #fff; background: linear-gradient(180deg, var(--brand-2), var(--brand)); }
 .account-text { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.3; }
 .account-email { font-size: 13.5px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .account-credits { font-size: 12px; color: var(--text-3); }
@@ -13,22 +13,22 @@
 .auth-lede { margin: 0; color: var(--text-2); font-size: 14.5px; }
 .auth .back { align-self: flex-start; height: 32px; padding: 0 10px; margin-left: -10px; font-size: 13.5px; }
 .auth .note { margin: 0; text-align: center; }
-.field-wrap { display: flex; align-items: center; gap: 10px; height: 50px; padding: 0 16px; border-radius: 16px; background: rgba(255, 255, 255, 0.8); box-shadow: 0 0 0 1px rgba(14, 14, 60, 0.1); color: var(--text-3); transition: box-shadow var(--t-quick) var(--ease); }
+.field-wrap { display: flex; align-items: center; gap: 10px; height: 50px; padding: 0 16px; border-radius: 16px; background: var(--surface); box-shadow: 0 0 0 1px rgba(14, 14, 60, 0.1); color: var(--text-3); transition: box-shadow var(--t-quick) var(--ease); }
 .field-wrap:focus-within { box-shadow: 0 0 0 1.5px var(--indigo), 0 0 0 5px var(--focus-ring); }
 .field { flex: 1; min-width: 0; border: 0; outline: none; background: transparent; font: inherit; font-size: 15.5px; color: var(--ink); }
-.field.code { flex: none; height: 64px; text-align: center; font: 600 30px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.5em; padding-left: 0.5em; border-radius: 18px; background: rgba(255, 255, 255, 0.8); box-shadow: 0 0 0 1px rgba(14, 14, 60, 0.1); }
+.field.code { flex: none; height: 64px; text-align: center; font: 600 30px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.5em; padding-left: 0.5em; border-radius: 18px; background: var(--surface); box-shadow: 0 0 0 1px rgba(14, 14, 60, 0.1); }
 .field.code:focus { box-shadow: 0 0 0 1.5px var(--indigo), 0 0 0 5px var(--focus-ring); }
 .resend { align-self: center; font-size: 13.5px; }
 
 .account { display: flex; flex-direction: column; }
-.balance { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; padding: 18px 20px; border-radius: var(--r-card); color: #fff; background: linear-gradient(140deg, var(--indigo-2), var(--indigo) 60%, #2a1fd6); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 16px 34px -18px rgba(59, 46, 255, 0.8); }
+.balance { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; padding: 18px 20px; border-radius: var(--r-card); color: #fff; background: linear-gradient(140deg, var(--brand-2), var(--brand) 60%, #2a1fd6); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 16px 34px -18px rgba(59, 46, 255, 0.8); }
 .balance-label { display: flex; align-items: center; gap: 6px; font-size: 13px; opacity: 0.85; }
 .balance-value { font-size: 38px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.1; }
 .balance-side { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; text-align: right; }
 .balance-side .note { color: rgba(255, 255, 255, 0.8); font-size: 12.5px; }
 .balance .badge { color: #fff; background: rgba(255, 255, 255, 0.18); }
 .sandbox-note { margin: 12px 0 0; padding: 8px 12px; border-radius: 12px; font-size: 13px; color: var(--warn); background: rgba(154, 91, 0, 0.08); }
-.plan-card { margin-top: 14px; padding: 16px 18px; border-radius: var(--r-card); background: rgba(255, 255, 255, 0.75); box-shadow: 0 0 0 1px rgba(59, 46, 255, 0.18); }
+.plan-card { margin-top: 14px; padding: 16px 18px; border-radius: var(--r-card); background: var(--surface); box-shadow: 0 0 0 1px rgba(59, 46, 255, 0.18); }
 .plan-card.current { box-shadow: 0 0 0 1.5px var(--indigo); }
 .plan-card p { margin: 6px 0 12px; font-size: 14px; color: var(--text-2); }
 .plan-head { display: flex; align-items: center; gap: 8px; color: var(--indigo); }
@@ -39,12 +39,12 @@
 .plan-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .save { font-size: 11.5px; font-weight: 700; color: var(--success); }
 .packs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 10px; }
-.pack { position: relative; display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 14px 8px 12px; border: 0; border-radius: 18px; background: rgba(255, 255, 255, 0.75); box-shadow: 0 0 0 1px rgba(14, 14, 60, 0.08); }
+.pack { position: relative; display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 14px 8px 12px; border: 0; border-radius: 18px; background: var(--surface); box-shadow: 0 0 0 1px var(--edge); }
 .pack:hover:not(:disabled) { box-shadow: 0 0 0 1.5px var(--indigo); }
 .pack strong { font-size: 19px; letter-spacing: -0.02em; }
 .pack span { font-size: 12px; color: var(--text-3); }
 .pack em { font-style: normal; font-weight: 650; margin-top: 6px; color: var(--indigo); }
-.pack small { position: absolute; top: -8px; font-size: 10.5px; font-weight: 700; color: #fff; background: var(--success); padding: 2px 7px; border-radius: 999px; }
+.pack small { position: absolute; top: -8px; font-size: 10.5px; font-weight: 700; color: var(--bg); background: var(--success); padding: 2px 7px; border-radius: 999px; }
 .account-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 18px; padding-top: 12px; border-top: 1px solid var(--hairline); }
 
 /* ---------- Welcome: cloud while the offline model downloads ---------- */
@@ -53,7 +53,7 @@
 
 /* ---------- Get Quo sheet ---------- */
 .get-app { width: min(520px, 100%); }
-.app-option { display: flex; align-items: center; gap: 14px; padding: 14px 14px 14px 12px; margin-bottom: 8px; border-radius: var(--r-card); background: rgba(255, 255, 255, 0.75); box-shadow: 0 0 0 0.5px rgba(14, 14, 60, 0.1), 0 1px 2px rgba(14, 14, 60, 0.04); }
+.app-option { display: flex; align-items: center; gap: 14px; padding: 14px 14px 14px 12px; margin-bottom: 8px; border-radius: var(--r-card); background: var(--surface); box-shadow: 0 0 0 0.5px rgba(14, 14, 60, 0.1), 0 1px 2px rgba(14, 14, 60, 0.04); }
 .app-option.done { box-shadow: 0 0 0 1.5px var(--indigo); }
 .app-option-icon { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 14px; flex: none; color: var(--indigo); background: var(--accent-tint); }
 .app-option .grow { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }

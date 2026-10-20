@@ -9,7 +9,7 @@
 .install-nudge.leaving { animation: nudge-out var(--t-quick) var(--ease) forwards; }
 @keyframes nudge-in { from { opacity: 0; transform: translateY(24px) scale(0.92); } }
 @keyframes nudge-out { to { opacity: 0; transform: translateY(12px) scale(0.96); } }
-.nudge-icon { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 14px; margin-bottom: 12px; color: #fff; background: linear-gradient(180deg, var(--indigo-2), var(--indigo)); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 10px 22px -10px rgba(59, 46, 255, 0.8); }
+.nudge-icon { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 14px; margin-bottom: 12px; color: #fff; background: linear-gradient(180deg, var(--brand-2), var(--brand)); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 10px 22px -10px rgba(59, 46, 255, 0.8); }
 .install-nudge h3 { margin: 0 0 4px; font-size: 16.5px; letter-spacing: -0.015em; padding-right: 28px; }
 .install-nudge p { margin: 0 0 14px; font-size: 13px; color: var(--text-2); line-height: 1.5; }
 .nudge-actions { display: flex; gap: 6px; }
@@ -29,14 +29,14 @@
 .attach-icon { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--accent-tint); color: var(--indigo); }
 .attach-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .attach-remove { display: grid; place-items: center; width: 22px; height: 22px; border: 0; border-radius: 50%; background: transparent; color: var(--text-3); }
-.attach-remove:hover { background: rgba(14, 14, 40, 0.1); color: var(--text); }
+.attach-remove:hover { background: var(--fill-strong); color: var(--text); }
 
 .msg-attachments { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; max-width: 82%; margin-bottom: 6px; }
 .msg-image { max-width: min(280px, 100%); max-height: 240px; width: auto; height: auto; border-radius: 18px; box-shadow: 0 0 0 0.5px rgba(14, 14, 60, 0.12), 0 8px 20px -12px rgba(30, 20, 120, 0.4); }
 .msg-file { display: inline-flex; align-items: center; gap: 8px; max-width: 280px; padding: 9px 14px; border-radius: 16px; background: var(--accent-soft); color: var(--indigo); font-size: 13.5px; font-weight: 600; }
 .msg-file small { font-weight: 500; color: var(--text-3); white-space: nowrap; }
 
-.composer.dragging { box-shadow: var(--glass-shadow), 0 0 0 3px rgba(59, 46, 255, 0.35); }
+.composer.dragging { box-shadow: var(--glass-shadow), 0 0 0 3px color-mix(in srgb, var(--indigo) 45%, transparent); }
 .attach-btn, .mic-btn { flex: none; width: 34px; height: 34px; }
 .mic-btn.recording { color: #fff; background: #d92d4a; animation: record-pulse 1.4s ease-in-out infinite; }
 .mic-btn.recording:hover:not(:disabled) { background: #c4243f; color: #fff; }
@@ -61,7 +61,7 @@ code.path { padding: 1px 6px; border-radius: 6px; background: var(--fill-strong)
 .check { display: flex; gap: 10px; align-items: flex-start; margin-top: 14px; font-size: 13.5px; color: var(--text-2); cursor: pointer; }
 .check input { margin-top: 3px; accent-color: var(--indigo); }
 .field.mono { font: 500 13.5px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.02em; text-transform: uppercase; }
-.sync-state { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: var(--r-card); background: rgba(255, 255, 255, 0.55); box-shadow: 0 0 0 0.5px rgba(14, 14, 60, 0.08); }
+.sync-state { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: var(--r-card); background: var(--surface-soft); box-shadow: 0 0 0 0.5px var(--edge); }
 .sync-state > svg { flex: none; color: var(--indigo); }
 .sync-state > div { flex: 1; min-width: 0; display: grid; }
 .sync-state small { color: var(--text-3); font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -78,7 +78,7 @@ code.path { padding: 1px 6px; border-radius: 6px; background: var(--fill-strong)
 .memory-add .field-wrap { flex: 1; min-width: 0; height: 46px; }
 .memory-add .btn { flex: none; }
 .memory-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
-.memory-list li { display: flex; align-items: center; gap: 4px; padding: 8px 8px 8px 14px; border-radius: 14px; background: rgba(255, 255, 255, 0.55); box-shadow: 0 0 0 0.5px rgba(14, 14, 60, 0.08); }
+.memory-list li { display: flex; align-items: center; gap: 4px; padding: 8px 8px 8px 14px; border-radius: 14px; background: var(--surface-soft); box-shadow: 0 0 0 0.5px var(--edge); }
 .memory-text { flex: 1; min-width: 0; font-size: 14.5px; color: var(--ink); overflow-wrap: anywhere; line-height: 1.4; padding: 2px 0; }
 .memory-edit { display: flex; align-items: center; gap: 4px; flex: 1; min-width: 0; }
 .memory-edit-field { height: 34px; padding: 0 4px; font-size: 14.5px; }

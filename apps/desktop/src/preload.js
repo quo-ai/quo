@@ -22,6 +22,8 @@ function subscribe(channel, callback) {
 contextBridge.exposeInMainWorld('quoDesktop', {
   platform: process.platform,
   version,
+  // Light, dark or the system's: every window follows it, the approval window too.
+  appearance: { set: mode => invoke('app:theme', { mode }) },
   // Code mode: the project folder is chosen in a native dialog and edits and commands
   // are approved in native dialogs, so none of this takes a path or an approval from the page.
   agent: {

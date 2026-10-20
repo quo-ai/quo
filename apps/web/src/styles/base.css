@@ -1,35 +1,52 @@
-/* Quo Web — "liquid glass" in Quo's language: electric indigo, white,
-   translucent floating chrome over a soft light-field, springy motion.
-   Content stays crisp and opaque; only chrome is glass. */
+/* Quo Web — "liquid glass" in Quo's language: electric indigo, translucent floating chrome over a soft light-field,
+   springy motion, in light and dark. Content stays crisp and opaque; only chrome is glass. */
 
+/* Every colour has a light and a dark value (light-dark()); the scheme follows the system, or the choice in Settings
+   (data-theme on <html>). Text and status colours pass AA on the glass in both. */
 :root {
-  --indigo: #3b2eff;
-  --indigo-2: #5a4dff;
+  color-scheme: light dark;
+  /* Brand fills (buttons, bubbles, badges): the same in both, with white on them. */
+  --brand: #3b2eff;
+  --brand-2: #5a4dff;
   --violet: #8f87ff;
-  --ink: #0e0e1a;
-  --text: #0e0e1a;
-  --text-2: #4c4c62;
-  --text-3: #68687d; /* 4.7:1 even on the glass over the indigo bloom (AA) */
-  --hairline: rgba(14, 14, 40, 0.08);
-  --error: #c4243f;
-  --warn: #9a5b00;
-  --success: #17773f; /* text on white, white on it, and on its own tint: all AA */
+  /* Indigo as text, icons, rings and decoration: lighter in the dark so it reads. */
+  --indigo: light-dark(#3b2eff, #a8a2ff);
+  --bg: light-dark(#f5f5fb, #0c0c14);
+  --ink: light-dark(#0e0e1a, #f1f1f8);
+  --text: light-dark(#0e0e1a, #f1f1f8);
+  --text-2: light-dark(#4c4c62, #b8b8cc);
+  --text-3: light-dark(#68687d, #9696ad); /* AA on the glass in both: 4.7 and 5.8 */
+  --hairline: light-dark(rgba(14, 14, 40, 0.08), rgba(255, 255, 255, 0.1));
+  --edge: light-dark(rgba(14, 14, 60, 0.08), rgba(255, 255, 255, 0.09)); /* the thin outline of cards */
+  --error: light-dark(#c4243f, #ff7d8f);
+  --warn: light-dark(#9a5b00, #f2b05e);
+  --success: light-dark(#17773f, #5ad08f);
   /* Fills and tints: one value per role, so states stay consistent everywhere. */
-  --fill: rgba(14, 14, 40, 0.05);        /* chips, inputs, code, list-row hover */
-  --fill-strong: rgba(14, 14, 40, 0.08); /* hover on a filled thing, icon tiles, bars */
-  --accent-soft: rgba(59, 46, 255, 0.07); /* indigo hover, notes */
-  --accent-tint: rgba(59, 46, 255, 0.1);  /* selected and on states, accent icon tiles */
-  --focus-ring: rgba(59, 46, 255, 0.12);
+  --fill: light-dark(rgba(14, 14, 40, 0.05), rgba(255, 255, 255, 0.06));        /* chips, inputs, code, list-row hover */
+  --fill-strong: light-dark(rgba(14, 14, 40, 0.08), rgba(255, 255, 255, 0.1));  /* hover on a filled thing, icon tiles, bars */
+  --accent-soft: light-dark(rgba(59, 46, 255, 0.07), rgba(143, 135, 255, 0.12)); /* indigo hover, notes */
+  --accent-tint: light-dark(rgba(59, 46, 255, 0.1), rgba(143, 135, 255, 0.18));  /* selected and on states, accent icon tiles */
+  --focus-ring: light-dark(rgba(59, 46, 255, 0.12), rgba(143, 135, 255, 0.3));
+  /* Surfaces: cards inside sheets, raised controls (a selected segment, a key), the dimmed page behind a sheet, code. */
+  --surface: light-dark(rgba(255, 255, 255, 0.75), rgba(255, 255, 255, 0.05));
+  --surface-soft: light-dark(rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0.035));
+  --raised: light-dark(#ffffff, #2c2c3c);
+  --scrim: light-dark(rgba(20, 16, 60, 0.18), rgba(0, 0, 0, 0.5));
+  --code-bg: light-dark(#12121c, #06060b);
 
-  --glass: rgba(255, 255, 255, 0.58);
-  --glass-strong: rgba(255, 255, 255, 0.78);
+  --glass: light-dark(rgba(255, 255, 255, 0.58), rgba(30, 30, 44, 0.6));
+  --glass-strong: light-dark(rgba(255, 255, 255, 0.78), rgba(36, 36, 52, 0.78));
+  --glass-thick: light-dark(rgba(255, 255, 255, 0.97), rgba(30, 30, 42, 0.97));
+  --glass-thick-2: light-dark(rgba(250, 250, 255, 0.94), rgba(24, 24, 34, 0.95));
   --glass-blur: blur(28px) saturate(185%);
   --glass-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.95),
-    inset 0 -1px 0 rgba(255, 255, 255, 0.35),
-    0 0 0 0.5px rgba(14, 14, 60, 0.07),
-    0 12px 32px -14px rgba(40, 30, 140, 0.28),
-    0 34px 70px -36px rgba(40, 30, 140, 0.22);
+    inset 0 1px 0 light-dark(rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.08)),
+    inset 0 -1px 0 light-dark(rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0.03)),
+    0 0 0 0.5px var(--edge),
+    0 12px 32px -14px light-dark(rgba(40, 30, 140, 0.28), rgba(0, 0, 0, 0.5)),
+    0 34px 70px -36px light-dark(rgba(40, 30, 140, 0.22), rgba(0, 0, 0, 0.45));
+  --rim: 1; /* how bright the glass's specular edge is */
+  --bloom: 0.55;
 
   --r-panel: 28px;
   --r-card: 20px;
@@ -43,16 +60,19 @@
   --t-base: 0.3s;
   --t-spring: 0.5s;
   --t-enter: 0.6s;
-
-  color-scheme: light;
 }
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"] { color-scheme: dark; }
+/* Numbers can't use light-dark(): the dark values for the background glow and the glass edge. */
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bloom: 0.4; --rim: 0.18; } }
+:root[data-theme="dark"] { --bloom: 0.4; --rim: 0.18; }
 
 * { box-sizing: border-box; }
 html, body, #root { height: 100%; }
 body {
   margin: 0;
   color: var(--text);
-  background: #f5f5fb;
+  background: var(--bg);
   font: 15.5px/1.55 Inter, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   overflow: hidden;
@@ -64,6 +84,6 @@ svg { flex: none; }
 
 /* Light-field behind the glass: faint indigo/violet blooms. */
 .lightfield { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
-.lightfield::before, .lightfield::after { content: ''; position: absolute; border-radius: 50%; filter: blur(80px); opacity: 0.55; }
+.lightfield::before, .lightfield::after { content: ''; position: absolute; border-radius: 50%; filter: blur(80px); opacity: var(--bloom); }
 .lightfield::before { width: 60vw; height: 60vw; left: -18vw; top: -26vw; background: radial-gradient(closest-side, rgba(90, 77, 255, 0.28), transparent); }
 .lightfield::after { width: 55vw; height: 55vw; right: -20vw; bottom: -28vw; background: radial-gradient(closest-side, rgba(143, 135, 255, 0.3), transparent); }

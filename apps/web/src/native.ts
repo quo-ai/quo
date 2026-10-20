@@ -219,6 +219,7 @@ declare global {
     quoDesktop?: {
       platform: string;
       version: string;
+      appearance?: { set: (mode: 'system' | 'light' | 'dark') => Promise<unknown> };
       agent?: DesktopAgent;
       providers?: DesktopProviders;
       web?: DesktopWeb;
