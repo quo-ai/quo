@@ -21,13 +21,13 @@
    toasts): still translucent, but opaque enough that text behind never
    competes with text on top. */
 .glass.thick {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(250, 250, 255, 0.88)) padding-box;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.97), rgba(250, 250, 255, 0.94)) padding-box; /* readable even where the browser can't blur */
   backdrop-filter: blur(40px) saturate(200%);
   -webkit-backdrop-filter: blur(40px) saturate(200%);
 }
 
 /* ---------- Buttons: squish on press, spring back ---------- */
-.press { transition: transform 0.5s var(--jelly), background-color 0.2s var(--ease), box-shadow 0.2s var(--ease); }
+.press { transition: transform var(--t-spring) var(--jelly), background-color var(--t-quick) var(--ease), box-shadow var(--t-quick) var(--ease); }
 .press:active:not(:disabled) { transform: scale(0.94); transition-duration: 0.12s; transition-timing-function: var(--ease); }
 
 .btn {
@@ -43,10 +43,10 @@
 .btn-primary:hover:not(:disabled) { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 12px 26px -8px rgba(59, 46, 255, 0.75); }
 .btn-glass { color: var(--text); }
 .btn-glass:hover:not(:disabled) { background-color: rgba(255, 255, 255, 0.9); }
-.btn-soft { background: rgba(14, 14, 40, 0.055); color: var(--text); }
-.btn-soft:hover:not(:disabled) { background: rgba(14, 14, 40, 0.09); }
+.btn-soft { background: var(--fill); color: var(--text); }
+.btn-soft:hover:not(:disabled) { background: var(--fill-strong); }
 .btn-ghost { background: transparent; color: var(--text-2); }
-.btn-ghost:hover:not(:disabled) { background: rgba(14, 14, 40, 0.05); color: var(--text); }
+.btn-ghost:hover:not(:disabled) { background: var(--fill); color: var(--text); }
 .btn-lg { height: 52px; padding: 0 26px; font-size: 16px; }
 .btn-block { width: 100%; }
 
@@ -54,7 +54,7 @@
   display: inline-grid; place-items: center; width: 36px; height: 36px; border-radius: 12px;
   border: 0; background: transparent; color: var(--text-2);
 }
-.icon-btn:hover:not(:disabled) { background: rgba(14, 14, 40, 0.06); color: var(--text); }
+.icon-btn:hover:not(:disabled) { background: var(--fill-strong); color: var(--text); }
 .icon-btn.round { border-radius: 999px; }
 
 .kbd { margin-left: auto; font: 600 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace; color: rgba(255, 255, 255, 0.75); padding: 3px 6px; border-radius: 6px; background: rgba(255, 255, 255, 0.16); }

@@ -3,10 +3,10 @@
    sidebar is hidden it drops to the bottom-left corner. */
 .install-nudge {
   position: absolute; left: 24px; bottom: 178px; z-index: 7; width: 264px;
-  padding: 16px 16px 14px; border-radius: 24px; animation: nudge-in 0.6s var(--jelly);
+  padding: 16px 16px 14px; border-radius: 24px; animation: nudge-in var(--t-enter) var(--jelly);
 }
 .app.sidebar-collapsed .install-nudge { bottom: 20px; left: 20px; }
-.install-nudge.leaving { animation: nudge-out 0.22s var(--ease) forwards; }
+.install-nudge.leaving { animation: nudge-out var(--t-quick) var(--ease) forwards; }
 @keyframes nudge-in { from { opacity: 0; transform: translateY(24px) scale(0.92); } }
 @keyframes nudge-out { to { opacity: 0; transform: translateY(12px) scale(0.96); } }
 .nudge-icon { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 14px; margin-bottom: 12px; color: #fff; background: linear-gradient(180deg, var(--indigo-2), var(--indigo)); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 10px 22px -10px rgba(59, 46, 255, 0.8); }
@@ -24,16 +24,16 @@
 
 /* ---------- Attachments, voice input ---------- */
 .chips-row { display: flex; flex-wrap: wrap; gap: 8px; padding: 2px 4px 8px; }
-.attach-chip { display: inline-flex; align-items: center; gap: 8px; max-width: 240px; height: 36px; padding: 0 6px 0 4px; border-radius: 999px; background: rgba(14, 14, 40, 0.055); font-size: 13px; color: var(--text); animation: rise 0.3s var(--ease) both; }
+.attach-chip { display: inline-flex; align-items: center; gap: 8px; max-width: 240px; height: 36px; padding: 0 6px 0 4px; border-radius: 999px; background: var(--fill); font-size: 13px; color: var(--text); animation: rise var(--t-base) var(--ease) both; }
 .attach-chip img { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; }
-.attach-icon { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: rgba(59, 46, 255, 0.1); color: var(--indigo); }
+.attach-icon { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--accent-tint); color: var(--indigo); }
 .attach-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .attach-remove { display: grid; place-items: center; width: 22px; height: 22px; border: 0; border-radius: 50%; background: transparent; color: var(--text-3); }
 .attach-remove:hover { background: rgba(14, 14, 40, 0.1); color: var(--text); }
 
 .msg-attachments { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; max-width: 82%; margin-bottom: 6px; }
 .msg-image { max-width: min(280px, 100%); max-height: 240px; width: auto; height: auto; border-radius: 18px; box-shadow: 0 0 0 0.5px rgba(14, 14, 60, 0.12), 0 8px 20px -12px rgba(30, 20, 120, 0.4); }
-.msg-file { display: inline-flex; align-items: center; gap: 8px; max-width: 280px; padding: 9px 14px; border-radius: 16px; background: rgba(59, 46, 255, 0.08); color: var(--indigo); font-size: 13.5px; font-weight: 600; }
+.msg-file { display: inline-flex; align-items: center; gap: 8px; max-width: 280px; padding: 9px 14px; border-radius: 16px; background: var(--accent-soft); color: var(--indigo); font-size: 13.5px; font-weight: 600; }
 .msg-file small { font-weight: 500; color: var(--text-3); white-space: nowrap; }
 
 .composer.dragging { box-shadow: var(--glass-shadow), 0 0 0 3px rgba(59, 46, 255, 0.35); }
@@ -46,18 +46,18 @@
 
 /* ---------- Models you already have (desktop app) ---------- */
 .found-list { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 8px; }
-.found-list li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border-radius: 14px; background: rgba(14, 14, 40, 0.04); }
+.found-list li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border-radius: 14px; background: var(--fill); }
 .found-name { display: grid; min-width: 0; }
 .found-name strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
 .found-name small { color: var(--text-3); font-size: 12.5px; }
 .found-list .btn { height: 32px; padding: 0 14px; flex: none; }
-code.path { padding: 1px 6px; border-radius: 6px; background: rgba(14, 14, 40, 0.06); font-size: 12.5px; word-break: break-all; }
+code.path { padding: 1px 6px; border-radius: 6px; background: var(--fill-strong); font-size: 12.5px; word-break: break-all; }
 
 /* ---------- Quo Sync ---------- */
 .sync-points { list-style: none; margin: 14px 0 6px; padding: 0; display: grid; gap: 10px; }
 .sync-points li { display: flex; gap: 12px; align-items: flex-start; font-size: 14px; color: var(--text-2); line-height: 1.45; }
 .sync-points svg { flex: none; margin-top: 2px; color: var(--indigo); }
-.recovery-key { margin: 12px 0; padding: 14px 16px; border-radius: 14px; background: rgba(14, 14, 40, 0.05); font: 600 15.5px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.04em; word-break: break-word; user-select: all; cursor: text; color: var(--ink); }
+.recovery-key { margin: 12px 0; padding: 14px 16px; border-radius: 14px; background: var(--fill); font: 600 15.5px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.04em; word-break: break-word; user-select: all; cursor: text; color: var(--ink); }
 .check { display: flex; gap: 10px; align-items: flex-start; margin-top: 14px; font-size: 13.5px; color: var(--text-2); cursor: pointer; }
 .check input { margin-top: 3px; accent-color: var(--indigo); }
 .field.mono { font: 500 13.5px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.02em; text-transform: uppercase; }
@@ -68,7 +68,7 @@ code.path { padding: 1px 6px; border-radius: 6px; background: rgba(14, 14, 40, 0
 .sync-state.error > svg { color: var(--error); }
 .sync-state .btn { flex: none; height: 34px; padding: 0 14px; font-size: 13.5px; }
 
-.danger-zone { margin-top: 18px; padding-top: 14px; border-top: 1px solid rgba(14, 14, 40, 0.08); }
+.danger-zone { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--hairline); }
 .danger-zone .btn-link { color: var(--text-3); font-weight: 500; font-size: 13px; }
 .danger-zone .btn-link:hover { color: var(--error); }
 .danger-zone p { margin: 0 0 10px; }

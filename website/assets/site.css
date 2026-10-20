@@ -11,8 +11,8 @@
   --surface: #f6f6fa;
   --surface-2: #eeeef4;
   --text: #0e0e1a;
-  --text-2: #54546a;
-  --text-3: #737388;
+  --text-2: #4c4c62;
+  --text-3: #68687d; /* the app's values: AA on white and on the tinted sections */
   --border: rgba(14, 14, 40, 0.1);
   --accent: #3b2eff;
   --accent-soft: rgba(59, 46, 255, 0.08);

@@ -4,17 +4,17 @@
 .step summary, .step-row { display: flex; align-items: center; gap: 8px; padding: 4px 6px; border-radius: 10px; color: var(--text-2); cursor: default; }
 .step summary { cursor: pointer; list-style: none; }
 .step summary::-webkit-details-marker { display: none; }
-.step summary:hover { background: rgba(59, 46, 255, 0.06); }
+.step summary:hover { background: var(--accent-soft); }
 .step svg { flex: none; color: var(--text-3); }
 .step-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.step-chev { margin-left: auto; transition: transform 0.2s var(--ease); }
+.step-chev { margin-left: auto; transition: transform var(--t-quick) var(--ease); }
 .step details[open] .step-chev { transform: rotate(90deg); }
 .step.running svg { color: var(--indigo); }
 .step.failed svg { color: var(--error); }
 .step.declined .step-title, .step.stopped .step-title { color: var(--text-3); }
 .step-text { margin: 4px 6px 4px 28px; color: var(--text-3); }
-.step-pre { margin: 4px 0 6px 28px; padding: 10px 12px; max-height: 280px; overflow: auto; border-radius: 12px; font: 12.5px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre; color: var(--ink); background: rgba(14, 14, 40, 0.05); }
-.step-pre .add { color: #1a7f4b; background: rgba(47, 179, 106, 0.1); }
+.step-pre { margin: 4px 0 6px 28px; padding: 10px 12px; max-height: 280px; overflow: auto; border-radius: 12px; font: 12.5px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre; color: var(--ink); background: var(--fill); }
+.step-pre .add { color: var(--success); background: rgba(23, 119, 63, 0.1); }
 .step-pre .del { color: #b3243c; background: rgba(196, 36, 63, 0.08); }
 .undo-chip { margin: 0 0 10px 6px; }
 

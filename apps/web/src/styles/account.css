@@ -13,11 +13,11 @@
 .auth-lede { margin: 0; color: var(--text-2); font-size: 14.5px; }
 .auth .back { align-self: flex-start; height: 32px; padding: 0 10px; margin-left: -10px; font-size: 13.5px; }
 .auth .note { margin: 0; text-align: center; }
-.field-wrap { display: flex; align-items: center; gap: 10px; height: 50px; padding: 0 16px; border-radius: 16px; background: rgba(255, 255, 255, 0.8); box-shadow: 0 0 0 1px rgba(14, 14, 60, 0.1); color: var(--text-3); transition: box-shadow 0.2s var(--ease); }
-.field-wrap:focus-within { box-shadow: 0 0 0 1.5px var(--indigo), 0 0 0 5px rgba(59, 46, 255, 0.12); }
+.field-wrap { display: flex; align-items: center; gap: 10px; height: 50px; padding: 0 16px; border-radius: 16px; background: rgba(255, 255, 255, 0.8); box-shadow: 0 0 0 1px rgba(14, 14, 60, 0.1); color: var(--text-3); transition: box-shadow var(--t-quick) var(--ease); }
+.field-wrap:focus-within { box-shadow: 0 0 0 1.5px var(--indigo), 0 0 0 5px var(--focus-ring); }
 .field { flex: 1; min-width: 0; border: 0; outline: none; background: transparent; font: inherit; font-size: 15.5px; color: var(--ink); }
 .field.code { flex: none; height: 64px; text-align: center; font: 600 30px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.5em; padding-left: 0.5em; border-radius: 18px; background: rgba(255, 255, 255, 0.8); box-shadow: 0 0 0 1px rgba(14, 14, 60, 0.1); }
-.field.code:focus { box-shadow: 0 0 0 1.5px var(--indigo), 0 0 0 5px rgba(59, 46, 255, 0.12); }
+.field.code:focus { box-shadow: 0 0 0 1.5px var(--indigo), 0 0 0 5px var(--focus-ring); }
 .resend { align-self: center; font-size: 13.5px; }
 
 .account { display: flex; flex-direction: column; }
@@ -37,14 +37,14 @@
 .perks li { display: flex; align-items: center; gap: 8px; }
 .perks svg { color: var(--indigo); }
 .plan-actions { display: flex; flex-wrap: wrap; gap: 8px; }
-.save { font-size: 11.5px; font-weight: 700; color: #1f8a50; }
+.save { font-size: 11.5px; font-weight: 700; color: var(--success); }
 .packs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 10px; }
 .pack { position: relative; display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 14px 8px 12px; border: 0; border-radius: 18px; background: rgba(255, 255, 255, 0.75); box-shadow: 0 0 0 1px rgba(14, 14, 60, 0.08); }
 .pack:hover:not(:disabled) { box-shadow: 0 0 0 1.5px var(--indigo); }
 .pack strong { font-size: 19px; letter-spacing: -0.02em; }
 .pack span { font-size: 12px; color: var(--text-3); }
 .pack em { font-style: normal; font-weight: 650; margin-top: 6px; color: var(--indigo); }
-.pack small { position: absolute; top: -8px; font-size: 10.5px; font-weight: 700; color: #fff; background: #2fb36a; padding: 2px 7px; border-radius: 999px; }
+.pack small { position: absolute; top: -8px; font-size: 10.5px; font-weight: 700; color: #fff; background: var(--success); padding: 2px 7px; border-radius: 999px; }
 .account-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 18px; padding-top: 12px; border-top: 1px solid var(--hairline); }
 
 /* ---------- Welcome: cloud while the offline model downloads ---------- */
@@ -55,13 +55,13 @@
 .get-app { width: min(520px, 100%); }
 .app-option { display: flex; align-items: center; gap: 14px; padding: 14px 14px 14px 12px; margin-bottom: 8px; border-radius: var(--r-card); background: rgba(255, 255, 255, 0.75); box-shadow: 0 0 0 0.5px rgba(14, 14, 60, 0.1), 0 1px 2px rgba(14, 14, 60, 0.04); }
 .app-option.done { box-shadow: 0 0 0 1.5px var(--indigo); }
-.app-option-icon { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 14px; flex: none; color: var(--indigo); background: rgba(59, 46, 255, 0.09); }
+.app-option-icon { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 14px; flex: none; color: var(--indigo); background: var(--accent-tint); }
 .app-option .grow { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .app-option strong { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 15px; }
 .app-option .grow > span { font-size: 13px; color: var(--text-2); line-height: 1.45; }
 .app-option .btn { height: 36px; padding: 0 14px; font-size: 13.5px; flex: none; }
 .store-buttons { display: flex; flex-direction: column; align-items: stretch; gap: 6px; flex: none; }
 .store-buttons .note { text-align: center; font-size: 12px; }
-.after-download { margin: 0 0 10px; padding: 10px 14px; border-radius: 14px; font-size: 13px; color: var(--text-2); background: rgba(59, 46, 255, 0.06); }
+.after-download { margin: 0 0 10px; padding: 10px 14px; border-radius: 14px; font-size: 13px; color: var(--text-2); background: var(--accent-soft); }
 .other-os { margin: 4px 0 0 4px; }
 .sheet-foot { margin: 18px 0 0; text-align: center; }
