@@ -66,6 +66,8 @@ const QWEN: Sampling = {
   temperature: 0.7, top_p: 0.8, top_k: 20, min_p: 0, penalty_present: 1.5, penalty_last_n: 256,
 };
 const QWEN_THINKING: Partial<Sampling> = { temperature: 1.0, top_p: 0.95, top_k: 20, min_p: 0, penalty_present: 1.5 };
+// Qwen3.8 keeps Qwen3.5's set without thinking, and drops the presence penalty with it (model card, checked 20 Oct 2026).
+const QWEN38_THINKING: Partial<Sampling> = { temperature: 1.0, top_p: 0.95, top_k: 20, min_p: 0, penalty_present: 0 };
 // Qwen's own advice for the two smallest (0.8B, 2B; only the browser build still has them), without thinking, for text: a
 // freer set with a strong presence penalty (model cards, checked 19 Oct 2026).
 const QWEN_SMALL: Sampling = { temperature: 1.0, top_p: 1.0, top_k: 20, min_p: 0, penalty_present: 2.0, penalty_last_n: 256 };
@@ -188,7 +190,10 @@ const qwen = (id: string, size: string, description: string, file: number, visio
 export const DESKTOP_MODELS: LocalModel[] = [
   qwen('qwen35-4b', '4B', 'Strong all-rounder with careful reasoning. Reads images. Best on a computer with a graphics card.', 2834975040, 672423488, 8, KV.qwenMid, { model: 2740937888, projector: 672423616 }, 'limited'),
   qwen('qwen35-9b', '9B', 'A big step up in quality and reasoning. Reads images. Wants a graphics card with 8 GB or more, or 16 GB of memory.', 5868826976, 918165984, 12, KV.qwenMid, { model: 5680522464, projector: 918166080 }, 'good'),
-  qwen('qwen35-27b', '27B', 'The most capable model here. Reads images. For computers with 32 GB or more of memory, or a high-end graphics card.', 17106773056, 927607392, 32, KV.qwenLarge, { model: 16740812704, projector: 927607040 }, 'good'),
+  // Qwen3.8 27B replaced Qwen3.5 27B: the same architecture, newer training. Unsloth's file keeps the prediction head (as the
+  // MTP editions above do), so the window costs the same and the engine writes several tokens per step.
+  nativeModel('qwen38-27b', 'Qwen3.8 27B', 'The most capable model here. Reads images. For computers with 32 GB or more of memory, or a high-end graphics card.', 'unsloth/Qwen3.8-27B-GGUF',
+    { name: 'Qwen3.8-27B-UD-Q4_K_M.gguf', bytes: 16464440224 }, { bytes: 927607488 }, 32, { contextSize: LONG_WINDOW, kvBytesPerToken: KV.qwenLarge, thinkingSampling: QWEN38_THINKING, supportsThinking: true, agent: 'good' }),
   nativeModel('gemma4-e2b', 'Gemma 4 E2B', 'Google’s small multilingual model. Reads images and speaks 140+ languages.', 'unsloth/gemma-4-E2B-it-GGUF',
     { name: 'gemma-4-E2B-it-Q4_K_M.gguf', bytes: 3106738272 }, { bytes: 985654080 }, 8, { sampling: GEMMA, contextSize: LONG_WINDOW, kvBytesPerToken: KV.gemmaE2B, supportsThinking: true }),
   // Gemma 4's larger sizes, in the quantization-aware editions (trained for 4-bit).
@@ -216,6 +221,7 @@ export const DEFAULT_LOCAL_MODEL_ID = hasNativeEngine() ? DEFAULT_NATIVE_MODEL_I
 export const RETIRED_MODELS: { id: string; name: string; files: { name: string; sizeBytes: number }[] }[] = [
   { id: 'qwen35-0.8b', name: 'Qwen3.5 0.8B', files: [{ name: 'model.gguf', sizeBytes: 532517120 }, { name: 'mmproj.gguf', sizeBytes: 204987232 }] },
   { id: 'qwen35-2b', name: 'Qwen3.5 2B', files: [{ name: 'model.gguf', sizeBytes: 1280835840 }, { name: 'mmproj.gguf', sizeBytes: 668227264 }] },
+  { id: 'qwen35-27b', name: 'Qwen3.5 27B', files: [{ name: 'model.gguf', sizeBytes: 17106773056 }, { name: 'mmproj.gguf', sizeBytes: 927607392 }] },
 ];
 
 /** The catalog plus any models the user added (desktop app). */

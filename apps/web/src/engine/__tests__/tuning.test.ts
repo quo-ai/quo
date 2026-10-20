@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('../../native', () => ({ hasNativeEngine: () => true, nativeBridge: () => null }));
-const { DESKTOP_MODELS } = await import('../../catalog');
+const { DESKTOP_MODELS, RETIRED_MODELS } = await import('../../catalog');
 const { contextFor, maxTokensFor, samplingFor, KV_SHARE, MIN_CONTEXT, THINKING_TOKENS } = await import('../tuning');
 
 const model = (id: string) => DESKTOP_MODELS.find(m => m.id === id)!;
@@ -11,7 +11,7 @@ const pick = (s: ReturnType<typeof samplingFor>) => [s.temperature, s.top_p, s.t
 describe('the window a model gets', () => {
   it('is the one asked for when the computer can hold it', () => {
     expect(contextFor(model('qwen35-9b'), 32768, 16)).toBe(32768);
-    expect(contextFor(model('qwen35-27b'), 32768, 24)).toBe(32768);
+    expect(contextFor(model('qwen38-27b'), 32768, 24)).toBe(32768);
     expect(contextFor(model('qwen35-4b'), 32768, 16)).toBe(32768);
     expect(contextFor(model('qwen35-4b'), 32768, 8)).toBe(27648); // 8 GB: its share of memory holds a little less
   });
@@ -59,10 +59,15 @@ describe('how long a reply may be', () => {
 describe('sampling, the way each family recommends', () => {
 
   it('uses Qwen’s own sets for the Qwen3.5 models that are left: without thinking, and with it', () => {
-    for (const id of ['qwen35-4b', 'qwen35-9b', 'qwen35-27b']) {
+    for (const id of ['qwen35-4b', 'qwen35-9b']) {
       expect(pick(samplingFor(model(id), { thinking: false })), id).toEqual([0.7, 0.8, 20, 0, 1.5]);
       expect(pick(samplingFor(model(id), { thinking: true })), id).toEqual([1.0, 0.95, 20, 0, 1.5]);
     }
+  });
+
+  it('uses Qwen3.8’s own: the same without thinking, no presence penalty with it', () => {
+    expect(pick(samplingFor(model('qwen38-27b'), { thinking: false }))).toEqual([0.7, 0.8, 20, 0, 1.5]);
+    expect(pick(samplingFor(model('qwen38-27b'), { thinking: true }))).toEqual([1.0, 0.95, 20, 0, 0]);
   });
 
   it('keeps the other families’ own recommendations', () => {
@@ -75,7 +80,7 @@ describe('sampling, the way each family recommends', () => {
 describe('the catalog', () => {
   it('knows what a token of window costs for every model, and gives the light models the longer window', () => {
     for (const m of DESKTOP_MODELS) expect(m.kvBytesPerToken, m.id).toBeGreaterThan(0);
-    for (const id of ['qwen35-4b', 'qwen35-9b', 'qwen35-27b', 'gemma4-e2b']) expect(model(id).contextSize, id).toBe(32768);
+    for (const id of ['qwen35-4b', 'qwen35-9b', 'qwen38-27b', 'gemma4-e2b']) expect(model(id).contextSize, id).toBe(32768);
     expect(model('llama32-3b').contextSize).toBe(16384);
     expect(model('phi4-mini').contextSize).toBe(16384);
   });
@@ -103,7 +108,6 @@ describe('the Qwen3.5 models come as the editions that keep the prediction head'
   it('are downloaded from Unsloth’s MTP repositories, with the exact sizes of those files', () => {
     expect(urlOf('qwen35-4b', 'model.gguf')).toBe('https://huggingface.co/unsloth/Qwen3.5-4B-MTP-GGUF/resolve/main/Qwen3.5-4B-Q4_K_M.gguf');
     expect(urlOf('qwen35-9b', 'mmproj.gguf')).toBe('https://huggingface.co/unsloth/Qwen3.5-9B-MTP-GGUF/resolve/main/mmproj-F16.gguf');
-    expect(model('qwen35-27b').files.map(f => f.sizeBytes)).toEqual([17106773056, 927607392]);
     expect(model('qwen35-4b').files.map(f => f.sizeBytes)).toEqual([2834975040, 672423488]);
     expect(model('qwen35-9b').files.map(f => f.sizeBytes)).toEqual([5868826976, 918165984]);
   });
@@ -111,12 +115,27 @@ describe('the Qwen3.5 models come as the editions that keep the prediction head'
   it('still count as installed for someone who downloaded the plain editions before', () => {
     expect(model('qwen35-4b').files.map(f => f.altSizes)).toEqual([[2740937888], [672423616]]);
     expect(model('qwen35-9b').files.map(f => f.altSizes)).toEqual([[5680522464], [918166080]]);
-    expect(model('qwen35-27b').files.map(f => f.altSizes)).toEqual([[16740812704], [927607040]]);
     for (const id of ['gemma4-e2b', 'llama32-3b', 'phi4-mini']) expect(model(id).files.every(f => f.altSizes === undefined), id).toBe(true);
   });
 
   it('count the prediction head’s extra layer in the memory a token of window takes', () => {
     expect(model('qwen35-4b').kvBytesPerToken).toBe(9 * 2 * 4 * 256 * 2);
-    expect(model('qwen35-27b').kvBytesPerToken).toBe(17 * 2 * 4 * 256 * 2);
+  });
+});
+
+describe('Qwen3.8 27B replaced Qwen3.5 27B', () => {
+  it('comes from Unsloth’s file, which keeps the prediction head, so a token of window costs the same', () => {
+    expect(model('qwen38-27b').files.map(f => f.url)).toEqual([
+      'https://huggingface.co/unsloth/Qwen3.8-27B-GGUF/resolve/main/Qwen3.8-27B-UD-Q4_K_M.gguf',
+      'https://huggingface.co/unsloth/Qwen3.8-27B-GGUF/resolve/main/mmproj-F16.gguf',
+    ]);
+    expect(model('qwen38-27b').files.map(f => f.sizeBytes)).toEqual([16464440224, 927607488]);
+    expect(model('qwen38-27b').kvBytesPerToken).toBe(17 * 2 * 4 * 256 * 2);
+    expect(model('qwen38-27b')).toMatchObject({ vision: true, supportsThinking: true, agent: 'good' });
+  });
+
+  it('leaves Qwen3.5 27B’s files to be found and removed, in either edition', () => {
+    expect(DESKTOP_MODELS.some(m => m.id === 'qwen35-27b')).toBe(false);
+    expect(RETIRED_MODELS.find(m => m.id === 'qwen35-27b')?.files.map(f => f.name)).toEqual(['model.gguf', 'mmproj.gguf']);
   });
 });

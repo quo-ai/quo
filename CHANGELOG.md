@@ -5,6 +5,7 @@ Notable changes to Quo. Quo Web and the desktop app ship together under the desk
 ## [Unreleased] (web and desktop)
 
 ### Added
+- **Qwen3.8 27B** replaces Qwen3.5 27B in the desktop app: the newer model, with the same speed-up for writing several words at once. If you have the old one, Models & storage offers to remove it.
 - **Gemma 4 models** — Gemma 4 E2B in the browser (Chrome, Edge and Firefox; best with a graphics card), and Gemma 4 12B and 26B A4B in the desktop app. Google's models write well in 140+ languages, read images in the desktop app, and can think when you turn it on.
 - **Dark mode and themes** — follows your system, or choose Light or Dark in Settings → Appearance. Dark is true black by default (clean on OLED screens), or Midnight, the indigo night with frosted glass. The accent is Indigo or Mono (greys, no glow). In the desktop app the window and the approval window follow the same choice.
 

@@ -14,13 +14,13 @@ const { RETIRED_MODELS } = await import('../../catalog');
 const ok = (value: unknown) => ({ ok: value });
 
 describe('models the app used to offer', () => {
-  it('knows the two it took out, with the files they were made of', () => {
-    expect(RETIRED_MODELS.map(m => m.id)).toEqual(['qwen35-0.8b', 'qwen35-2b']);
+  it('knows the ones it took out, with the files they were made of', () => {
+    expect(RETIRED_MODELS.map(m => m.id)).toEqual(['qwen35-0.8b', 'qwen35-2b', 'qwen35-27b']);
     for (const model of RETIRED_MODELS) expect(model.files.map(f => f.name)).toEqual(['model.gguf', 'mmproj.gguf']);
   });
 
   it('finds the ones still on this computer, partial downloads included, and says how much room they take', async () => {
-    const state = vi.fn(async (id: string) => ok(id === 'qwen35-2b' ? { installed: true, downloadedBytes: 1_949_063_104, totalBytes: 1_949_063_104 } : { installed: false, downloadedBytes: 300_000_000, totalBytes: 737_504_352 }));
+    const state = vi.fn(async (id: string) => ok(id === 'qwen35-2b' ? { installed: true, downloadedBytes: 1_949_063_104, totalBytes: 1_949_063_104 } : id === 'qwen35-27b' ? { installed: false, downloadedBytes: 0, totalBytes: 18_034_380_448 } : { installed: false, downloadedBytes: 300_000_000, totalBytes: 737_504_352 }));
     const found = await findLeftovers({ state, remove: vi.fn() } as never);
     expect(found).toEqual([
       { id: 'qwen35-0.8b', name: 'Qwen3.5 0.8B', bytes: 300_000_000 },

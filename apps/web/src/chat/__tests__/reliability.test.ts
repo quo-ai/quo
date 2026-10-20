@@ -13,7 +13,7 @@ describe('the note under a reply from a small offline model', () => {
   });
 
   it('is not there for the largest, an unknown model, or a reply with no model', () => {
-    expect(reliabilityNote('qwen35-27b')).toBeNull();
+    expect(reliabilityNote('qwen38-27b')).toBeNull();
     expect(reliabilityNote('some-cloud-model')).toBeNull();
     expect(reliabilityNote(undefined)).toBeNull();
   });

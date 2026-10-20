@@ -77,7 +77,7 @@ Open models, downloaded once and kept on your device. Quo checks your hardware a
 | Qwen3.5 9B (vision, thinking) | 5.9 GB | 16 GB computers, or an 8 GB graphics card | desktop | Apache 2.0 |
 | Gemma 4 12B (vision, thinking) | 6.9 GB | 16 GB computers, or an 8 GB graphics card | desktop | Gemma terms |
 | Gemma 4 26B A4B (vision, thinking) | 15.4 GB | 24 GB computers | desktop | Gemma terms |
-| Qwen3.5 27B (vision, thinking) | 17.1 GB | 32 GB computers | desktop | Apache 2.0 |
+| Qwen3.8 27B (vision, thinking) | 17.4 GB | 32 GB computers | desktop | Apache 2.0 |
 
 Full lists: [`apps/mobile/constants/models.ts`](apps/mobile/constants/models.ts) (phone) and [`apps/web/src/catalog.ts`](apps/web/src/catalog.ts) (web and desktop).
 
