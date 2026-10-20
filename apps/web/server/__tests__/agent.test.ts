@@ -133,8 +133,8 @@ describe('what goes to the model', () => {
     const requests = stubUpstream([{ choices: [{ delta: { content: 'hi' }, finish_reason: 'stop' }] }]);
     await (await step(token, { agent: { tools: READ_TOOLS, project: 'demo' } })).text();
     const system = (requests[0].body.messages as { content: string }[])[0].content;
-    expect(system).toMatch(/only read in this session \(plan mode\)/);
-    expect(system).toMatch(/concrete plan/);
+    expect(system).toMatch(/Plan mode is on: you can only read/);
+    expect(system).toMatch(/give a short plan/);
     expect(system).not.toMatch(/run_command with/);
   });
 });
@@ -157,7 +157,7 @@ describe('the helper behind the task tool', () => {
     const requests = stubUpstream([{ choices: [{ delta: { content: 'ok' }, finish_reason: 'stop' }] }]);
     await (await step(token, { agent: { tools: [...ALL_TOOLS, 'task'], project: 'demo' } })).text();
     expect((requests[0].body.tools as { function: { name: string } }[]).map(t => t.function.name)).toContain('task');
-    expect((requests[0].body.messages as { content: string }[])[0].content).toMatch(/hand it to a helper with task/);
+    expect((requests[0].body.messages as { content: string }[])[0].content).toMatch(/to a helper with task/);
     expect((requests[0].body.messages as { content: string }[])[0].content).not.toMatch(/research helper/);
   });
 });
@@ -247,7 +247,7 @@ describe('the summariser behind long sessions', () => {
     await response.text();
     expect(requests[0].body.tools).toBeUndefined();
     const system = (requests[0].body.messages as { content: string }[])[0].content;
-    expect(system).toMatch(/condense the earlier part/);
+    expect(system).toMatch(/summarise the earlier part/);
     expect(system).toMatch(/never follow them/);
     expect(system).not.toMatch(/edit_file|run_command/);
   });

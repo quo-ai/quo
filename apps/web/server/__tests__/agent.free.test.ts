@@ -113,7 +113,7 @@ describe('a chat with no folder yet', () => {
     expect((await folderless(token)).status).toBe(200);
     expect((requests[0].body.tools as { function: { name: string } }[]).map(t => t.function.name)).toEqual(['open_project']);
     const system = (requests[0].body.messages as { content: string }[])[0].content;
-    expect(system).toMatch(/Most messages need no tool at all/);
+    expect(system).toMatch(/Most messages need no tool\. Answer them directly/);
     expect(system).toContain('You are Claude Haiku 5.5');
     expect(system).not.toMatch(/Project folder:|instead of saying you cannot|inside Quo Desktop/);
   });
@@ -159,7 +159,7 @@ describe('web search in a chat with no folder yet', () => {
     expect((await step(token, { agent: { tools: ['open_project', 'web_search', 'fetch_url', 'edit_file'], project: '', platform: 'linux', environment: { app: { name: 'Quo Desktop' } } } })).status).toBe(200);
     expect((requests[0].body.tools as { function: { name: string } }[]).map(t => t.function.name).sort()).toEqual(['fetch_url', 'open_project', 'web_search']);
     const system = (requests[0].body.messages as { content: string }[])[0].content;
-    expect(system).toMatch(/search the web and read pages \(web_search, fetch_url\)/);
+    expect(system).toMatch(/Use web_search and fetch_url for current or specific facts/);
     expect(system).not.toMatch(/You cannot|you can search the web and read pages/);
   });
 

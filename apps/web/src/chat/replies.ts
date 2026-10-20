@@ -1,4 +1,4 @@
-import { FREE_CODE_CHARS, FREE_CODE_STEPS, READ_ONLY_TOOLS, WEB_TOOLS, webSystemPrompt } from '../../shared/agentTools';
+import { FREE_CODE_CHARS, FREE_CODE_STEPS, READ_ONLY_TOOLS, WEB_TOOLS, chatPrompt, webSystemPrompt } from '../../shared/agentTools';
 import { runAgent, countChanges, CONTEXT_CHARS } from '../agent/loop';
 import { agentContextChars, askLocalAgentModel, prepareLocalAgent } from '../agent/local';
 import { askOwnAgentModel } from '../agent/own';
@@ -30,8 +30,8 @@ import { SearchSteps } from './searchSteps';
  * more when it's final (`persist` true).
  */
 
-const LOCAL_PROMPT = 'You are Quo, a helpful private AI assistant running entirely on the user’s device. Be clear and concise. Use markdown when it helps readability.';
-const CLOUD_PROMPT = 'You are Quo, a helpful AI assistant. Be clear and concise. Use markdown when it helps readability.';
+const LOCAL_PROMPT = chatPrompt('local');
+const CLOUD_PROMPT = chatPrompt('cloud');
 
 const FOLDER_TOOL = 'open_project';
 

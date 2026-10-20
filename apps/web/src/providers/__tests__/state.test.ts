@@ -154,7 +154,7 @@ describe('one step of Code mode on the user’s own key', () => {
     expect(request.messages[0].content).toMatch(/You are Quo Code/);
     expect(request.messages[0].content).toMatch(/<project-notes>\nUse tabs\./);
     expect(request.messages[0].content).not.toMatch(/<b>|"App"/);
-    expect(request.messages[0].content).toMatch(/only read in this session \(plan mode\)/);
+    expect(request.messages[0].content).toMatch(/Plan mode is on: you can only read/);
     expect(request.messages[1]).toEqual({ role: 'user', content: 'Look around' });
     expect(request.tools.map(t => t.function.name)).toEqual(['list_directory', 'read_file', 'find_files', 'search_text']);
     expect(askOwnAgentModel).toBeTypeOf('function');
