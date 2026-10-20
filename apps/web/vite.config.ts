@@ -55,6 +55,18 @@ function dropUnusedSpeechRuntimes(): Plugin {
   };
 }
 
+/**
+ * Chunks that load on demand get a prefix the service worker recognises (workbox below): the colouring engine and each
+ * grammar (lang-), and maths (math-). Grammars that others embed (JavaScript in HTML) are shared chunks, so the test is
+ * what a chunk holds, not only its entry.
+ */
+function chunkName(chunk: { facadeModuleId?: string | null; moduleIds?: string[] }): string {
+  const ids = chunk.moduleIds?.length ? chunk.moduleIds : [chunk.facadeModuleId ?? ''];
+  if (ids.some(id => /\/node_modules\/(shiki|@shikijs)\//.test(id))) return 'assets/lang-[name]-[hash].js';
+  if ((chunk.facadeModuleId ?? '').endsWith('/src/math/load.ts')) return 'assets/math-[hash].js';
+  return 'assets/[name]-[hash].js';
+}
+
 export default defineConfig({
   plugins: [
     quoApi(),
@@ -95,11 +107,16 @@ export default defineConfig({
       workbox: {
         globPatterns: ['**/*.{js,css,html,wasm,png,svg}'],
         // Voice input and PDF reading load on demand; they're cached when first used (below).
-        globIgnores: ['checkout.html', 'screenshots/**', '**/ort-wasm-*', '**/pdf.worker*', '**/pdf-*.js'],
+        // So do code colours (one file per language) and maths (KaTeX and its fonts).
+        globIgnores: ['checkout.html', 'screenshots/**', '**/ort-wasm-*', '**/pdf.worker*', '**/pdf-*.js', '**/lang-*', '**/math-*'],
         runtimeCaching: [{
           urlPattern: ({ url }: { url: URL }) => /\/assets\/(ort-wasm-|pdf)/.test(url.pathname),
           handler: 'CacheFirst',
           options: { cacheName: 'quo-optional-features', expiration: { maxEntries: 12 } },
+        }, {
+          urlPattern: ({ url }: { url: URL }) => /\/assets\/(lang-|math-|KaTeX_)/.test(url.pathname),
+          handler: 'CacheFirst',
+          options: { cacheName: 'quo-code-and-maths', expiration: { maxEntries: 120 } },
         }],
         // The wllama wasm is ~9 MB.
         maximumFileSizeToCacheInBytes: 20 * 1024 * 1024,
@@ -109,7 +126,7 @@ export default defineConfig({
       },
     }),
   ],
-  build: { target: 'esnext' },
+  build: { target: 'esnext', rolldownOptions: { output: { chunkFileNames: chunkName } } },
   // The API tests start an in-memory Postgres and stream simulated replies; a shared CI runner needs more than the 5 s default.
   test: { testTimeout: 30_000, hookTimeout: 30_000, exclude: [...configDefaults.exclude, 'interop/**'] },
   worker: { format: 'es' },

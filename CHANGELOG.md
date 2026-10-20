@@ -9,6 +9,9 @@ Notable changes to Quo. Quo Web and the desktop app ship together under the desk
 
 ### Improved
 - **Clearer replies** — every model is asked to write plainly: the answer first, short sentences, no filler, and the same style in the code and text it writes.
+- **Code colours** — code in replies and in the desktop file panel is coloured by language (about 50, with the grammars VS Code uses), in calm colours that follow your theme and accent. Code blocks are light in Light mode, like GitHub.
+- **Maths** — formulas are drawn properly, inline and on their own line, however the model writes them; prices like $5 stay as text.
+- **Easier tables and text** — numbers line up and right-align, headings and paragraphs wrap without a lone last word.
 - **Small details** — the background glow fades out through a fine dither (Light and Midnight), changing the look dissolves the new one in, terminal output matches the dark style, and text selection, the text cursor and scrollbars take the accent.
 - **Easier to read** — small grey text and green labels pass contrast checks in both themes; sheets stay readable where the browser can't blur.
 

@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { Copy, FolderSearch, Globe, X } from 'lucide-react';
 import type { CodeSession } from '../../agent/session';
+import { LineTokens, useHighlight } from '../../code/CodeText';
+import { FILE_LIMIT } from '../../code/highlight';
+import { languageOfPath } from '../../code/languages';
 import type { FileChange, FileView } from '../../native';
 import { toast } from '../Toasts';
 
@@ -37,7 +40,10 @@ export function FileViewer({ session, path, line, change, onClose }: { session: 
     body.current?.querySelector(`[data-line="${line}"]`)?.scrollIntoView({ block: 'center' });
   }, [line, view]);
 
-  const lines = view?.kind === 'text' ? (view.text ?? '').split('\n') : [];
+  const content = view?.kind === 'text' ? (view.text ?? '') : '';
+  const lines = content ? content.split('\n') : [];
+  const coloured = useHighlight(content, change ? null : languageOfPath(path), FILE_LIMIT);
+  const tokens = coloured?.code === content ? coloured.lines : null;
   return (
     <div className="fp-viewer">
       <div className="fp-viewer-head">
@@ -56,7 +62,7 @@ export function FileViewer({ session, path, line, change, onClose }: { session: 
           : view.kind === 'toolarge' ? <p className="fp-note">This file is too large to show here.</p>
           : (
             <pre className="fp-code">
-              {lines.map((text, index) => <span key={index} data-line={index + 1} className={`fp-line${line === index + 1 ? ' hit' : ''}`}><span className="fp-ln">{index + 1}</span>{text || ' '}{'\n'}</span>)}
+              {lines.map((text, index) => <span key={index} data-line={index + 1} className={`fp-line${line === index + 1 ? ' hit' : ''}`}><span className="fp-ln">{index + 1}</span>{tokens?.[index] ? <LineTokens tokens={tokens[index]} /> : text || ' '}{'\n'}</span>)}
               {view.clipped && <span className="fp-line hunk">… the rest of this file is not shown</span>}
             </pre>
           )}

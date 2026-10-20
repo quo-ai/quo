@@ -12,7 +12,7 @@
   --edge: light-dark(rgba(14, 14, 60, 0.08), rgba(255, 255, 255, 0.09));
   --raised: light-dark(#ffffff, #2c2c3c);
   --scrim: light-dark(rgba(20, 16, 60, 0.18), rgba(0, 0, 0, 0.5));
-  --code-bg: light-dark(#12121c, #06060b);
+  --code-bg: light-dark(#fafafc, #06060b);
   --glass: light-dark(rgba(255, 255, 255, 0.58), rgba(30, 30, 44, 0.6));
   --glass-strong: light-dark(rgba(255, 255, 255, 0.78), rgba(36, 36, 52, 0.78));
   --glass-thick: light-dark(rgba(255, 255, 255, 0.97), rgba(30, 30, 42, 0.97));

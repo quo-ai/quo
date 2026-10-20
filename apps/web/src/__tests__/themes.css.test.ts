@@ -77,3 +77,29 @@ describe('the appearance tokens', () => {
     for (const side of [0, 1] as const) expect(contrast(rgb(halves(themed['--indigo'])[side]), rgb(halves(themed['--bg'])[side]))).toBeGreaterThanOrEqual(4.5);
   });
 });
+
+describe('the code colours', () => {
+  const syntax = css('syntax.css');
+  const roles = block(syntax, ':root');
+  const monoRoles = block(syntax, ':root[data-accent="mono"]');
+  const names = ['--syn-fg', '--syn-keyword', '--syn-function', '--syn-type', '--syn-string', '--syn-constant', '--syn-comment', '--syn-punct'];
+
+  it('are AA on the code background in light and dark, in Black and Midnight, with Indigo and Mono', () => {
+    for (const style of [base, { ...base, ...midnight }]) {
+      for (const palette of [roles, { ...roles, ...monoRoles }]) {
+        for (const side of [0, 1] as const) {
+          const under = rgb(halves(style['--code-bg'])[side]);
+          for (const name of names) expect(contrast(rgb(halves(palette[name])[side]), under), `${name} ${side ? 'dark' : 'light'} on ${style['--code-bg']}`).toBeGreaterThanOrEqual(4.5);
+          expect(contrast(rgb(halves(style['--text-3'])[side]), under), 'the language label').toBeGreaterThanOrEqual(4.5);
+        }
+      }
+    }
+  });
+
+  it('tell the parts apart: no two roles share a colour, except Mono’s greys', () => {
+    for (const side of [0, 1] as const) {
+      const colours = names.map(name => halves(roles[name])[side]);
+      expect(new Set(colours).size).toBe(colours.length);
+    }
+  });
+});

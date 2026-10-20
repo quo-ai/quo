@@ -65,14 +65,14 @@
   background-image: repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.04) 0 1px, transparent 1px 3px);
 }
 .step-pre.output::selection, .step-pre.output *::selection { background: color-mix(in srgb, var(--term-glow) 40%, transparent); }
-.step-pre.output, .code { scrollbar-color: rgba(255, 255, 255, 0.2) transparent; }
+.step-pre.output { scrollbar-color: rgba(255, 255, 255, 0.2) transparent; }
 
 /* Code in replies: a header with the language and a copy button, and the same scanlines. */
 .code { margin: 14px 0; border-radius: 16px; overflow: hidden; background: var(--code-bg); box-shadow: 0 0 0 0.5px var(--edge); }
-.code-head { display: flex; align-items: center; justify-content: space-between; padding: 5px 6px 5px 14px; color: #9a9aa6; font: 600 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.08em; text-transform: uppercase; border-bottom: 1px solid rgba(255, 255, 255, 0.07); }
+.code-head { display: flex; align-items: center; justify-content: space-between; padding: 5px 6px 5px 14px; color: var(--text-3); font: 600 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.08em; text-transform: uppercase; border-bottom: 1px solid var(--hairline); }
 .code-copy { display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 9px; border: 0; border-radius: 8px; background: transparent; color: inherit; font: inherit; letter-spacing: 0.04em; cursor: pointer; }
-.code-copy:hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
-.md .code pre { margin: 0; border-radius: 0; background-color: transparent; background-image: repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 3px); }
+.code-copy:hover { background: var(--fill-strong); color: var(--text); }
+.md .code pre { margin: 0; border-radius: 0; background-color: transparent; background-image: repeating-linear-gradient(0deg, var(--scan) 0 1px, transparent 1px 3px); }
 
 /* Commands, and the jump to the latest reply. */
 .cmd-list { pointer-events: auto; margin: 0 0 8px; padding: 6px; border-radius: 16px; display: grid; gap: 1px; max-height: 300px; overflow-y: auto; }

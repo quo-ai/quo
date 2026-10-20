@@ -30,14 +30,14 @@
 .fp-viewer-head { display: flex; align-items: center; gap: 2px; padding: 8px 8px 6px 14px; }
 .fp-viewer-path { margin-right: auto; font: 12px ui-monospace, 'SF Mono', Menlo, Consolas, monospace; color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; direction: rtl; text-align: left; }
 .fp-viewer-body { flex: 1; min-height: 0; overflow: auto; padding: 0 8px 10px; }
-.fp-code { margin: 0; padding: 10px 0; border-radius: 12px; background: var(--code-bg); color: #e9e9ff; font: 12px/1.55 ui-monospace, 'SF Mono', Menlo, Consolas, monospace; overflow: auto; white-space: pre; }
+.fp-code { margin: 0; padding: 10px 0; border-radius: 12px; background: var(--code-bg); color: var(--syn-fg); font: 12px/1.55 ui-monospace, 'SF Mono', Menlo, Consolas, monospace; overflow: auto; white-space: pre; }
 .fp-line { display: block; padding: 0 12px 0 0; min-height: 1.55em; }
 .fp-code.diff .fp-line { padding-left: 12px; }
-.fp-line.add { background: rgba(60, 200, 120, 0.16); color: #9af0c0; }
-.fp-line.del { background: rgba(255, 90, 110, 0.16); color: #ffb0bb; }
-.fp-line.hunk { color: #8d8dd0; padding-left: 12px; }
-.fp-line.hit { background: rgba(255, 214, 90, 0.2); }
-.fp-ln { display: inline-block; width: 3.6em; padding-right: 12px; text-align: right; color: #6b6b8e; user-select: none; }
+.fp-line.add { background: var(--diff-add-bg); color: var(--success); }
+.fp-line.del { background: var(--diff-del-bg); color: var(--error); }
+.fp-line.hunk { color: var(--syn-comment); padding-left: 12px; }
+.fp-line.hit { background: var(--code-hit); }
+.fp-ln { display: inline-block; width: 3.6em; padding-right: 12px; text-align: right; color: var(--code-dim); user-select: none; }
 .fp-image { max-width: 100%; border-radius: 10px; background: repeating-conic-gradient(#e9e9f3 0 25%, #fff 0 50%) 50% / 16px 16px; }
 
 /* A path named in a message that is a real file in the project. */

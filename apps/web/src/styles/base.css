@@ -40,7 +40,7 @@
   --surface-soft: light-dark(rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0.035));
   --raised: light-dark(#ffffff, #2a2a2e);
   --scrim: light-dark(rgba(20, 16, 60, 0.18), rgba(0, 0, 0, 0.6));
-  --code-bg: light-dark(#12121c, #111113);
+  --code-bg: light-dark(#fafafc, #111113); /* code follows the theme, like GitHub; terminal output stays dark */
 
   --glass: light-dark(rgba(255, 255, 255, 0.58), rgba(20, 20, 22, 0.72));
   --glass-strong: light-dark(rgba(255, 255, 255, 0.78), rgba(28, 28, 31, 0.86));

@@ -4,11 +4,15 @@ import ReactMarkdown, { type Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { codePanel, useFileExists } from '../agent/codePanel';
 import { fileRefFromHref, parseFileRef, type FileRef } from '../agent/fileRefs';
+import { CodeText } from '../code/CodeText';
+import { languageOf } from '../code/languages';
+import { hasMath, normalizeMath } from '../math/normalize';
+import { useMath } from '../math/useMath';
 
 /**
- * Renders model output as markdown (GitHub-flavoured: tables, lists, code).
- * Raw HTML in the text is not rendered, so model output can't inject markup;
- * links open in a new tab without access to this page.
+ * Renders model output as markdown (GitHub-flavoured: tables, lists, code), with code coloured (code/) and maths drawn
+ * by KaTeX (math/), each loaded the first time a reply needs it. Raw HTML in the text is not rendered, so model output
+ * can't inject markup; links open in a new tab without access to this page.
  */
 
 /** The plain text inside rendered children. */
@@ -19,15 +23,16 @@ export function textOf(node: ReactNode): string {
   return '';
 }
 
-/** A code block with its language and a copy button. */
+/** A code block with its language, its colours and a copy button. */
 function CodeBlock({ children }: { children?: ReactNode }) {
   const [copied, setCopied] = useState(false);
   const code = isValidElement(children) ? (children as ReactElement<{ className?: string; children?: ReactNode }>) : null;
   const language = /language-([\w+#.-]+)/.exec(code?.props.className ?? '')?.[1];
+  const text = textOf(code?.props.children);
 
   async function copy() {
     try {
-      await navigator.clipboard.writeText(textOf(code?.props.children).replace(/\n$/, ''));
+      await navigator.clipboard.writeText(text.replace(/\n$/, ''));
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {
@@ -41,7 +46,7 @@ function CodeBlock({ children }: { children?: ReactNode }) {
         <span>{language ?? 'code'}</span>
         <button type="button" className="code-copy" onClick={() => void copy()} aria-label="Copy code">{copied ? <><Check size={13} /> Copied</> : <><Copy size={13} /> Copy</>}</button>
       </div>
-      <pre>{children}</pre>
+      <pre><code className={code?.props.className}><CodeText code={text} language={languageOf(language)} /></code></pre>
     </div>
   );
 }
@@ -80,9 +85,12 @@ const components: Components = {
 const plugins = [remarkGfm];
 
 export const Markdown = memo(function Markdown({ text, muted = false }: { text: string; muted?: boolean }) {
+  const math = useMath(hasMath(text));
   return (
     <div className={muted ? 'md muted' : 'md'}>
-      <ReactMarkdown remarkPlugins={plugins} components={components}>{text}</ReactMarkdown>
+      {math
+        ? <ReactMarkdown remarkPlugins={[remarkGfm, math.remark]} rehypePlugins={[math.rehype]} components={components}>{normalizeMath(text)}</ReactMarkdown>
+        : <ReactMarkdown remarkPlugins={plugins} components={components}>{text}</ReactMarkdown>}
     </div>
   );
 });

@@ -1,0 +1,51 @@
+/* Code and maths. Code colours are roles (code/theme.ts names them, code/highlight.ts gives each token one), muted in
+   the way of GitHub and VS Code: hue tells the parts apart, nothing shouts. Every role is AA on --code-bg in light, Black
+   and Midnight, and in Mono, which uses greys with bold keywords (themes.css.test.ts). */
+:root {
+  --syn-fg: light-dark(#24242f, #e4e4e7);
+  --syn-keyword: light-dark(#7a3cc4, #c3a6ff);
+  --syn-function: light-dark(#1f5bc4, #82b1ff);
+  --syn-type: light-dark(#0b7285, #6cc7cf);
+  --syn-string: light-dark(#2b7a2f, #93cf8f);
+  --syn-constant: light-dark(#b04a00, #f5a66b);
+  --syn-comment: light-dark(#6e6e82, #8a8a99);
+  --syn-punct: light-dark(#565668, #a1a1ad);
+  --syn-inserted: var(--success);
+  --syn-deleted: var(--error);
+  --syn-changed: var(--warn);
+  /* Around the code: line numbers, the changed lines of a diff, the line a link points at, and faint scanlines. */
+  --code-dim: light-dark(#9a9aab, #5c5c68);
+  --diff-add-bg: light-dark(rgba(23, 119, 63, 0.1), rgba(60, 200, 120, 0.14));
+  --diff-del-bg: light-dark(rgba(196, 36, 63, 0.08), rgba(255, 90, 110, 0.14));
+  --code-hit: light-dark(rgba(255, 190, 0, 0.2), rgba(255, 214, 90, 0.16));
+  --scan: light-dark(rgba(14, 14, 40, 0.022), rgba(255, 255, 255, 0.025));
+}
+:root[data-accent="mono"] {
+  --syn-fg: light-dark(#27272a, #e4e4e7);
+  --syn-keyword: light-dark(#09090b, #fafafa);
+  --syn-function: light-dark(#3f3f46, #d4d4d8);
+  --syn-type: light-dark(#3f3f46, #d4d4d8);
+  --syn-string: light-dark(#52525b, #a8a8b0);
+  --syn-constant: light-dark(#09090b, #fafafa);
+  --syn-comment: light-dark(#6e6e7a, #8a8a94);
+  --syn-punct: light-dark(#6e6e7a, #a1a1aa);
+}
+.syn-keyword { color: var(--syn-keyword); }
+.syn-function { color: var(--syn-function); }
+.syn-type { color: var(--syn-type); }
+.syn-string { color: var(--syn-string); }
+.syn-constant { color: var(--syn-constant); }
+.syn-comment { color: var(--syn-comment); }
+.syn-punct { color: var(--syn-punct); }
+.syn-inserted { color: var(--syn-inserted); }
+.syn-deleted { color: var(--syn-deleted); }
+.syn-changed { color: var(--syn-changed); }
+.syn-i { font-style: italic; }
+.syn-b { font-weight: 600; }
+:root[data-accent="mono"] .syn-keyword { font-weight: 600; }
+
+/* Maths (KaTeX): the text's colour and a touch larger; a long formula scrolls on its own instead of widening the reply. */
+.md .katex { font-size: 1.08em; }
+.md .katex-display { margin: 14px 0; padding: 4px 2px; overflow-x: auto; overflow-y: hidden; }
+.md .katex-display > .katex { white-space: nowrap; }
+.md .katex-error { font: 0.9em ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
