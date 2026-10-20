@@ -43,8 +43,13 @@ describe('background commands', () => {
     assert.match(second.text, /tick \d+/);
     const stopped = await s.callTool('stop_command', { id: 'bg1' });
     assert.match(stopped.text, /Stopped bg1/);
-    await sleep(200);
-    assert.match((await s.callTool('command_output', { id: 'bg1' })).text, /stopped/);
+    // Stopping takes a moment, longer on Windows (taskkill ends the whole process tree): look until it has.
+    let after = '';
+    for (let i = 0; i < 50 && !/stopped/.test(after); i++) {
+      await sleep(100);
+      after = (await s.callTool('command_output', { id: 'bg1' })).text;
+    }
+    assert.match(after, /stopped/);
     assert.match((await s.callTool('stop_command', { id: 'bg1' })).text, /already finished/);
   });
 
