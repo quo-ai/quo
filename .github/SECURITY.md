@@ -15,7 +15,7 @@ Include what you found, how to reproduce it, and what an attacker could do with 
 
 - Anything that sends chats, files, voice or other personal data off the device without the user choosing a cloud model.
 - The Quo apps (Android, iOS), Quo Web, the desktop app, and Quo's API (accounts, credits, cloud chat).
-- Code mode (the coding agent in the desktop app): anything that lets the model, or text it reads, read outside the project folder, read a secrets file, change or run something without the user’s approval, make the app contact a server other than GitHub’s download host, or write outside the folder (the design is in [apps/desktop/README.md](../apps/desktop/README.md#code-mode)).
+- Code mode (the coding agent in the desktop app): anything that lets the model, or text it reads, read outside the project folder, read a secrets file, change or run something without the user’s approval, make the app contact anything beyond GitHub’s download host, the web search and pages the rules allow, and the project’s own git remote for a push the user approved, or write outside the folder (the design is in [apps/desktop/README.md](../apps/desktop/README.md#code-mode)).
 - Quo Sync: its encryption and key handling (anything that lets someone, including us, read synced chats or memories without the recovery key), and sign-in and sessions (the design is in [apps/web/SYNC.md](../apps/web/SYNC.md)).
 - Release and update integrity (desktop builds, auto-update, model downloads and their validation).
 

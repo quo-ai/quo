@@ -146,7 +146,7 @@ privacy = f'''<h1>Privacy Policy</h1>
 
 <h2>How long we keep data</h2>
 <ul>
-<li><strong>Your content</strong> stays on your device until you delete it. You can delete individual chats, clear all chats or memories (in Settings in the Android app, or under Memories in Quo Web and the desktop app), or uninstall the app to remove everything.</li>
+<li><strong>Your content</strong> stays on your device until you delete it. You can delete individual chats, clear all chats or memories (in Settings, in every app), or uninstall the app to remove everything.</li>
 <li><strong>Usage data</strong> is kept by Google for no longer than 14 months.</li>
 <li><strong>Crash reports</strong> are kept by Google for about 90 days.</li>
 <li><strong>Emails</strong> are kept only as long as needed to help you.</li>
@@ -244,7 +244,7 @@ faq = [
     ('Where are my chats stored?',
      'On your device. If you turn on Quo Sync (optional, and it needs a Quo account), encrypted copies are also kept so your other devices can have them, and we can’t read them. Without Quo Sync there is no server copy, so if you uninstall the app or clear your chats, they are gone for good.'),
     ('What is Code mode?',
-     'In the desktop app, with a capable cloud model or an offline model, Code lets Quo work on one of your project folders: read and search the code, make changes, run your tests, and read public GitHub repositories for reference. You choose the folder, you confirm every change and nearly every command in a pop-up (only read-only checks like <code>git status</code> run on their own), and it never reads files like .env or private keys. A Plan switch makes it read-only, and each reply that changed files has an Undo button. With a cloud model the files it reads are sent to the model provider; with an offline model they stay on your computer. Cloud models use credits, so a long session costs more than a short chat. Small offline models make more mistakes, so Quo asks before using one for Code.'),
+     'A coding agent in the desktop app. Ask for something in a project and Quo works in that folder: it reads the code, makes changes, runs your tests, commits and, if you ask, pushes and gives you a link to open a pull request. You approve every change, command, commit and push in a window the page can’t click (read-only checks like <code>git status</code> run on their own), and it never reads files like .env or private keys. Plan mode makes it read-only, and Undo puts changed files back. With a cloud model the files it reads go to the model’s provider; with an offline model they stay on your computer. Settings are in <strong>Models &amp; storage → Code</strong>.'),
     ('Can I use my own API key?',
      'Yes, with no Quo account. In <strong>Models &amp; storage → Your keys</strong>, pick a provider (OpenRouter, Anthropic, OpenAI, Google, xAI, DeepSeek, Mistral or Groq), paste your key and choose the models you want. You can also add a server of your own, such as Ollama or LM Studio. Messages go straight from your computer to the provider, not through Quo, and you pay the provider directly. In the desktop app the key is kept in your system’s secure storage and the page can’t read it back. Code mode works with these models too.'),
     ('Can Quo search the web?',

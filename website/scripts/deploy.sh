@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Deploys website/ to Vercel (project "quo", https://quoai.vercel.app).
+# `--preview` deploys to a preview address instead, to check a change first.
 # Runs from a copy outside the git repo: Vercel's Hobby plan blocks
 # deployments whose git commit author isn't on the team. The copy carries the
 # project link (.vercel/) but never .env* files.
@@ -21,4 +22,6 @@ with zipfile.ZipFile('assets/brand/quo-brand-kit.zip', 'w', zipfile.ZIP_DEFLATED
     for name in sorted(os.listdir('assets/shots')):
         z.write(f'assets/shots/{name}', f'quo-brand-kit/screenshots/{name}')
 PY
-npx -y vercel@latest deploy --prod --yes
+target=--prod
+[ "${1:-}" = "--preview" ] && target=
+npx -y vercel@latest deploy $target --yes

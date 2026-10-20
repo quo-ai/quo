@@ -17,6 +17,7 @@ Read [`CLAUDE.md`](../CLAUDE.md) first. It lists architecture and the native got
 ## Before opening a pull request
 
 - The checks pass in every app you touched: `npm run typecheck && npm test` (plus `npm run lint` in `apps/mobile`).
+- The repository checks pass too: `node scripts/check-secrets.js` (no keys, personal paths or email addresses) and `node scripts/check-structure.js` (no source file over 500 lines). Turn on the pre-commit hook once with `git config core.hooksPath scripts/hooks`.
 - Keep changes focused, with one topic per pull request.
 - For UI changes, include a screenshot or short clip.
 - For bigger changes (new model, new feature, dependency bumps to llama.rn or wllama), open an issue first.

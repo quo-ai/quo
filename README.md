@@ -33,41 +33,37 @@ Quo runs the model on your device instead:
 - **Works offline.** On a plane, abroad, anywhere without signal.
 - **Private by design.** Chats, files, photos and voice are processed on your device. No account, no server copy.
 - **Open source.** “Private” is something you can check, not just a promise.
-- **Free.** Offline models are free and unlimited, everywhere.
+- **Free.** Offline models are free and unlimited.
 
 ## Get Quo
 
 | | How it runs | Get it |
 |---|---|---|
-| 🌐 **Web** | [wllama](https://github.com/ngxson/wllama) (llama.cpp → WebAssembly). WebGPU in Chrome and Edge, CPU elsewhere | [quoai-app.vercel.app](https://quoai-app.vercel.app/) |
-| 💻 **Desktop** | Its own app for macOS, Windows and Linux (Electron), running models on your graphics card | [macOS](https://github.com/quo-ai/quo/releases/latest/download/Quo-mac-universal.dmg) · [Windows](https://github.com/quo-ai/quo/releases/latest/download/Quo-windows-x64-setup.exe) · [Linux](https://github.com/quo-ai/quo/releases/latest/download/Quo-linux-x86_64.AppImage) |
-| 🤖 **Android** | [llama.rn](https://github.com/mybigday/llama.rn), ships with a starter model | [Google Play](https://play.google.com/store/apps/details?id=com.quo.app) |
-| 📱 **iPhone / iPad** | llama.rn on Metal | Coming soon |
+| **Web** | [wllama](https://github.com/ngxson/wllama) (llama.cpp in WebAssembly), on the graphics card in Chrome and Edge | [quoai-app.vercel.app](https://quoai-app.vercel.app/) |
+| **Desktop** | llama.cpp on the graphics card, in an app for macOS, Windows and Linux | [macOS](https://github.com/quo-ai/quo/releases/latest/download/Quo-mac-universal.dmg) · [Windows](https://github.com/quo-ai/quo/releases/latest/download/Quo-windows-x64-setup.exe) · [Linux](https://github.com/quo-ai/quo/releases/latest/download/Quo-linux-x86_64.AppImage) |
+| **Android** | [llama.rn](https://github.com/mybigday/llama.rn), with a model built in | [Google Play](https://play.google.com/store/apps/details?id=com.quo.app) |
+| **iPhone and iPad** | llama.rn on Metal | Coming soon |
 
-> **Best browser:** Chrome or Edge on a laptop or desktop. They let Quo use your graphics card (WebGPU), which makes replies much faster. Firefox and Safari work but run on the processor. Phone browsers don't have enough memory, so use the phone apps.
+In a browser, use Chrome or Edge on a computer: Firefox and Safari run on the processor, which is slower, and phone browsers don't have the memory (use the app).
 
 ## Features
 
-| | Web and desktop | iPhone and Android |
-|---|:-:|:-:|
-| Chat with offline models (Qwen, Gemma, Llama, …) | ✓ | ✓ |
-| Thinking mode (reasoning you can read) | ✓ | ✓ † |
-| Saved chats, markdown, search | ✓ | ✓ |
-| Works fully offline after one download | ✓ | ✓ |
-| Suggests the right model for your hardware | ✓ | ✓ |
-| Ask about PDFs and documents | | ✓ |
-| Understand photos | | ✓ |
-| Voice input and read aloud | | ✓ † |
-| Optional cloud models, clearly marked | ✓ | |
-| Use your own API key (OpenRouter, Anthropic, OpenAI, …), or a server like Ollama | ✓ | |
-| Code mode: a coding agent for your project folder (desktop app) | ✓ | |
-| Web search: Brave, Tavily, Exa, SearXNG or DuckDuckGo | ✓ | |
+| | Web | Desktop | Phone |
+|---|:-:|:-:|:-:|
+| Offline models, working with no internet | ✓ | ✓ | ✓ |
+| Thinking you can read | ✓ | ✓ | ✓ † |
+| Ask about documents | ✓ | ✓ | ✓ |
+| Understand photos | | ✓ | ✓ |
+| Voice input and read aloud | ✓ | ✓ | ✓ † |
+| A free cloud model, and your own API keys (OpenRouter, Anthropic, OpenAI, Ollama…) | ✓ | ✓ | |
+| Web search with sources, when the model needs it | ✓ | ✓ | |
+| Code mode: a coding agent that asks before every change, commit and push | | ✓ | |
 
-Phone features marked † are part of the optional one-time Premium upgrade.
+† Part of the optional one-time Premium upgrade on the phone.
 
 ## Models
 
-Open models in GGUF format, downloaded once and kept on your device. Quo checks your hardware and suggests one that runs well.
+Open models, downloaded once and kept on your device. Quo checks your hardware and suggests one that runs well.
 
 | Model | Download | Runs well on | Where | Licence |
 |---|---|---|---|---|
@@ -81,11 +77,11 @@ Open models in GGUF format, downloaded once and kept on your device. Quo checks 
 | Qwen3.5 9B (vision, thinking) | 5.9 GB | 16 GB computers, or an 8 GB graphics card | desktop | Apache 2.0 |
 | Qwen3.5 27B (vision, thinking) | 17.1 GB | 32 GB computers | desktop | Apache 2.0 |
 
-The full catalogues are [`apps/mobile/constants/models.ts`](apps/mobile/constants/models.ts) (phones) and [`apps/web/src/catalog.ts`](apps/web/src/catalog.ts) (web and desktop).
+Full lists: [`apps/mobile/constants/models.ts`](apps/mobile/constants/models.ts) (phone) and [`apps/web/src/catalog.ts`](apps/web/src/catalog.ts) (web and desktop).
 
 ## Pricing
 
-Quo Web and the desktop app are free. The phone apps are free with three models (one with vision), and an optional one-time **Premium** upgrade (from $9.99, no subscription) unlocks every model, thinking mode, voice input and read-aloud, enhanced recall, and unlimited chats and memories.
+Quo Web and the desktop app are free, including a free cloud model (20 messages a day). The phone app is free with three models; a one-time **Premium** upgrade (from $9.99) unlocks every model, thinking, voice, and unlimited chats and memories.
 
 ## Build from source
 
@@ -112,23 +108,21 @@ npm install
 npm run android    # or: npm run ios (macOS)
 ```
 
-Each app runs its own checks (`npm run typecheck`, `npm test`, plus `npm run lint` for the phone app). Read [`CLAUDE.md`](CLAUDE.md) for the architecture and native gotchas, and [`apps/web/README.md`](apps/web/README.md) for how Quo Web works.
+Each app has its own checks (`npm run typecheck`, `npm test`, and `npm run lint` for the phone app). [`CLAUDE.md`](CLAUDE.md) covers the architecture and the rules that keep it safe; [`apps/web/README.md`](apps/web/README.md) and [`apps/desktop/README.md`](apps/desktop/README.md) go deeper.
 
 ## Repository
 
 ```
-apps/mobile/    Phone apps: Expo / React Native, llama.rn (Android, iOS)
-apps/web/       Quo Web: Vite + React, wllama, and its API (server/)
-apps/desktop/   Desktop app: Electron, serving a Quo Web build
-website/        quoai.vercel.app (static, no build step)
+apps/mobile/    Phone app: Expo / React Native, llama.rn
+apps/web/       Quo Web (Vite + React, wllama) and its API (server/)
+apps/desktop/   Desktop app: Electron and llama.cpp, serving a Quo Web build
+website/        quoai.vercel.app (static)
 ```
-
-`apps/mobile/ios/` isn't committed: it's generated from `app.json` by `npx expo prebuild -p ios`.
 
 ## Contributing
 
-Issues and pull requests are welcome. Start with [CONTRIBUTING.md](.github/CONTRIBUTING.md), and please follow the [Code of Conduct](.github/CODE_OF_CONDUCT.md). Security issues: see [SECURITY.md](.github/SECURITY.md).
+Issues and pull requests are welcome: see [CONTRIBUTING.md](.github/CONTRIBUTING.md) and the [Code of Conduct](.github/CODE_OF_CONDUCT.md). Report security issues privately ([SECURITY.md](.github/SECURITY.md)).
 
 ## License
 
-Code is licensed under [Apache 2.0](LICENSE). The licence doesn't cover the Quo AI name, logo or app icons; forks need their own name and icon (see [TRADEMARKS.md](TRADEMARKS.md)). Brand assets for press are at [quoai.vercel.app/brand](https://quoai.vercel.app/brand/).
+[Apache 2.0](LICENSE). The licence doesn't cover the Quo name, logo or icons, so forks need their own ([TRADEMARKS.md](TRADEMARKS.md)). Brand assets: [quoai.vercel.app/brand](https://quoai.vercel.app/brand/).

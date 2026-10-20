@@ -1,37 +1,45 @@
 # Changelog
 
-All notable changes to Quo will be documented in this file.
+Notable changes to Quo. Quo Web and the desktop app ship together under the desktop version (`desktop-v*` tags); the phone app has its own numbers. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-
-## [Unreleased]
+## [Unreleased] (web and desktop)
 
 ### Added
-- **Quo Web** — Quo in the browser: offline models run on the computer (WebGPU in Chrome and Edge), saved chats, thinking mode, resumable model downloads, installable as an app. Optional, clearly marked cloud models.
-- **Quo for desktop** — macOS, Windows and Linux app (Electron). Built and published by GitHub Actions.
-- **Get the app / Install Quo** — one-time install prompt after the first answer, a "Get the app" sheet, and browser / phone banners that point to the faster option.
-- **Native AI engine in the desktop app** — models now run in llama.cpp on the graphics card (Metal, Vulkan) or processor, instead of in the browser: far faster replies (hundreds of tokens a second on a graphics card instead of about a dozen), documents read in seconds instead of over a minute, and no 2 GB model limit. Bigger models (Qwen3.5 up to 27B), models that read photos, and models you already have from LM Studio or Ollama are used in place with no second download. Falls back to the in-browser engine where it isn't available.
-- **Code mode: a coding agent in the desktop app** — turn on Code in the chat bar and pick a project folder. A model can read and search the code, make changes, run tests and read public GitHub repositories. A Plan switch makes it read-only, each reply that changed files has an Undo button, and it follows the project's `AGENTS.md`. You approve every change and command (read-only ones like `git status` run on their own), and secrets files (.env, keys) are never read. Works with Quo's cloud models, your own API key, or an offline model on your computer (Qwen3.5 9B and up recommended; smaller ones ask first). Settings are in Models & storage → Code.
-- **Push and pull requests from Code mode** — when you ask, Quo pushes the branch you’re on to its remote and gives you a link to open a pull request on GitHub (“Made with Quo” in the body when crediting is on). Every push is approved in its own window listing the commits; it never force-pushes, never touches another branch or remote, and refuses when the remote has moved on. A setting turns it off (Models & storage → Code, on by default). Commits now match the project’s message style, a failing hook comes back for the model to fix (never skipped), signed commits and SSH remotes work, `git commit`/`git push` commands are steered to the tools, force pushes, amends and `--no-verify` are refused, and commands that throw work away carry a warning in the approval window.
-- **Searches and sources in the chat** — every search shows as a step while it runs ("Searching the web for …"), with any model and route: Quo’s cloud models, your own OpenRouter or Anthropic key, and the desktop’s own search tools. Under the reply, a Sources row links to the pages it drew on (the site’s name, the title on hover). No site icons are loaded, so the sites don’t learn who is reading; sources stay on the device.
-- **Web search with Quo’s cloud models, the model’s call** — there is no Web switch: the model is offered OpenRouter’s web search tool and searches only when a message needs it (a fixed engine, Exa, so the price is known: $0.007 a search plus the results as tokens), in the browser and the desktop app. The free model gets one search a reply from 3 a day per device (10 per IP; `FREE_DAILY_SEARCHES`, `FREE_DAILY_SEARCHES_PER_IP`); a reply that didn't search gives it back, and once they're used up Quo says so once. Replies on credits may search up to 3 times and pay only for the searches made. Your own OpenRouter key gets the same tool. Settings → Web says whether models may search at all.
-- **A new look for things that move, and slash commands** — what appears dissolves in through an ordered dither, "working" is a dither bar sweeping (under a running step, along the chat box, while a reply is on its way) with a block cursor at the end of streaming text, terminal output has scanlines and a faint glow, a finished step flashes once, and everything stops for people who ask for reduced motion. Code in replies has its language and a copy button, long runs of steps fold the older ones away with a one-line summary, edits show +/− as badges, and a Latest button appears when you scroll up. Type `/` for commands (`/new`, `/plan`, `/code`, `/summarise`, `/undo`, `/retry`, `/copy`, `/model`, `/keys`, `/think`, `/folder`, `/stop`; only the ones that apply right now are listed), `Shift+Tab` switches plan mode, and an arrow up in an empty box brings back your last message.
-- **Memory meter, summaries and a better folder picker** — a ring in the chat bar shows how full the model's memory is (counted by the provider when it says, estimated otherwise); open it to see what fills it, summarise the earlier messages so the conversation goes on from notes (or let Quo do it by itself when it is nearly full), or start a new chat. In Code mode the folder chip switches between recent projects (with where they are) and shows the git branch and how many files changed, each chat remembers its folder, and typing `@` lists the project's files to point the model at one.
-- **Use your own API key** — in Models & storage → Your keys, connect OpenRouter, Anthropic, OpenAI, Google, xAI, DeepSeek, Mistral or Groq, or add a server of your own (Ollama, LM Studio…), for chat and Code mode, with no Quo account. Messages go straight from your computer to the provider, not through Quo. In the desktop app the key is encrypted by your system's secure storage and the app's pages can't read it back; in a browser it stays in that browser.
-- **Web search** — models can search the web and read pages: in Code mode, and in chats with your own API key or an offline model, when the model decides to. Choose the search service in Models & storage → Web: Brave Search, Tavily or Exa with your key, your own SearXNG, or DuckDuckGo with nothing to set up. In a browser, OpenRouter and Anthropic search for themselves. On by default with your own keys, off with offline models until you turn it on. A model can only open addresses you wrote, a search found, or a page it read links to; never this computer or your network.
-- **Connection awareness** — Quo notices when you're offline (an Offline pill, web search switches off) and, as you choose, moves to your offline model when a cloud model can't be used (no internet, out of messages or credits, a refused key), asks first, or does nothing. It only ever moves toward the offline model.
-- **Quo Pro and cloud models** — a Quo Pro popup and a Cloud tab under Models & storage list the free model and the frontier models (Claude, GPT, Gemini, Grok, Qwen, GLM, Mistral, DeepSeek and more), which stay locked until you sign in and have credits. Choosing a locked model shows what it costs and how to unlock it.
-- **Memories in Quo Web and the desktop app** — a list of things you want Quo to know about you (Memories in the sidebar). Offline models read it before every reply; it is never sent to a cloud model. With Quo Sync on, it is the same list as in the Android app.
-- **Photos and documents** — attach PDFs and text files (and photos, with models that read images) to a message; they're read on your computer and only go to offline models.
-- **Voice input and read aloud** — speak instead of typing (Whisper runs on your computer after a one-time ~80 MB download) and have replies read out with your system's voices.
-- **Quo Sync** — end-to-end encrypted sync of chats and memories between Quo Web, the desktop app and the Android app, with a recovery key only you hold; Quo can't read them. Part of Quo Pro, or on its own. Needs sign-in and purchases to be switched on.
-- **Sign out of all devices** — ends every other sign-in of your account (a lost phone, a shared computer); available in Plan & credits in Quo Web and the desktop app, and in Settings → Sync in the Android app.
-- **Delete your account** — from Settings → Sync in the Android app, or Plan & credits in Quo Web and the desktop app; it removes your synced data, credits and plan records.
-- **Sync clean-up** — synced data stays for 180 days after a plan ends (with one warning email 30 days before it is deleted).
-- **Open source** — Apache 2.0 licence, contributing guide, code of conduct, security policy, issue templates; website and brand assets refreshed for launch.
+- **Push and pull requests** — Code mode can push the branch you're on and give you a link to open a pull request on GitHub. You approve every push; it never force-pushes. Turn it off in Models & storage → Code.
+- **Searches and sources** — each search shows as a step while it runs, and the pages a reply used appear as sources under it.
+- **The model decides when to search** — no Web switch. Quo's cloud models, the free one included, search through OpenRouter when a question needs it (3 searches a day on the free model). Settings → Web says whether models may search at all.
+- **Code mode starts itself** — the model asks for a project folder when a request needs one (you approve it), and can run a dev server in the background, hand a broad question to a read-only helper, keep a checklist, and summarise long sessions.
+- **Thinking levels** — Off, Quick, Auto or Deep, showing only the levels each model has. Auto leaves it to the model.
+- **Approvals in Quo's own window**, a file panel with clickable file links in replies, and opening what Quo built in your browser.
+- **Memory meter and summaries** — see how full the model's memory is and summarise earlier messages to keep going. Type `/` for commands and `@` to point at a project file.
+- **Connection awareness** — an Offline pill, and a choice to move to your offline model when a cloud model can't be reached.
 
-## [1.5.0] - 2026-10-04
+### Improved
+- **Faster offline Qwen3.5** in the desktop app (editions with a prediction head: about twice as fast on code edits). Models that don't fit memory start with a smaller window instead of failing, and an idle model unloads after 30 minutes.
+- **Model settings follow each maker's advice** (sampling, window, reply length). Qwen3.5 0.8B and 2B left the desktop app as too small; their files can be deleted in Models & storage.
+- **Commits** match the project's message style, a failing git hook comes back for the model to fix, signed commits work, and commands that throw work away carry a warning.
+
+### Fixed
+- macOS: Code mode refuses system folders reached through links (`/etc` is `/private/etc`).
+- Linux: the taskbar shows Quo's icon instead of a generic one.
+
+## [Desktop 1.3.0] - 2026-10-18
+
+The first releases of Quo Web and the desktop app.
+
+### Added
+- **Quo Web** — offline models in the browser (WebGPU in Chrome and Edge), saved chats, thinking, resumable downloads, installable as an app.
+- **Quo for desktop** — macOS, Windows and Linux. Models run in llama.cpp on the graphics card: hundreds of words a second, bigger models (up to Qwen3.5 27B), photos, and models you already have in LM Studio or Ollama.
+- **Code mode** — a coding agent for a project folder: it reads, edits, runs tests and commits, and you approve every change, command and commit. Works with cloud models, your own key or an offline model.
+- **Your own API keys** — OpenRouter, Anthropic, OpenAI, Google, xAI, DeepSeek, Mistral, Groq, or your own server (Ollama, LM Studio). Messages go straight to the provider.
+- **Web search** in Code mode and with your own keys or offline models: Brave, Tavily, Exa, SearXNG or DuckDuckGo.
+- **Cloud models** — a free model, and frontier models (Claude, GPT, Gemini and more) that unlock with credits.
+- **Photos, documents, voice and read aloud**, all processed on your computer.
+- **Memories** — things Quo should know about you, read by offline models only.
+- **Quo Sync** — end-to-end encrypted sync of chats and memories across web, desktop and Android, with sign out of all devices and account deletion.
+- **Open source** — Apache 2.0, with a contributing guide, code of conduct and security policy.
+
+## [Phone 1.5.0] - 2026-10-04
 
 ### Added
 - **Gemma 4** — new model with image understanding
@@ -46,7 +54,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - A crash when using thinking mode, plus many stability fixes
 
-## [1.4.0] - 2026-07-07
+## [Phone 1.4.0] - 2026-07-07
 
 ### Added
 - **Bundled starter model (instant start)** — Qwen3.5 0.8B ships with the app via Play Asset Delivery and is materialized on first launch, eliminating the first-run download wall. Builds without the pack fall back to the download flow automatically
@@ -71,7 +79,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Dependencies** — llama.rn 0.12.5, whisper.rn 0.5.5, lucide 1.x, expo-audio replaces deprecated expo-av, IAP 14.7.20; removed 15 unused dependencies
 - **Engineering** — Jest test suite introduced (95+ unit tests), all model download URLs verified, deduplicated generation pipeline shared between send and resend
 
-## [1.3.2] - 2026-07-06
+## [Phone 1.3.2] - 2026-07-06
 
 ### Added
 - New and refined model options, including premium models
@@ -83,7 +91,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Layout issues, bugs and performance problems
 
-## [1.3.0] - 2026-03-30
+## [Phone 1.3.0] - 2026-03-30
 
 ### Fixed
 - **Native Crash (SIGSEGV): endCompletion() race condition** — Added `isCompleting` mutex to prevent `stopCompletion()` from being called when no completion is active, fixing use-after-free crashes in `librnllama` on dotprod and v8 devices
@@ -103,7 +111,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [1.2.9] - 2026-03-04
+## [Phone 1.2.9] - 2026-03-04
 
 ### Added
 - **Background Generation**: Model responses now continue generating when the app goes to background, with a persistent notification so Android keeps the process alive
@@ -132,7 +140,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [1.2.8] - Previous Release
+## [Phone 1.2.8] - Previous Release
 - Initial release with core AI chat functionality
 - On-device model inference
 - Vision/image analysis capabilities
