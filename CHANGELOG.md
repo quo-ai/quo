@@ -2,7 +2,7 @@
 
 Notable changes to Quo. Quo Web and the desktop app ship together under the desktop version (`desktop-v*` tags); the phone app has its own numbers. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased] (web and desktop)
+## [Desktop 1.4.0] - 2026-10-20
 
 ### Added
 - **Push and pull requests** — Code mode can push the branch you're on and give you a link to open a pull request on GitHub. You approve every push; it never force-pushes. Turn it off in Models & storage → Code.
@@ -18,6 +18,7 @@ Notable changes to Quo. Quo Web and the desktop app ship together under the desk
 - **Faster offline Qwen3.5** in the desktop app (editions with a prediction head: about twice as fast on code edits). Models that don't fit memory start with a smaller window instead of failing, and an idle model unloads after 30 minutes.
 - **Model settings follow each maker's advice** (sampling, window, reply length). Qwen3.5 0.8B and 2B left the desktop app as too small; their files can be deleted in Models & storage.
 - **Commits** match the project's message style, a failing git hook comes back for the model to fix, signed commits work, and commands that throw work away carry a warning.
+- **Quo's co-author line** names the `quo-code` account, so GitHub shows "quo-code" with Quo's picture instead of "quo-ai[bot]".
 
 ### Fixed
 - macOS: Code mode refuses system folders reached through links (`/etc` is `/private/etc`).
