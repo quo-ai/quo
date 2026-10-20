@@ -139,7 +139,7 @@ describe('finding the repository a folder is in', () => {
   });
 });
 
-describe('system folders by their real path on macOS', () => {
+describe('system folders by their real path on macOS', { skip: process.platform === 'win32' }, () => {
   const asPlatform = (platform, fn) => {
     const original = Object.getOwnPropertyDescriptor(process, 'platform');
     Object.defineProperty(process, 'platform', { value: platform });
@@ -152,10 +152,10 @@ describe('system folders by their real path on macOS', () => {
 
   it('refuses /private/etc and the bare /private/var and /private/tmp, where /etc, /var and /tmp really lead', () => {
     const home = temp();
-    throwsCode(() => safety.checkProjectRoot('/private/etc', home), 'system_folder');
-    throwsCode(() => safety.checkProjectRoot('/private/etc/ssh', home), 'system_folder');
-    throwsCode(() => safety.checkProjectRoot('/private/var', home), 'system_folder');
-    throwsCode(() => safety.checkProjectRoot('/private/tmp', home), 'system_folder');
+    // Refused either way: as a system folder, or (on macOS, where temporary folders live in /private/var) as a folder that
+    // holds the home folder.
+    const refused = folder => assert.throws(() => safety.checkProjectRoot(folder, home), error => ['system_folder', 'too_broad'].includes(error.code), folder);
+    for (const folder of ['/private/etc', '/private/etc/ssh', '/private/var', '/private/tmp']) refused(folder);
     assert.equal(safety.checkProjectRoot('/private/var/folders/x/project', home), '/private/var/folders/x/project', 'temporary folders below stay usable');
   });
 
