@@ -17,8 +17,9 @@ export interface DownloadStore {
 }
 
 const filesOf = (model: LocalModel) => model.files.map(({ url, name, sizeBytes }) => ({ url, name, sizeBytes }));
-// What is on disk is judged against the sizes the files have now and the ones they used to have.
-const stateFilesOf = (model: LocalModel) => model.files.map(({ url, name, sizeBytes, altSizes }) => ({ url, name, sizeBytes, ...(altSizes ? { altSizes } : {}) }));
+// What is on disk is judged against the sizes the files have now and the ones they used to have; an optional file (a
+// drafter) never decides whether the model is installed.
+export const stateFilesOf = (model: LocalModel) => model.files.map(({ url, name, sizeBytes, altSizes, optional }) => ({ url, name, sizeBytes, ...(altSizes ? { altSizes } : {}), ...(optional ? { optional: true } : {}) }));
 
 let listening = false;
 
