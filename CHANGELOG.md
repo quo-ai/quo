@@ -2,9 +2,12 @@
 
 Notable changes to Quo. Quo Web and the desktop app ship together under the desktop version (`desktop-v*` tags); the phone app has its own numbers. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased] (web and desktop)
+## [Desktop 1.5.0] - 2026-10-21
 
 ### Added
+- **Any model from Hugging Face** — the desktop app can search Hugging Face and run almost any GGUF model (about 160 kinds: Llama, Qwen, Gemma, Mistral, DeepSeek, GLM, Phi, Granite and more). It says before downloading if a model won't work, and suggests a size that fits your computer.
+- **A faster engine for NVIDIA graphics cards** — Models & storage offers llama.cpp's CUDA engine where it helps: long messages are read about 40% faster and replies written about 10% faster. It's downloaded only if you ask, from llama.cpp's own releases, and checked before use; if it ever fails to start, Quo goes back to the engine it came with.
+- **Linux on ARM** — Quo now has ARM builds for Linux.
 - **Qwen3.8 27B** replaces Qwen3.5 27B in the desktop app: the newer model, with the same speed-up for writing several words at once. If you have the old one, Models & storage offers to remove it.
 - **Gemma 4 models** — Gemma 4 E2B in the browser (Chrome, Edge and Firefox; best with a graphics card), and Gemma 4 12B and 26B A4B in the desktop app. Google's models write well in 140+ languages, read images in the desktop app, and can think when you turn it on.
 - **Dark mode and themes** — follows your system, or choose Light or Dark in Settings → Appearance. Dark is true black by default (clean on OLED screens), or Midnight, the indigo night with frosted glass. The accent is Indigo or Mono (greys, no glow). In the desktop app the window and the approval window follow the same choice.
@@ -13,9 +16,6 @@ Notable changes to Quo. Quo Web and the desktop app ship together under the desk
 - **No engine from a CDN** — in Safari and older browsers, the offline model's engine came from a public CDN (jsDelivr). Quo now ships that version itself and loads it only where it's needed.
 
 ### Improved
-- **Any model from Hugging Face** — the desktop app can search Hugging Face and run almost any GGUF model (about 160 kinds: Llama, Qwen, Gemma, Mistral, DeepSeek, GLM, Phi, Granite and more). It says before downloading if a model won't work, and suggests a size that fits your computer.
-- **A faster engine for NVIDIA graphics cards** — Models & storage offers llama.cpp's CUDA engine where it helps: long messages are read about 40% faster and replies written about 10% faster. It's downloaded only if you ask, from llama.cpp's own releases, and checked before use; if it ever fails to start, Quo goes back to the engine it came with.
-- **Linux on ARM** — Quo now has ARM builds for Linux.
 - **Faster writing in the desktop app** — Qwen and Gemma models draft several words at a time and check each one, so replies are the same, only quicker: rewriting a file with a small change went from about 100 to 570 words a second in our test. Gemma 4 models come with a small drafter file for this.
 - **Longer memory on smaller computers** — when memory is short, the desktop app stores the model's working memory in 8 bits, which fits about twice as much conversation for about 3% of speed.
 - **Much faster follow-ups with offline models** — the model now reuses what it already read of the chat instead of reading it all again: the prompt no longer changes every minute (it has the date, not the time), and long chats and Code sessions drop old parts in steps. In a test in the browser, a follow-up in a 2,300-token chat took 2 seconds instead of 114.
