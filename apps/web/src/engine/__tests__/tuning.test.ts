@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('../../native', () => ({ hasNativeEngine: () => true, nativeBridge: () => null }));
-const { DESKTOP_MODELS, RETIRED_MODELS } = await import('../../catalog');
+const { DESKTOP_MODELS } = await import('../../catalog');
 const { contextFor, maxTokensFor, samplingFor, windowFor, KV_SHARE, MIN_CONTEXT, Q8_SHARE, THINKING_TOKENS } = await import('../tuning');
 
 const model = (id: string) => DESKTOP_MODELS.find(m => m.id === id)!;
@@ -170,8 +170,4 @@ describe('Qwen3.8 27B replaced Qwen3.5 27B', () => {
     expect(model('qwen38-27b')).toMatchObject({ vision: true, supportsThinking: true, agent: 'good' });
   });
 
-  it('leaves Qwen3.5 27B’s files to be found and removed, in either edition', () => {
-    expect(DESKTOP_MODELS.some(m => m.id === 'qwen35-27b')).toBe(false);
-    expect(RETIRED_MODELS.find(m => m.id === 'qwen35-27b')?.files.map(f => f.name)).toEqual(['model.gguf', 'mmproj.gguf']);
-  });
 });

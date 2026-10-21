@@ -179,16 +179,8 @@ describe('a model with images that does not fit: projector first, then window', 
   });
 });
 
-describe('the speed-up for models with a prediction head', () => {
+describe('the image projector when memory is short', () => {
   const base = { modelPath: '/m/model.gguf', mmprojPath: null, port: 1, key: 'k', contextSize: 16384 };
-  const value = (args, flag) => args[args.indexOf(flag) + 1];
-
-  it('is asked for only when the file has the head, with three tokens drafted a step and n-gram lookup beside it', () => {
-    const on = serverArgs({ ...base, mtp: true });
-    assert.equal(value(on, '--spec-type'), 'draft-mtp,ngram-map-k');
-    assert.equal(value(on, '--spec-draft-n-max'), '3');
-    for (const args of [serverArgs(base), serverArgs({ ...base, mtp: false })]) assert.ok(!args.includes('--spec-type'));
-  });
 
   it('puts the projector on the processor only when there is one and it was asked for', () => {
     assert.ok(!serverArgs({ ...base, cpuProjector: true }).includes('--no-mmproj-offload'), 'no projector, nothing to move');

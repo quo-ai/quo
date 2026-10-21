@@ -13,17 +13,6 @@ describe('buildContext', () => {
     expect(context).toEqual([{ role: 'system', content: SYSTEM }, ...turns]);
   });
 
-  it('drops the oldest turns first when over budget', () => {
-    const long = 'x'.repeat(3500); // ~1,006 tokens each
-    const turns = Array.from({ length: 10 }, (_, i) => msg(i % 2 ? 'assistant' : 'user', `${i}${long}`));
-    const context = buildContext(SYSTEM, turns, 4096, 1024);
-    const kept = context.slice(1);
-    expect(kept.length).toBeLessThan(turns.length);
-    expect(kept[kept.length - 1].content).toBe(turns[turns.length - 1].content);
-    const used = kept.reduce((sum, turn) => sum + estimateTokens(textOf(turn.content)), 0);
-    expect(used).toBeLessThanOrEqual(4096 - 1024);
-  });
-
   it('never starts the history with an orphaned assistant reply', () => {
     const long = 'y'.repeat(3500);
     const turns = [msg('user', long), msg('assistant', long), msg('user', long), msg('assistant', 'short'), msg('user', 'last')];
@@ -40,7 +29,7 @@ describe('buildContext', () => {
     expect(estimateTokens(textOf(context[1].content))).toBeLessThanOrEqual(4096 - 1024);
   });
 
-  it('drops old messages in steps, so the start of a long chat stays the same for several turns (the cached part)', () => {
+  it('drops the oldest messages first, in steps, so the start of a long chat stays the same for several turns (the cached part)', () => {
     const turns = Array.from({ length: 200 }, (_, i) => msg(i % 2 ? 'assistant' : 'user', `${i} ${'w'.repeat(700)}`));
     const starts: string[] = [];
     for (let n = 41; n <= 200; n += 2) {

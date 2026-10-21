@@ -68,15 +68,6 @@ describe('fitMessagesToContext', () => {
   });
 });
 
-describe('compressConversationContext', () => {
-  it('returns null when no model is loaded', async () => {
-    const messages = Array.from({ length: 20 }, (_, i) =>
-      msg(i % 2 === 0 ? 'user' : 'assistant', 'x'.repeat(2000), `m${i}`),
-    );
-    expect(await llmService.compressConversationContext(messages, null)).toBeNull();
-  });
-});
-
 describe('fitMessagesToContext keeps a contiguous tail', () => {
   it('stops at the first message that does not fit instead of skipping it', async () => {
     const messages = [

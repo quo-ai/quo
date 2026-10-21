@@ -16,6 +16,13 @@ const base = { modelPath: '/m/model.gguf', mmprojPath: null, port: 1, key: 'k', 
 const value = (args, flag) => args[args.indexOf(flag) + 1];
 
 describe('drafting several tokens a step', () => {
+  it('uses the model’s own prediction head when the file has one, three tokens a step, with n-gram lookup', () => {
+    const args = serverArgs({ ...base, mtp: true });
+    assert.equal(value(args, '--spec-type'), 'draft-mtp,ngram-map-k');
+    assert.equal(value(args, '--spec-draft-n-max'), '3');
+    assert.ok(!args.includes('--spec-draft-model'));
+  });
+
   it('uses a drafter file beside the model when there is one, four tokens a step, with n-gram lookup', () => {
     const args = serverArgs({ ...base, draftPath: '/m/draft.gguf' });
     assert.equal(value(args, '--spec-draft-model'), '/m/draft.gguf');
@@ -26,7 +33,7 @@ describe('drafting several tokens a step', () => {
   });
 
   it('never drafts by n-gram alone: without a head or a drafter it slowed new code by a third', () => {
-    for (const args of [serverArgs(base), serverArgs({ ...base, draftPath: null })]) {
+    for (const args of [serverArgs(base), serverArgs({ ...base, mtp: false }), serverArgs({ ...base, draftPath: null })]) {
       assert.ok(!args.includes('--spec-type'));
       assert.ok(!args.includes('--spec-draft-model'));
     }

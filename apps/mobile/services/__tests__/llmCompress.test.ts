@@ -33,8 +33,8 @@ afterEach(() => {
 });
 
 describe('compressConversationContext', () => {
-  it('returns null when no model is loaded', async () => {
-    const messages = [msg(0, 'user', 'x'.repeat(3000))];
+  it('returns null when no model is loaded, even for a history long enough to compress', async () => {
+    const messages = Array.from({ length: 20 }, (_, i) => msg(i, i % 2 ? 'assistant' : 'user', 'x'.repeat(2000)));
     expect(await llmService.compressConversationContext(messages, null)).toBeNull();
   });
 
