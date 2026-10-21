@@ -3,6 +3,7 @@ import { allLocalModels, modelSizeBytes, type LocalModel } from '../catalog';
 import { forgetCustomModel, useCustomModels } from '../customModels';
 import { modelFit, recommendedModelId, type DeviceProfile } from '../device';
 import { cancelDownload, removeModel, startDownload, type DownloadState } from '../storage/downloads';
+import { forgetHfModel, useHfModels } from '../models/hfStore';
 import { downloadErrorText, formatBytes, percent } from './format';
 
 interface ModelListProps {
@@ -20,6 +21,7 @@ const FIT_NOTE = {
 
 export function ModelList({ device, downloads, activeModelId, onUse }: ModelListProps) {
   useCustomModels(); // re-render when models are added or forgotten
+  useHfModels();
   const recommended = device ? recommendedModelId(device) : null;
   return (
     <div>
@@ -84,10 +86,11 @@ function ModelCard({ model, state, active, recommended, fitNote, onUse }: {
         {status === 'installed' && !active && (
           <button className="btn btn-primary press" onClick={onUse}>Use this model</button>
         )}
-        {status === 'installed' && (
+        {(status === 'installed' || (model.source && status !== 'downloading' && status !== 'waiting' && status !== 'verifying')) && (
           <button
             className="btn btn-ghost press"
-            onClick={() => void (model.custom ? forgetCustomModel(model.id) : removeModel(model))}
+            // A model added from Hugging Face goes from the list too once its files are gone.
+            onClick={() => void (model.custom ? forgetCustomModel(model.id) : removeModel(model).then(() => model.source && forgetHfModel(model.id)))}
             title={model.custom ? 'Stops using it in Quo; the file stays where it is' : undefined}
           >
             <Trash2 size={15} /> {model.custom ? 'Forget' : 'Remove'}

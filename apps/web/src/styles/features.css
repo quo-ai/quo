@@ -89,3 +89,12 @@ code.path { padding: 1px 6px; border-radius: 6px; background: var(--fill-strong)
 .btn-link.muted:hover, .btn-link.danger { color: var(--error); }
 .danger-row { display: grid; gap: 4px; margin-bottom: 14px; justify-items: start; }
 .danger-row .note { font-size: 12.5px; }
+/* Models from Hugging Face (desktop): a search row, then the results or the chosen model's sizes. */
+.hf-search { display: flex; gap: 8px; margin: 0 0 4px; }
+.hf-search input { flex: 1; min-width: 0; padding: 9px 12px; border-radius: 12px; border: 0; background: var(--fill); color: var(--text); font: inherit; font-size: 14px; box-shadow: 0 0 0 0.5px var(--edge) inset; }
+.hf-search input:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--focus-ring); }
+.hf-pick { display: grid; gap: 10px; margin-top: 12px; padding: 12px; border-radius: 14px; background: var(--fill); }
+.hf-pick strong { overflow-wrap: anywhere; font-size: 14px; }
+.hf-pick label { display: grid; gap: 4px; font-size: 13px; color: var(--text-2); }
+.hf-pick select { padding: 8px 10px; border-radius: 10px; border: 0; background: var(--raised); color: var(--text); font: inherit; font-size: 13.5px; box-shadow: 0 0 0 0.5px var(--edge) inset; }
+.hf-pick .hf-check { display: flex; align-items: center; gap: 8px; }

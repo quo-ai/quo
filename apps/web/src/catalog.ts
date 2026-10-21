@@ -1,6 +1,7 @@
 import { hasNativeEngine } from './native';
 import { getCustomModel, getCustomModels } from './customModels';
 import { runsMainBuild } from './engine/wasm';
+import { getHfModels } from './models/hfStore';
 
 /**
  * Local model catalogs: the browser's (below), and the desktop app's larger
@@ -60,6 +61,8 @@ export interface LocalModel {
    * by default; 'limited' handles small jobs. Models without it are too small, and Code mode is opt-in for them.
    */
   agent?: 'good' | 'limited';
+  /** Where an added model came from (desktop app: models/hfStore.ts). Catalog models have none. */
+  source?: { kind: 'huggingface'; repo: string };
 }
 
 const HF = 'https://huggingface.co';
@@ -233,13 +236,16 @@ export const RETIRED_MODELS: { id: string; name: string; files: { name: string; 
   { id: 'qwen35-27b', name: 'Qwen3.5 27B', files: [{ name: 'model.gguf', sizeBytes: 17106773056 }, { name: 'mmproj.gguf', sizeBytes: 927607392 }] },
 ];
 
+/** Models the person added from Hugging Face; desktop app only (they need its engine). */
+const addedModels = (): LocalModel[] => (hasNativeEngine() ? getHfModels() : []);
+
 /** The catalog plus any models the user added (desktop app). */
 export function allLocalModels(): LocalModel[] {
-  return [...LOCAL_MODELS, ...getCustomModels()];
+  return [...LOCAL_MODELS, ...addedModels(), ...getCustomModels()];
 }
 
 export function getLocalModel(id: string): LocalModel | undefined {
-  return LOCAL_MODELS.find(model => model.id === id) ?? getCustomModel(id);
+  return LOCAL_MODELS.find(model => model.id === id) ?? addedModels().find(model => model.id === id) ?? getCustomModel(id);
 }
 
 export function modelSizeBytes(model: LocalModel): number {

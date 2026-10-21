@@ -13,6 +13,7 @@ Notable changes to Quo. Quo Web and the desktop app ship together under the desk
 - **No engine from a CDN** — in Safari and older browsers, the offline model's engine came from a public CDN (jsDelivr). Quo now ships that version itself and loads it only where it's needed.
 
 ### Improved
+- **Any model from Hugging Face** — the desktop app can search Hugging Face and run almost any GGUF model (about 160 kinds: Llama, Qwen, Gemma, Mistral, DeepSeek, GLM, Phi, Granite and more). It says before downloading if a model won't work, and suggests a size that fits your computer.
 - **A faster engine for NVIDIA graphics cards** — Models & storage offers llama.cpp's CUDA engine where it helps: long messages are read about 40% faster and replies written about 10% faster. It's downloaded only if you ask, from llama.cpp's own releases, and checked before use; if it ever fails to start, Quo goes back to the engine it came with.
 - **Linux on ARM** — Quo now has ARM builds for Linux.
 - **Faster writing in the desktop app** — Qwen and Gemma models draft several words at a time and check each one, so replies are the same, only quicker: rewriting a file with a small change went from about 100 to 570 words a second in our test. Gemma 4 models come with a small drafter file for this.

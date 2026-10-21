@@ -10,6 +10,7 @@ import type { DownloadState } from '../storage/downloads';
 import { CloudModelRow } from './CloudModelRow';
 import { CodeSettings } from './CodeSettings';
 import { ExternalModels } from './ExternalModels';
+import { HuggingFaceModels } from './HuggingFaceModels';
 import { KeysTab } from './keys/KeysTab';
 import { WebSettings } from './WebSettings';
 import { ModelList } from './ModelList';
@@ -82,6 +83,8 @@ export function ModelsSheet({ initialTab = 'device', device, downloads, activeMo
           <ModelList device={device} downloads={downloads} activeModelId={activeModelId} onUse={onUse} />
           {hasNativeEngine() && (
             <>
+              <div className="sheet-section-title">Any model from Hugging Face</div>
+              <HuggingFaceModels device={device} />
               <div className="sheet-section-title">Models you already have</div>
               <ExternalModels />
             </>
