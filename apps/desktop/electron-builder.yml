@@ -121,7 +121,7 @@ linux:
   synopsis: Private AI that runs on your computer
   description: Quo is a private, offline-first AI assistant. Models run on your own computer, on the GPU when available.
 appImage:
-  # x64 and arm64 (the links in the web app and website name the x64 one).
+  # ${arch} is x86_64 or arm64 for AppImage (amd64 or arm64 for .deb), so the x64 names stay the ones the links use.
   artifactName: Quo-linux-${arch}.AppImage
   # Don't hard-code --no-sandbox in the .desktop entry: AppRun already adds it
   # only where unprivileged user namespaces are unavailable.

@@ -150,19 +150,6 @@ jobs:
           [ -n "$WIN_CSC_KEY_PASSWORD" ] || unset WIN_CSC_KEY_PASSWORD
           npx electron-builder ${{ matrix.platform }} --publish "$PUBLISH_MODE" $extra_args
 
-      # Linux is built for x64 and arm64 (Quo-linux-x64/arm64.*). The website, the web app and older links name the x64
-      # AppImage Quo-linux-x86_64.AppImage, so it goes up under that name too.
-      - name: Keep the old Linux download name
-        if: runner.os == 'Linux' && env.PUBLISH_MODE != 'never'
-        working-directory: apps/desktop
-        shell: bash
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          version=$(node -p "require('./package.json').version")
-          cp dist/Quo-linux-x64.AppImage dist/Quo-linux-x86_64.AppImage
-          gh release upload "desktop-v$version" dist/Quo-linux-x86_64.AppImage --clobber
-
       - name: Upload builds to this run
         if: env.PUBLISH_MODE == 'never'
         uses: actions/upload-artifact@v7
