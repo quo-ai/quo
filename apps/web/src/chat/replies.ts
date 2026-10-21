@@ -19,6 +19,7 @@ import type { OwnModel } from '../providers/ownModels';
 import { CLOUD_CONTEXT, type ModelChoice } from '../models';
 import { allowUserUrls, runWebTool } from '../web/run';
 import { buildContext } from './context';
+import { noteWebChange } from './webChange';
 import { environmentFor, noteFor } from './environment';
 import type { Message } from './types';
 import { SearchSteps } from './searchSteps';
@@ -47,13 +48,15 @@ export interface ReplyTarget {
   setStatus: (status: ReplyStatus) => void;
   /** How full the model's memory is while it works (see agent/loop.ts). */
   onContext?: (tokens: number, exact: boolean) => void;
+  /** The chat this reply belongs to (Code mode says when web search changed between its messages: webChange.ts). */
+  chatId?: string;
 }
 
 /** How much of a conversation to send a model whose window is `model.contextTokens`: about 70% of it, in characters. */
 const contextChars = (model: OwnModel): number => Math.min(CONTEXT_CHARS, Math.round((model.contextTokens ?? 128_000) * 3 * 0.7));
 
 /** Code mode: the model works on the project with the desktop app's tools until it has nothing left to do. Returns how many files it changed. */
-export async function replyWithAgent(choice: CloudChoice | OwnChoice | LocalChoice, code: CodeSession | null, signal: AbortSignal, { prior, update, setStatus, onContext }: ReplyTarget, folder?: (FolderOpener & { web?: boolean; webSessionId?: string })): Promise<number> {
+export async function replyWithAgent(choice: CloudChoice | OwnChoice | LocalChoice, code: CodeSession | null, signal: AbortSignal, { prior, update, setStatus, onContext, chatId }: ReplyTarget, folder?: (FolderOpener & { web?: boolean; webSessionId?: string })): Promise<number> {
   // Without a folder yet the model has one tool, open_project, and decides from the message whether it needs it; once a
   // folder is open (now or mid-reply) everything below follows the session.
   let session = code;
@@ -68,12 +71,13 @@ export async function replyWithAgent(choice: CloudChoice | OwnChoice | LocalChoi
     await prepareLocalAgent(choice.model);
   }
   setStatus('generating');
-  const conversation: AgentMessage[] = prior.filter(m => m.content).map(m => ({ role: m.role, content: m.content }));
   const { useNotes, maxSteps } = codeSettings();
   // The free model's Code mode is small on purpose (few steps, a short conversation, no helpers or summaries).
   const light = choice.kind === 'cloud' && choice.model.free && !choice.model.agent;
   // Helpers (the task tool) are for models with room to spare: not offline ones, whose window is small, nor the free one.
   const toolsNow = () => (!session ? [FOLDER_TOOL, ...(webBefore ? WEB_TOOLS : [])] : choice.kind === 'local' || light ? session.tools : [...session.tools, TASK_TOOL]);
+  // Web search turned on or off since this chat's last message: say so, or the model may repeat what it said before.
+  const conversation: AgentMessage[] = noteWebChange(prior.filter(m => m.content).map(m => ({ role: m.role, content: m.content })), chatId, toolsNow().includes('web_search'));
   const platform = session?.info.platform ?? (typeof window !== 'undefined' ? window.quoDesktop?.platform : undefined) ?? 'linux';
   // Each request carries a fresh environment note (the clock moves, plan mode can be switched) for the models the app prompts;
   // Quo's own cloud models get the same from the server.

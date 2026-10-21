@@ -149,7 +149,7 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
     };
     onChange(current, true, created);
     if (code) rememberChatProject(current.id, code.project.id);
-    const target: ReplyTarget = { prior: modelMessages(current.messages.filter(m => m.id !== assistant.id)), update, setStatus, onContext: (tokens, exact) => setLive({ tokens, exact }) };
+    const target: ReplyTarget = { prior: modelMessages(current.messages.filter(m => m.id !== assistant.id)), update, setStatus, onContext: (tokens, exact) => setLive({ tokens, exact }), chatId: current.id };
 
     beginGeneration(); // Quo Sync waits until the reply is finished
     try {
