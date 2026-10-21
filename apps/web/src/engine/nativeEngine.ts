@@ -1,7 +1,7 @@
 import type { LocalModel } from '../catalog';
 import { engineMemoryGB, getDeviceProfile } from '../device';
 import { nativeBridge, NativeError, unwrap, type NativeStatus } from '../native';
-import { contextFor, maxTokensFor, samplingFor } from './tuning';
+import { maxTokensFor, samplingFor, windowFor } from './tuning';
 import type { ChatTurn, EngineInfo, GenerationResult, GenerationUpdate, InferenceEngine } from './localEngine';
 
 /**
@@ -47,8 +47,8 @@ export class NativeEngine implements InferenceEngine {
   }
 
   async load(model: LocalModel, options: { contextSize?: number } = {}): Promise<void> {
-    // The window asked for, held back where this computer cannot hold it (tuning.ts).
-    const contextSize = contextFor(model, options.contextSize ?? model.contextSize, engineMemoryGB(await getDeviceProfile()));
+    // The window asked for, held back (or stored in 8 bits) where this computer cannot hold it (tuning.ts).
+    const { contextSize, kvType } = windowFor(model, options.contextSize ?? model.contextSize, engineMemoryGB(await getDeviceProfile()));
     // Loaded already, with the room that was asked for.
     // A model that settled on a smaller window (it did not fit with the one asked for) is not loaded again for the same request.
     const ready = () => this.modelId === model.id && (this.status?.requestedContextSize ?? this.status?.contextSize) === contextSize;
@@ -61,7 +61,7 @@ export class NativeEngine implements InferenceEngine {
     this.loading = (async () => {
       await this.stop();
       this.status = null;
-      this.status = unwrap(await bridge.engine.start({ modelId: model.id, contextSize }));
+      this.status = unwrap(await bridge.engine.start({ modelId: model.id, contextSize, kvType }));
     })();
     try {
       await this.loading;

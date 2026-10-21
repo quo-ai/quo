@@ -19,7 +19,7 @@ describe('loading a model into the native engine', () => {
     await native.load(model);
     await native.load(model);
     expect(start).toHaveBeenCalledTimes(1);
-    expect(start).toHaveBeenCalledWith({ modelId: 'qwen35-9b', contextSize: 16384 });
+    expect(start).toHaveBeenCalledWith({ modelId: 'qwen35-9b', contextSize: 16384, kvType: 'f16' });
   });
 
   it('loads it again, with more room, when Code mode asks for a larger window — and again when a chat wants the default back', async () => {

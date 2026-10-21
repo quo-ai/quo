@@ -21,6 +21,8 @@ export interface ModelFile {
   sizeBytes: number;
   /** Sizes an earlier edition of this file had: someone who has one already has the model, and it keeps working. */
   altSizes?: number[];
+  /** Downloaded with the model, but the model counts as installed without it (a drafter that only makes it faster). */
+  optional?: boolean;
 }
 
 export interface Sampling {
@@ -168,9 +170,12 @@ function nativeModel(
   vision: { name?: string; bytes: number; altSizes?: number[] } | null,
   minMemoryGB: number,
   extra: Partial<LocalModel>,
+  draft?: { name: string; bytes: number },
 ): LocalModel {
   const files: ModelFile[] = [{ url: `${HF}/${repo}/resolve/main/${file.name}`, name: 'model.gguf', sizeBytes: file.bytes, ...(file.altSizes ? { altSizes: file.altSizes } : {}) }];
   if (vision) files.push({ url: `${HF}/${repo}/resolve/main/${vision.name ?? 'mmproj-F16.gguf'}`, name: 'mmproj.gguf', sizeBytes: vision.bytes, ...(vision.altSizes ? { altSizes: vision.altSizes } : {}) });
+  // Gemma 4's drafter: the engine drafts with it (several tokens a step, the same text); the model runs without it.
+  if (draft) files.push({ url: `${HF}/${repo}/resolve/main/${draft.name}`, name: 'draft.gguf', sizeBytes: draft.bytes, optional: true });
   return { id, name, description, files, ...NATIVE_LIMITS, sampling: QWEN, supportsThinking: false, minMemoryGB, native: true, vision: Boolean(vision), ...extra };
 }
 
@@ -194,13 +199,17 @@ export const DESKTOP_MODELS: LocalModel[] = [
   // MTP editions above do), so the window costs the same and the engine writes several tokens per step.
   nativeModel('qwen38-27b', 'Qwen3.8 27B', 'The most capable model here. Reads images. For computers with 32 GB or more of memory, or a high-end graphics card.', 'unsloth/Qwen3.8-27B-GGUF',
     { name: 'Qwen3.8-27B-UD-Q4_K_M.gguf', bytes: 16464440224 }, { bytes: 927607488 }, 32, { contextSize: LONG_WINDOW, kvBytesPerToken: KV.qwenLarge, thinkingSampling: QWEN38_THINKING, supportsThinking: true, agent: 'good' }),
-  nativeModel('gemma4-e2b', 'Gemma 4 E2B', 'Google’s small multilingual model. Reads images and speaks 140+ languages.', 'unsloth/gemma-4-E2B-it-GGUF',
-    { name: 'gemma-4-E2B-it-Q4_K_M.gguf', bytes: 3106738272 }, { bytes: 985654080 }, 8, { sampling: GEMMA, contextSize: LONG_WINDOW, kvBytesPerToken: KV.gemmaE2B, supportsThinking: true }),
-  // Gemma 4's larger sizes, in the quantization-aware editions (trained for 4-bit).
+  // Gemma 4 in the quantization-aware editions (trained for 4-bit: smaller, as good), each with its drafter. The E2B was the
+  // plain Q4_K_M file before: someone who has it keeps it (altSizes).
+  nativeModel('gemma4-e2b', 'Gemma 4 E2B', 'Google’s small multilingual model. Reads images and speaks 140+ languages.', 'unsloth/gemma-4-E2B-it-qat-GGUF',
+    { name: 'gemma-4-E2B-it-qat-UD-Q4_K_XL.gguf', bytes: 2620370976, altSizes: [3106738272] }, { bytes: 985654080 }, 8, { sampling: GEMMA, contextSize: LONG_WINDOW, kvBytesPerToken: KV.gemmaE2B, supportsThinking: true },
+    { name: 'mtp-gemma-4-E2B-it.gguf', bytes: 59235648 }),
   nativeModel('gemma4-12b', 'Gemma 4 12B', 'Google’s mid-size model: clear writing in 140+ languages. Reads images. Wants a graphics card with 8 GB or more, or 16 GB of memory.', 'unsloth/gemma-4-12B-it-qat-GGUF',
-    { name: 'gemma-4-12B-it-qat-UD-Q4_K_XL.gguf', bytes: 6716356800 }, { bytes: 175115840 }, 12, { sampling: GEMMA, contextSize: LONG_WINDOW, kvBytesPerToken: KV.gemma12b, supportsThinking: true, agent: 'limited' }),
+    { name: 'gemma-4-12B-it-qat-UD-Q4_K_XL.gguf', bytes: 6716356800 }, { bytes: 175115840 }, 12, { sampling: GEMMA, contextSize: LONG_WINDOW, kvBytesPerToken: KV.gemma12b, supportsThinking: true, agent: 'limited' },
+    { name: 'mtp-gemma-4-12B-it.gguf', bytes: 253708800 }),
   nativeModel('gemma4-26b-a4b', 'Gemma 4 26B A4B', 'Google’s larger model, quick for its size: it uses only part of itself for each word. Reads images. For computers with 24 GB or more of memory.', 'unsloth/gemma-4-26B-A4B-it-qat-GGUF',
-    { name: 'gemma-4-26B-A4B-it-qat-UD-Q4_K_XL.gguf', bytes: 14249047104 }, { bytes: 1193058784 }, 24, { sampling: GEMMA, contextSize: LONG_WINDOW, kvBytesPerToken: KV.gemma26b, supportsThinking: true, agent: 'limited' }),
+    { name: 'gemma-4-26B-A4B-it-qat-UD-Q4_K_XL.gguf', bytes: 14249047104 }, { bytes: 1193058784 }, 24, { sampling: GEMMA, contextSize: LONG_WINDOW, kvBytesPerToken: KV.gemma26b, supportsThinking: true, agent: 'limited' },
+    { name: 'mtp-gemma-4-26B-A4B-it.gguf', bytes: 251939328 }),
   nativeModel('llama32-3b', 'Llama 3.2 3B', 'Dependable all-rounder for writing and summarising.', 'unsloth/Llama-3.2-3B-Instruct-GGUF',
     { name: 'Llama-3.2-3B-Instruct-Q4_K_M.gguf', bytes: 2019377600 }, null, 8, { sampling: LLAMA, kvBytesPerToken: KV.llama3b }),
   nativeModel('phi4-mini', 'Phi-4 Mini', 'Microsoft’s compact reasoning model. Strong at maths, logic and structured answers.', 'unsloth/Phi-4-mini-instruct-GGUF',

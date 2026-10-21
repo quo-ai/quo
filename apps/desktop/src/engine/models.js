@@ -87,6 +87,8 @@ class ModelStore {
     for (const file of files) {
       const target = this.filePath(modelId, file.name);
       const done = await sizeOf(target);
+      // An optional file (a drafter that only makes the model faster) never decides whether the model is installed.
+      if (file.optional === true && done !== file.sizeBytes) continue;
       const part = done ? 0 : await sizeOf(`${target}.part`);
       // A file is whole at the size the catalog says now, or at a size it had before (an earlier edition of the same model
       // that someone already downloaded: it still works, so it is not downloaded again).

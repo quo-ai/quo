@@ -35,4 +35,19 @@ async function startWithFallback(start, contextSize, { hasProjector = false, min
   }
 }
 
-module.exports = { startWithFallback, MIN_CONTEXT };
+/**
+ * Starts with the window stored as asked ('f16' or 'q8_0'). An 8-bit window needs flash attention, which a few devices
+ * lack, so one that fails for any reason but a missing model is started once more in 16 bits. Resolves to what `run`
+ * returned for the storage that worked.
+ */
+async function startWithCache(run, kvType) {
+  const cache = kvType === 'q8_0' ? 'q8_0' : 'f16';
+  try {
+    return await run(cache);
+  } catch (error) {
+    if (cache === 'f16' || error?.code === 'model_missing') throw error;
+    return run('f16');
+  }
+}
+
+module.exports = { startWithFallback, startWithCache, MIN_CONTEXT };

@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('../../native', () => ({ hasNativeEngine: () => true, nativeBridge: () => null }));
 const { DESKTOP_MODELS, RETIRED_MODELS } = await import('../../catalog');
-const { contextFor, maxTokensFor, samplingFor, KV_SHARE, MIN_CONTEXT, THINKING_TOKENS } = await import('../tuning');
+const { contextFor, maxTokensFor, samplingFor, windowFor, KV_SHARE, MIN_CONTEXT, Q8_SHARE, THINKING_TOKENS } = await import('../tuning');
 
 const model = (id: string) => DESKTOP_MODELS.find(m => m.id === id)!;
 
@@ -42,6 +42,27 @@ describe('the window a model gets', () => {
     expect(contextFor({ kvBytesPerToken: undefined }, 16384, 8)).toBe(16384);
     expect(contextFor(model('llama32-3b'), 16384, null)).toBe(16384);
     expect(contextFor(model('llama32-3b'), 16384, 0)).toBe(16384);
+  });
+});
+
+describe('how the window is stored', () => {
+  it('stays 16-bit whenever the window asked for fits, and when memory is unknown', () => {
+    expect(windowFor(model('qwen35-4b'), 32768, 16)).toEqual({ contextSize: 32768, kvType: 'f16' });
+    expect(windowFor(model('qwen35-4b'), 32768, 8)).toEqual({ contextSize: 32768, kvType: 'q8_0' }); // 27,648 tokens in 16 bits
+    expect(windowFor(model('qwen35-4b'), 32768, null)).toEqual({ contextSize: 32768, kvType: 'f16' });
+  });
+
+  it('goes to 8 bits where memory holds the window back, and gets about twice the window for it', () => {
+    const phi = model('phi4-mini'); // 128 KB a token
+    const plain = contextFor(phi, 131072, 16);
+    const { contextSize, kvType } = windowFor(phi, 131072, 16);
+    expect(kvType).toBe('q8_0');
+    expect(contextSize).toBeGreaterThan(plain * 1.8);
+    expect(contextSize * phi.kvBytesPerToken! * Q8_SHARE).toBeLessThanOrEqual(16 * 2 ** 30 * KV_SHARE);
+  });
+
+  it('never goes under the smallest window a chat needs, and uses 8 bits to make that one fit better', () => {
+    expect(windowFor(model('phi4-mini'), 16384, 1)).toEqual({ contextSize: MIN_CONTEXT, kvType: 'q8_0' });
   });
 });
 
@@ -93,8 +114,23 @@ describe('the catalog', () => {
       expect(model(id).supportsThinking, id).toBe(true);
       expect(pick(samplingFor(model(id), { thinking: true })), id).toEqual([1.0, 0.95, 64, 0, undefined]);
     }
-    expect(model('gemma4-12b').files.map(f => f.sizeBytes)).toEqual([6716356800, 175115840]);
-    expect(model('gemma4-26b-a4b').files.map(f => f.sizeBytes)).toEqual([14249047104, 1193058784]);
+    expect(model('gemma4-12b').files.map(f => f.sizeBytes)).toEqual([6716356800, 175115840, 253708800]);
+    expect(model('gemma4-26b-a4b').files.map(f => f.sizeBytes)).toEqual([14249047104, 1193058784, 251939328]);
+  });
+
+  it('gives every Gemma 4 its drafter, as an optional file (the model runs without it), from the same repository', () => {
+    for (const id of ['gemma4-e2b', 'gemma4-12b', 'gemma4-26b-a4b']) {
+      const files = model(id).files;
+      expect(files.map(f => f.name), id).toEqual(['model.gguf', 'mmproj.gguf', 'draft.gguf']);
+      expect(files.map(f => Boolean(f.optional)), id).toEqual([false, false, true]);
+      expect(files[2].url, id).toMatch(/^https:\/\/huggingface\.co\/unsloth\/gemma-4-[^/]+-it-qat-GGUF\/resolve\/main\/mtp-gemma-4-[^/]+-it\.gguf$/);
+      expect(new URL(files[2].url).pathname.split('/').slice(1, 3)).toEqual(new URL(files[0].url).pathname.split('/').slice(1, 3));
+    }
+    for (const m of DESKTOP_MODELS) if (!m.id.startsWith('gemma4')) expect(m.files.some(f => f.optional), m.id).toBe(false);
+  });
+
+  it('moved Gemma 4 E2B to the quantization-aware file, and the plain one someone downloaded still counts', () => {
+    expect(model('gemma4-e2b').files[0]).toMatchObject({ sizeBytes: 2620370976, altSizes: [3106738272] });
   });
 
   it('never asks for more window than a model has', () => {
@@ -115,7 +151,7 @@ describe('the Qwen3.5 models come as the editions that keep the prediction head'
   it('still count as installed for someone who downloaded the plain editions before', () => {
     expect(model('qwen35-4b').files.map(f => f.altSizes)).toEqual([[2740937888], [672423616]]);
     expect(model('qwen35-9b').files.map(f => f.altSizes)).toEqual([[5680522464], [918166080]]);
-    for (const id of ['gemma4-e2b', 'llama32-3b', 'phi4-mini']) expect(model(id).files.every(f => f.altSizes === undefined), id).toBe(true);
+    for (const id of ['llama32-3b', 'phi4-mini']) expect(model(id).files.every(f => f.altSizes === undefined), id).toBe(true);
   });
 
   it('count the prediction head’s extra layer in the memory a token of window takes', () => {

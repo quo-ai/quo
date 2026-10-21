@@ -88,7 +88,7 @@ class EngineError extends Error {
  * choices (GPU layers fitted to free memory, flash attention where it helps), which is also what Ollama does and what Jan
  * went back to after pinning the layer count made small GPUs run out of memory.
  */
-function serverArgs({ modelPath, mmprojPath, port, key, contextSize, mtp = false, cpuProjector = false }) {
+function serverArgs({ modelPath, mmprojPath, draftPath = null, port, key, contextSize, mtp = false, cpuProjector = false, kvType = 'f16' }) {
   const args = [
     '-m', modelPath,
     '--host', '127.0.0.1', '--port', String(port), '--api-key', key,
@@ -106,8 +106,15 @@ function serverArgs({ modelPath, mmprojPath, port, key, contextSize, mtp = false
   if (mmprojPath) args.push('--mmproj', mmprojPath);
   // The projector stays on the processor when there was no room for it on the graphics card (fallback.js).
   if (mmprojPath && cpuProjector) args.push('--no-mmproj-offload');
-  // The model has a multi-token-prediction head: it writes several tokens per step, with the same text and no second model.
-  if (mtp) args.push('--spec-type', 'draft-mtp', '--spec-draft-n-max', '3');
+  // Speculative decoding, which never changes the text (the model checks every drafted token). A model with a
+  // multi-token-prediction head, built in (Qwen3.5, Qwen3.8) or as a small file beside it (Gemma 4's drafter), drafts a
+  // few tokens a step; n-gram lookup drafts long runs the reply repeats from the prompt, as when a file is rewritten with
+  // one change. Measured (RTX 3070 Ti, Vulkan): a code edit 104 -> 160 tok/s with the head, 567 with both; new code and
+  // prose no slower. Lookup alone slowed new code by a third, so it only comes with a head.
+  if (draftPath) args.push('--spec-draft-model', draftPath, '--spec-type', 'draft-mtp,ngram-map-k', '--spec-draft-n-max', '4');
+  else if (mtp) args.push('--spec-type', 'draft-mtp,ngram-map-k', '--spec-draft-n-max', '3');
+  // An 8-bit window where memory is short (tuning.ts asks for it): half the memory a token takes, about 3% slower.
+  if (kvType === 'q8_0') args.push('-ctk', 'q8_0', '-ctv', 'q8_0');
   return args;
 }
 
@@ -162,7 +169,7 @@ class LlamaEngine extends EventEmitter {
 
   status() {
     return this.current
-      ? { running: true, modelId: this.current.modelId, contextSize: this.current.contextSize, backend: this.current.backend, device: this.current.device, vision: this.current.vision, gpuAvailable: Boolean(this.deviceCount), mtp: this.current.mtp, projectorOnCpu: this.current.projectorOnCpu }
+      ? { running: true, modelId: this.current.modelId, contextSize: this.current.contextSize, backend: this.current.backend, device: this.current.device, vision: this.current.vision, gpuAvailable: Boolean(this.deviceCount), mtp: this.current.mtp, kvType: this.current.kvType, projectorOnCpu: this.current.projectorOnCpu }
       : { running: false };
   }
 
@@ -181,16 +188,16 @@ class LlamaEngine extends EventEmitter {
   }
 
   /** Loads a model (replacing any other) and resolves when it can answer. */
-  start({ modelId, modelPath, mmprojPath, contextSize, cpuProjector = false }) {
+  start({ modelId, modelPath, mmprojPath, draftPath = null, contextSize, cpuProjector = false, kvType = 'f16' }) {
     return this._exclusive(async () => {
       if (!this.available) throw new EngineError('engine_missing', 'The AI engine isn’t included in this build.');
-      if (this.current?.modelId === modelId && this.current.contextSize === contextSize && this.child) return this.status();
+      if (this.current?.modelId === modelId && this.current.contextSize === contextSize && this.current.kvType === kvType && this.child) return this.status();
       await this._stop();
 
       const port = await freePort();
       const key = crypto.randomBytes(24).toString('hex');
       const mtp = await hasMtp(modelPath); // read from the file: a model downloaded before the faster files existed has none
-      const args = serverArgs({ modelPath, mmprojPath, port, key, contextSize, mtp, cpuProjector });
+      const args = serverArgs({ modelPath, mmprojPath, draftPath, port, key, contextSize, mtp, cpuProjector, kvType });
 
       const lines = [];
       const info = { gpuLayers: 0, totalLayers: 0, backends: new Set(), device: null };
@@ -264,7 +271,8 @@ class LlamaEngine extends EventEmitter {
         backend: gpu ? BACKEND_NAMES[[...info.backends][0]] ?? [...info.backends][0] ?? 'gpu' : 'cpu',
         device: gpu ? info.device : null,
         vision: Boolean(mmprojPath),
-        mtp,
+        mtp: mtp || Boolean(draftPath),
+        kvType,
         projectorOnCpu: Boolean(mmprojPath && cpuProjector),
       };
       this.idle.start();

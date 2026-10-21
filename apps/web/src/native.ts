@@ -59,6 +59,10 @@ export interface NativeStatus {
   requestedContextSize?: number;
   /** The computer has a graphics card the engine could use. */
   gpuAvailable?: boolean;
+  /** Drafting several tokens a step (a prediction head or a drafter file). */
+  mtp?: boolean;
+  /** How the window is stored: 16 bits, or 8 where memory was short. */
+  kvType?: 'f16' | 'q8_0';
 }
 
 export interface ModelFileRequest {
@@ -97,7 +101,8 @@ export interface NativeBridge {
   engine: {
     info: () => Promise<NativeResult<NativeInfo>>;
     status: () => Promise<NativeResult<NativeStatus>>;
-    start: (options: { modelId: string; contextSize: number }) => Promise<NativeResult<NativeStatus>>;
+    /** `kvType` 'q8_0' stores the window in 8 bits (tuning.ts windowFor); the engine falls back to 16 if it can't. */
+    start: (options: { modelId: string; contextSize: number; kvType?: 'f16' | 'q8_0' }) => Promise<NativeResult<NativeStatus>>;
     stop: () => Promise<NativeResult<unknown>>;
     onEvent: (callback: (event: { type: 'exit'; code: number | null; signal: string | null }) => void) => () => void;
   };

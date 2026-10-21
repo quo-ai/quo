@@ -7,7 +7,7 @@ const path = require('node:path');
 const { app, BrowserWindow, dialog, ipcMain, shell } = require('electron');
 const { trusted } = require('../trust');
 const lock = require('../../engine.lock.json');
-const { startWithFallback } = require('./fallback');
+const { startWithCache, startWithFallback } = require('./fallback');
 const { LlamaEngine, EngineError, engineTarget } = require('./llama');
 const { ModelStore, ModelError } = require('./models');
 
@@ -91,9 +91,10 @@ function setupEngine() {
   handle('engine:status', () => engine.status());
   handle('engine:stop', () => engine.stop());
 
-  handle('engine:start', async ({ modelId, contextSize }) => {
+  handle('engine:start', async ({ modelId, contextSize, kvType }) => {
     let modelPath;
     let mmprojPath;
+    let draftPath = null;
     if (String(modelId).startsWith('custom-')) {
       const entry = await store.resolveCustom(modelId);
       if (!entry) throw new ModelError('model_missing', 'That model file can’t be found any more.');
@@ -104,10 +105,14 @@ function setupEngine() {
       if (!(await exists(modelPath))) throw new ModelError('model_missing', 'That model isn’t downloaded yet.');
       const projector = store.filePath(modelId, 'mmproj.gguf');
       if (await exists(projector)) mmprojPath = projector;
+      // A drafter beside the model (Gemma 4's multi-token-prediction file) makes it write faster; without one it still runs.
+      const draft = store.filePath(modelId, 'draft.gguf');
+      if (await exists(draft)) draftPath = draft;
     }
     // Too big for this computer's memory with that window: try a smaller one (a model that fits is better than an error).
     const asked = clamp(contextSize, 2048, 131072, 8192);
-    const status = await startWithFallback((size, options) => engine.start({ modelId, modelPath, mmprojPath, contextSize: size, cpuProjector: options.cpuProjector }), asked, { hasProjector: Boolean(mmprojPath) });
+    const run = cache => startWithFallback((size, options) => engine.start({ modelId, modelPath, mmprojPath, draftPath, contextSize: size, cpuProjector: options.cpuProjector, kvType: cache }), asked, { hasProjector: Boolean(mmprojPath) });
+    const status = await startWithCache(run, kvType);
     return { ...status, requestedContextSize: asked };
   });
 

@@ -134,6 +134,7 @@ describe('how llama-server is started', () => {
   });
 
   it('leaves GPU layers, flash attention and the rest to llama-server’s own choices (pinning them OOMs small GPUs)', () => {
+    // (The window is stored in 8 bits only when the app asks for it: engine-speed.test.js.)
     for (const flag of ['-ngl', '--gpu-layers', '--n-gpu-layers', '-fa', '--flash-attn', '-ctk', '-ctv', '--no-mmap', '--mlock', '-b', '-ub', '-t', '--fit']) assert.ok(!args.includes(flag), flag);
   });
 
@@ -182,9 +183,9 @@ describe('the speed-up for models with a prediction head', () => {
   const base = { modelPath: '/m/model.gguf', mmprojPath: null, port: 1, key: 'k', contextSize: 16384 };
   const value = (args, flag) => args[args.indexOf(flag) + 1];
 
-  it('is asked for only when the file has the head, with three tokens drafted a step', () => {
+  it('is asked for only when the file has the head, with three tokens drafted a step and n-gram lookup beside it', () => {
     const on = serverArgs({ ...base, mtp: true });
-    assert.equal(value(on, '--spec-type'), 'draft-mtp');
+    assert.equal(value(on, '--spec-type'), 'draft-mtp,ngram-map-k');
     assert.equal(value(on, '--spec-draft-n-max'), '3');
     for (const args of [serverArgs(base), serverArgs({ ...base, mtp: false })]) assert.ok(!args.includes('--spec-type'));
   });

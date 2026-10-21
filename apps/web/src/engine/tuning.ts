@@ -24,6 +24,23 @@ export function contextFor(model: Pick<LocalModel, 'kvBytesPerToken'>, requested
   return Math.min(requested, Math.max(fits, MIN_CONTEXT));
 }
 
+/** q8_0 keeps 32 values in 34 bytes: a token of window in 8 bits takes this share of what it takes in 16. */
+export const Q8_SHARE = 34 / 64;
+
+export type KvType = 'f16' | 'q8_0';
+
+/**
+ * The window and how it is stored (desktop engine). 16-bit when the window asked for fits; where memory is what holds it
+ * back, 8-bit, which takes about half the memory a token for about 3% of speed (measured: Qwen3.5 4B, 16K deep, 102.6 ->
+ * 99.0 tok/s), so the window is up to twice as long, or a small one leaves more room for the model itself.
+ */
+export function windowFor(model: Pick<LocalModel, 'kvBytesPerToken'>, requested: number, memoryGB: number | null): { contextSize: number; kvType: KvType } {
+  if (!model.kvBytesPerToken || !memoryGB || memoryGB <= 0) return { contextSize: requested, kvType: 'f16' };
+  const fits = (bytes: number) => Math.floor((memoryGB * 2 ** 30 * KV_SHARE) / bytes / 1024) * 1024;
+  if (fits(model.kvBytesPerToken) >= requested) return { contextSize: requested, kvType: 'f16' };
+  return { contextSize: Math.min(requested, Math.max(fits(model.kvBytesPerToken * Q8_SHARE), MIN_CONTEXT)), kvType: 'q8_0' };
+}
+
 /** How many tokens a reply may use: the model's usual, or room for its thinking as well. */
 export function maxTokensFor(model: Pick<LocalModel, 'maxTokens'>, thinking: boolean, context: number): number {
   return thinking ? Math.max(model.maxTokens, Math.min(THINKING_TOKENS, Math.floor(context / 2))) : model.maxTokens;
