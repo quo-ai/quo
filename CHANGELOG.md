@@ -13,6 +13,8 @@ Notable changes to Quo. Quo Web and the desktop app ship together under the desk
 - **No engine from a CDN** — in Safari and older browsers, the offline model's engine came from a public CDN (jsDelivr). Quo now ships that version itself and loads it only where it's needed.
 
 ### Improved
+- **A faster engine for NVIDIA graphics cards** — Models & storage offers llama.cpp's CUDA engine where it helps: long messages are read about 40% faster and replies written about 10% faster. It's downloaded only if you ask, from llama.cpp's own releases, and checked before use; if it ever fails to start, Quo goes back to the engine it came with.
+- **Linux on ARM** — Quo now has ARM builds for Linux.
 - **Faster writing in the desktop app** — Qwen and Gemma models draft several words at a time and check each one, so replies are the same, only quicker: rewriting a file with a small change went from about 100 to 570 words a second in our test. Gemma 4 models come with a small drafter file for this.
 - **Longer memory on smaller computers** — when memory is short, the desktop app stores the model's working memory in 8 bits, which fits about twice as much conversation for about 3% of speed.
 - **Much faster follow-ups with offline models** — the model now reuses what it already read of the chat instead of reading it all again: the prompt no longer changes every minute (it has the date, not the time), and long chats and Code sessions drop old parts in steps. In a test in the browser, a follow-up in a 2,300-token chat took 2 seconds instead of 114.

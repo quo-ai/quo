@@ -47,6 +47,26 @@ export interface NativeInfo {
   modelsDir: string;
 }
 
+export interface AcceleratorStatus {
+  /** There is a faster build for this computer's graphics card. */
+  available: boolean;
+  label: string | null;
+  bytes: number;
+  installed: boolean;
+  installing: boolean;
+  /** The person wants it used (they can turn it off). */
+  use: boolean;
+  /** Why it was set aside after failing to start, or null. */
+  failed: string | null;
+  /** The engine runs from it right now. */
+  active: boolean;
+}
+
+export type AcceleratorEvent =
+  | { type: 'progress'; loaded: number; total: number }
+  | { type: 'done'; status: AcceleratorStatus }
+  | { type: 'error'; code: string; message: string };
+
 export interface NativeStatus {
   running: boolean;
   modelId?: string;
@@ -105,6 +125,15 @@ export interface NativeBridge {
     start: (options: { modelId: string; contextSize: number; kvType?: 'f16' | 'q8_0' }) => Promise<NativeResult<NativeStatus>>;
     stop: () => Promise<NativeResult<unknown>>;
     onEvent: (callback: (event: { type: 'exit'; code: number | null; signal: string | null }) => void) => () => void;
+    /** A faster engine for the graphics card (desktop accelerators.js); missing in older desktop builds. */
+    accelerator?: {
+      status: () => Promise<NativeResult<AcceleratorStatus>>;
+      install: () => Promise<NativeResult<boolean>>;
+      cancel: () => Promise<NativeResult<unknown>>;
+      use: (on: boolean) => Promise<NativeResult<AcceleratorStatus>>;
+      remove: () => Promise<NativeResult<AcceleratorStatus>>;
+      onEvent: (callback: (event: AcceleratorEvent) => void) => () => void;
+    };
   };
   models: {
     state: (modelId: string, files: ModelFileRequest[]) => Promise<NativeResult<ModelDiskInfo>>;

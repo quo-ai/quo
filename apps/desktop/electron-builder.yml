@@ -99,16 +99,17 @@ nsis:
 
 linux:
   extraResources:
-    - from: engine/linux-x64
-      to: engine/linux-x64
+    # One engine per architecture: x64 (Vulkan) and arm64 (processor; NVIDIA ARM machines can add the CUDA engine).
+    - from: engine/linux-${arch}
+      to: engine/linux-${arch}
     # The window's own icon (src/appIcon.js), for an AppImage started without a .desktop file.
     - from: build/icon.png
       to: icon.png
   target:
     - target: AppImage
-      arch: x64
+      arch: [x64, arm64]
     - target: deb
-      arch: x64
+      arch: [x64, arm64]
   # Set explicitly: Linux would otherwise derive its icons from mac.icon.
   icon: build/icon.png
   # The .desktop file is named after package.json "desktopName", which is also
@@ -120,9 +121,10 @@ linux:
   synopsis: Private AI that runs on your computer
   description: Quo is a private, offline-first AI assistant. Models run on your own computer, on the GPU when available.
 appImage:
-  artifactName: Quo-linux-x86_64.AppImage
+  # x64 and arm64 (the links in the web app and website name the x64 one).
+  artifactName: Quo-linux-${arch}.AppImage
   # Don't hard-code --no-sandbox in the .desktop entry: AppRun already adds it
   # only where unprivileged user namespaces are unavailable.
   executableArgs: []
 deb:
-  artifactName: Quo-linux-amd64.deb
+  artifactName: Quo-linux-${arch}.deb

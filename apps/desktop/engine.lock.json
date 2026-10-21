@@ -17,6 +17,104 @@
     "linux-x64": {
       "file": "llama-b11719-bin-ubuntu-vulkan-x64.tar.gz",
       "sha256": "9a09cce245acf8823feb99fb7ba8ddd3e878e3827564888131e0185044aa4429"
+    },
+    "linux-arm64": {
+      "file": "llama-b11719-bin-ubuntu-arm64.tar.gz",
+      "sha256": "290aa4432ad8e28b638285be6a75d0dd6f327d9b2d95f7048a8cf5e69704bee9"
+    }
+  },
+  "accelerators": {
+    "_note": "Optional faster builds for a graphics card, downloaded only when the person asks (Models & storage), checked against these SHA-256s, from llama.cpp's own release (src/engine/accelerators.js). Same release as above.",
+    "linux-x64": {
+      "cuda13": {
+        "label": "NVIDIA CUDA 13",
+        "minCompute": 7.5,
+        "minCuda": 13.0,
+        "files": [
+          {
+            "file": "llama-b11719-bin-ubuntu-cuda-13.4-x64.tar.gz",
+            "bytes": 154225478,
+            "sha256": "9482b9f0b4634e10335c4f498f33bce919db1ba4b5b632431938e541ca51ab15"
+          },
+          {
+            "file": "cudart-llama-b11719-bin-ubuntu-cuda-13.4-x64.tar.gz",
+            "bytes": 440236667,
+            "sha256": "001ec3728dfae6dbb5987f1dfefe65f09d9cfdc197def0490ba92fb93324ca10"
+          }
+        ]
+      },
+      "cuda12": {
+        "label": "NVIDIA CUDA 12",
+        "minCompute": 5.0,
+        "minCuda": 12.8,
+        "files": [
+          {
+            "file": "llama-b11719-bin-ubuntu-cuda-12.8-x64.tar.gz",
+            "bytes": 173342707,
+            "sha256": "e283eb9a2c245501317d4abbb822e5ab429a84693580f4ff5c533712db014f3b"
+          },
+          {
+            "file": "cudart-llama-b11719-bin-ubuntu-cuda-12.8-x64.tar.gz",
+            "bytes": 594377552,
+            "sha256": "0b8816822a8258683fe15e7bb29eb8aaca9f9a36a949c985430e0f94ad838722"
+          }
+        ]
+      }
+    },
+    "win-x64": {
+      "cuda13": {
+        "label": "NVIDIA CUDA 13",
+        "minCompute": 7.5,
+        "minCuda": 13.0,
+        "files": [
+          {
+            "file": "llama-b11719-bin-win-cuda-13.4-x64.zip",
+            "bytes": 155107842,
+            "sha256": "926257ef2132133e7630e7062e28a6f13e621f17a36770b04c695c0d14e27578"
+          },
+          {
+            "file": "cudart-llama-bin-win-cuda-13.4-x64.zip",
+            "bytes": 423535356,
+            "sha256": "738f8c251ac22b70c3ae6f83a10cf222725df0395246a2cf58f32bdb85fbe668"
+          }
+        ]
+      },
+      "cuda12": {
+        "label": "NVIDIA CUDA 12",
+        "minCompute": 5.0,
+        "minCuda": 12.4,
+        "files": [
+          {
+            "file": "llama-b11719-bin-win-cuda-12.4-x64.zip",
+            "bytes": 267483221,
+            "sha256": "3a7c399487a315cad888cd5394f1e144993ec25676148930cf2069a6c2fd6360"
+          },
+          {
+            "file": "cudart-llama-bin-win-cuda-12.4-x64.zip",
+            "bytes": 391443627,
+            "sha256": "8c79a9b226de4b3cacfd1f83d24f962d0773be79f1e7b75c6af4ded7e32ae1d6"
+          }
+        ]
+      }
+    },
+    "linux-arm64": {
+      "cuda13": {
+        "label": "NVIDIA CUDA 13",
+        "minCompute": 7.5,
+        "minCuda": 13.0,
+        "files": [
+          {
+            "file": "llama-b11719-bin-ubuntu-cuda-13.4-arm64.tar.gz",
+            "bytes": 149755707,
+            "sha256": "ac5152f88f03f47b054de220afef7643dd58ded540f440aacf6e7550ef90f51a"
+          },
+          {
+            "file": "cudart-llama-b11719-bin-ubuntu-cuda-13.4-arm64.tar.gz",
+            "bytes": 552521501,
+            "sha256": "735b02c92db6ae2964a47a0b0f2063cd03ad9d38db2b72b73b2564d3c569f190"
+          }
+        ]
+      }
     }
   }
 }

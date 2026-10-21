@@ -3,7 +3,9 @@
 // Downloads the pinned llama.cpp release for each target, checks its SHA-256
 // against engine.lock.json, and unpacks it to engine/<target>/ (gitignored).
 // electron-builder bundles that folder, so the app ships the exact build
-// listed in the lock file and never downloads code at run time.
+// listed in the lock file. The only engine it downloads at run time is the
+// optional CUDA build the person asks for, pinned in the same lock file's
+// "accelerators" and checked the same way (src/engine/accelerators.js).
 //
 //   node scripts/fetch-engine.js                 current platform
 //   node scripts/fetch-engine.js mac-arm64 mac-x64

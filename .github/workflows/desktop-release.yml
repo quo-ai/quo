@@ -65,7 +65,7 @@ jobs:
             engines: win-x64
           - os: ubuntu-latest
             platform: --linux
-            engines: linux-x64
+            engines: linux-x64 linux-arm64
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7
@@ -89,7 +89,9 @@ jobs:
         run: npm ci
 
       # llama.cpp's llama-server, pinned in engine.lock.json and checked against
-      # its SHA-256; the app ships this exact build and never downloads code.
+      # its SHA-256; the app ships this exact build. (The only engine it ever
+      # downloads is the optional CUDA build the person asks for, pinned in the
+      # same file: src/engine/accelerators.js.)
       - name: Fetch the AI engine
         working-directory: apps/desktop
         shell: bash
@@ -147,6 +149,19 @@ jobs:
           [ -n "$CSC_KEY_PASSWORD" ] || unset CSC_KEY_PASSWORD
           [ -n "$WIN_CSC_KEY_PASSWORD" ] || unset WIN_CSC_KEY_PASSWORD
           npx electron-builder ${{ matrix.platform }} --publish "$PUBLISH_MODE" $extra_args
+
+      # Linux is built for x64 and arm64 (Quo-linux-x64/arm64.*). The website, the web app and older links name the x64
+      # AppImage Quo-linux-x86_64.AppImage, so it goes up under that name too.
+      - name: Keep the old Linux download name
+        if: runner.os == 'Linux' && env.PUBLISH_MODE != 'never'
+        working-directory: apps/desktop
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          version=$(node -p "require('./package.json').version")
+          cp dist/Quo-linux-x64.AppImage dist/Quo-linux-x86_64.AppImage
+          gh release upload "desktop-v$version" dist/Quo-linux-x86_64.AppImage --clobber
 
       - name: Upload builds to this run
         if: env.PUBLISH_MODE == 'never'

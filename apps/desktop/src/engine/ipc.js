@@ -8,7 +8,8 @@ const { app, BrowserWindow, dialog, ipcMain, shell } = require('electron');
 const { trusted } = require('../trust');
 const lock = require('../../engine.lock.json');
 const { startWithCache, startWithFallback } = require('./fallback');
-const { LlamaEngine, EngineError, engineTarget } = require('./llama');
+const { Accelerators, AcceleratorError } = require('./accelerators');
+const { LlamaEngine, EngineError, binaryIn, engineTarget, listDevicesIn } = require('./llama');
 const { ModelStore, ModelError } = require('./models');
 
 /**
@@ -39,6 +40,19 @@ function setupEngine() {
   const userData = app.getPath('userData');
   const directory = engineDirectory() ?? path.join(userData, 'no-engine');
   const engine = new LlamaEngine({ directory, pidFile: path.join(userData, 'engine.pid') });
+  // A faster build for the graphics card, if the person downloaded one (accelerators.js). Not with a test engine.
+  const accelerators = new Accelerators({
+    root: path.join(userData, 'engines'),
+    choiceFile: path.join(userData, 'engine-choice.json'),
+    lock,
+    target: process.env.QUO_ENGINE_DIR ? null : engineTarget(),
+    binaryName: path.basename(binaryIn(directory)),
+    listDevices: listDevicesIn,
+  });
+  /** Moves the engine to the faster build or back to the bundled one, as the choice and what is installed say. */
+  let ready = Promise.resolve();
+  const settle = () => (ready = (async () => engine.useDirectory((await accelerators.engineDir()) ?? directory))().catch(() => {}));
+  settle();
   const store = new ModelStore({
     directory: path.join(userData, 'models'),
     customFile: path.join(userData, 'custom-models.json'),
@@ -76,8 +90,9 @@ function setupEngine() {
       }
     });
 
-  handle('engine:info', async () => ({
+  handle('engine:info', async () => (await ready, {
     available: engine.available,
+    accelerated: engine.directory !== directory,
     release: lock.release,
     platform: process.platform,
     arch: process.arch,
@@ -87,6 +102,29 @@ function setupEngine() {
     devices: await engine.devices(),
     modelsDir: store.directory,
   }));
+
+  handle('engine:accelerator:status', async () => ({ ...(await accelerators.status()), active: engine.directory !== directory }));
+  handle('engine:accelerator:install', () => {
+    // Progress and the result arrive as engine:accelerator:event messages. Nothing from the page decides what is fetched.
+    accelerators.install({ onProgress: (loaded, total) => broadcast('engine:accelerator:event', { type: 'progress', loaded, total }) })
+      .then(async () => {
+        await settle();
+        broadcast('engine:accelerator:event', { type: 'done', status: { ...(await accelerators.status()), active: engine.directory !== directory } });
+      })
+      .catch(error => broadcast('engine:accelerator:event', { type: 'error', code: error instanceof AcceleratorError ? error.code : 'failed', message: error instanceof AcceleratorError ? error.message : 'Something went wrong.' }));
+    return true;
+  });
+  handle('engine:accelerator:cancel', () => accelerators.cancel());
+  handle('engine:accelerator:use', async ({ on }) => {
+    await accelerators.use(on === true);
+    await settle();
+    return { ...(await accelerators.status()), active: engine.directory !== directory };
+  });
+  handle('engine:accelerator:remove', async () => {
+    await engine.useDirectory(directory);
+    await accelerators.remove();
+    return { ...(await accelerators.status()), active: false };
+  });
 
   handle('engine:status', () => engine.status());
   handle('engine:stop', () => engine.stop());
@@ -112,7 +150,17 @@ function setupEngine() {
     // Too big for this computer's memory with that window: try a smaller one (a model that fits is better than an error).
     const asked = clamp(contextSize, 2048, 131072, 8192);
     const run = cache => startWithFallback((size, options) => engine.start({ modelId, modelPath, mmprojPath, draftPath, contextSize: size, cpuProjector: options.cpuProjector, kvType: cache }), asked, { hasProjector: Boolean(mmprojPath) });
-    const status = await startWithCache(run, kvType);
+    await ready;
+    let status;
+    try {
+      status = await startWithCache(run, kvType);
+    } catch (error) {
+      // The faster build failed where the bundled one may not: note it, go back, and try once more.
+      if (engine.directory === directory || error?.code === 'model_missing' || error?.code === 'out_of_memory') throw error;
+      await accelerators.markFailed(error?.code);
+      await engine.useDirectory(directory);
+      status = await startWithCache(run, kvType);
+    }
     return { ...status, requestedContextSize: asked };
   });
 

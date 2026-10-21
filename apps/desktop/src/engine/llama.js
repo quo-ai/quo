@@ -47,6 +47,15 @@ function freePort() {
   });
 }
 
+/** The devices the llama-server in `directory` can use (it lists them and exits; nothing listens). */
+function listDevicesIn(directory) {
+  return new Promise(resolve => {
+    execFile(binaryIn(directory), ['--list-devices'], { cwd: directory, timeout: 30_000, windowsHide: true }, (error, stdout, stderr) => {
+      resolve(error && !stdout ? [] : parseDevices(`${stdout}\n${stderr}`));
+    });
+  });
+}
+
 /** `Vulkan0: NVIDIA GeForce RTX 3070 Ti (8192 MiB, 6192 MiB free)` → a device record. */
 function parseDevices(text) {
   const devices = [];
@@ -155,16 +164,23 @@ class LlamaEngine extends EventEmitter {
 
   /** GPUs the engine can use, with memory. Empty means CPU only. */
   devices() {
-    this.devicesCache ??= new Promise(resolve => {
-      if (!this.available) return resolve([]);
-      execFile(this.binary, ['--list-devices'], { cwd: this.directory, timeout: 30_000, windowsHide: true }, (error, stdout, stderr) => {
-        resolve(error && !stdout ? [] : parseDevices(`${stdout}\n${stderr}`));
-      });
-    }).then(list => {
+    this.devicesCache ??= (this.available ? listDevicesIn(this.directory) : Promise.resolve([])).then(list => {
       this.deviceCount = list.length;
       return list;
     });
     return this.devicesCache;
+  }
+
+  /** Runs llama-server from another folder (a faster build for the graphics card, or back to the bundled one). Stops any model first. */
+  useDirectory(directory) {
+    return this._exclusive(async () => {
+      if (directory === this.directory) return;
+      await this._stop();
+      this.directory = directory;
+      this.binary = binaryIn(directory);
+      this.devicesCache = null;
+      this.deviceCount = null;
+    });
   }
 
   status() {
@@ -356,4 +372,4 @@ class LlamaEngine extends EventEmitter {
 }
 
 module.exports = {
-  serverArgs, LlamaEngine, EngineError, engineTarget, binaryIn, parseDevices, explainFailure };
+  serverArgs, LlamaEngine, EngineError, engineTarget, binaryIn, listDevicesIn, parseDevices, explainFailure };

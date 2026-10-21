@@ -64,3 +64,6 @@
 .shortcut-row dt { font-size: 14px; color: var(--text); }
 .shortcut-row dd { margin: 0; display: inline-flex; gap: 4px; flex: none; }
 kbd { min-width: 24px; padding: 3px 7px; border-radius: 8px; background: var(--raised); box-shadow: 0 1px 0 var(--edge), 0 0 0 0.5px var(--edge); font: 600 12px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--text-2); text-align: center; }
+/* The faster engine for a graphics card (desktop): under the storage note, on its own line. */
+.accelerator { margin-top: 14px; padding-top: 12px; border-top: 0.5px solid var(--hairline); }
+.accelerator-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }

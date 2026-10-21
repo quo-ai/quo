@@ -73,6 +73,15 @@ contextBridge.exposeInMainWorld('quoDesktop', {
       info: () => invoke('engine:info'),
       status: () => invoke('engine:status'),
       start: options => invoke('engine:start', options),
+      // The faster build for the graphics card (accelerators.js): main decides what it is; the page can only ask.
+      accelerator: {
+        status: () => invoke('engine:accelerator:status'),
+        install: () => invoke('engine:accelerator:install'),
+        cancel: () => invoke('engine:accelerator:cancel'),
+        use: on => invoke('engine:accelerator:use', { on: on === true }),
+        remove: () => invoke('engine:accelerator:remove'),
+        onEvent: callback => subscribe('engine:accelerator:event', callback),
+      },
       stop: () => invoke('engine:stop'),
       onEvent: callback => subscribe('engine:event', callback),
     },
