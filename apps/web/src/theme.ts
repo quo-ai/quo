@@ -91,5 +91,5 @@ export function useAppearance(): Appearance {
   return useSyncExternalStore(listener => {
     listeners.add(listener);
     return () => listeners.delete(listener);
-  }, appearance, () => DEFAULTS);
+  }, appearance, appearance); // the app renders only in the browser; tests render on the server and read the same choice
 }

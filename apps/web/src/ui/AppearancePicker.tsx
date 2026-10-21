@@ -19,10 +19,12 @@ function Choices<K extends keyof Appearance>({ name, label, options, swatch }: {
 }
 
 export function AppearancePicker() {
+  // The dark style only shows where it can apply: in Dark, and in System (dark whenever the computer is).
+  const { mode } = useAppearance();
   return (
     <div className="appearance">
       <Choices name="mode" label="Mode" options={THEME_MODES} />
-      <Choices name="dark" label="Dark style" options={DARK_STYLES} swatch />
+      {mode !== 'light' && <Choices name="dark" label="Dark style" options={DARK_STYLES} swatch />}
       <Choices name="accent" label="Accent" options={ACCENTS} swatch />
     </div>
   );
