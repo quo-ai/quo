@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { describeDone, describeRunning } from '../describe';
-import { CONTEXT_CHARS, MAX_STEPS, estimateTokens, parseArguments, runAgent, trimToolOutput, type AgentDeps } from '../loop';
+import { CONTEXT_CHARS, MAX_STEPS, TRIM_RESULTS_STEP, estimateTokens, parseArguments, runAgent, trimToolOutput, type AgentDeps } from '../loop';
 import type { AgentMessage, StepReply, ToolResult } from '../types';
 
 const reply = (patch: Partial<StepReply> = {}): StepReply => ({ content: '', toolCalls: [], finish: 'stop', charged: 0.5, balance: 20, ...patch });
@@ -197,11 +197,28 @@ describe('keeping a long session within bounds', () => {
     const trimmed = trimToolOutput(messages, CONTEXT_CHARS);
     expect(trimmed).toHaveLength(messages.length);
     const results = trimmed.filter(m => m.role === 'tool');
-    expect(results.slice(0, 3).every(m => m.content.startsWith('[Earlier output left out'))).toBe(true);
-    expect(results.slice(-6).every(m => m.content.length === 60_000)).toBe(true);
+    // Five must go to fit; a group of four is the step, so eight go and the newest four stay whole.
+    expect(results.slice(0, 8).every(m => m.content.startsWith('[Earlier output left out'))).toBe(true);
+    expect(results.slice(-4).every(m => m.content.length === 60_000)).toBe(true);
     expect(trimmed.filter(m => m.role === 'assistant')).toEqual(messages.filter(m => m.role === 'assistant'));
     const total = trimmed.reduce((sum, m) => sum + m.content.length, 0);
-    expect(total).toBeLessThanOrEqual(CONTEXT_CHARS + 60_000);
+    expect(total).toBeLessThanOrEqual(CONTEXT_CHARS);
+  });
+
+  it('leaves out the same old results for several steps, so the start of the session stays cached', () => {
+    const messages: AgentMessage[] = [...user];
+    const firstChanged: number[] = [];
+    let before: AgentMessage[] | null = null;
+    for (let i = 0; i < 40; i++) {
+      messages.push(assistant(`c${i}`), tool(`c${i}`, 20_000));
+      const sent = trimToolOutput(messages, 300_000);
+      if (before) firstChanged.push(before.findIndex((m, index) => m.content !== sent[index]?.content));
+      before = sent;
+    }
+    // A step that changes nothing already sent leaves every earlier message as it was (-1).
+    const rewrites = firstChanged.filter(index => index >= 0).length;
+    expect(rewrites).toBeGreaterThan(0);
+    expect(rewrites).toBeLessThanOrEqual(Math.ceil(firstChanged.length / TRIM_RESULTS_STEP) + 1);
   });
 
   it('does not touch what it was given', () => {

@@ -22,6 +22,8 @@ const FAILURES_ALLOWED = 5;
 const REPEATED = 'You have already made this exact call twice with the same result. Do not repeat it. Use what you have, try something different, or tell the user what is blocking you.';
 const ALWAYS_KEEP = 1; // the newest tool result is what the model is about to read; it is never dropped
 const LEFT_OUT_START = '[Earlier output left out';
+/** Old results are left out in groups this size, so the same ones stay out for the next few steps (see trimToolOutput). */
+export const TRIM_RESULTS_STEP = 4;
 
 export interface AgentDeps {
   /** One request to the model. `onText` gets its words as they arrive. */
@@ -73,19 +75,35 @@ function describeCall(messages: AgentMessage[], id: string): string {
 /**
  * Drops the oldest tool output first (keeping the calls) once the conversation is long, so it keeps fitting. Newer output
  * survives as long as it fits. A dropped result says which call it was, so the model still knows what it has already looked at.
+ *
+ * As many as needed are left out, rounded up to TRIM_RESULTS_STEP: the engine reuses the cached start of the prompt, and
+ * leaving out one more result on every step changed that start each time, so most of the session was read again per step.
  */
 export function trimToolOutput(messages: AgentMessage[], limit = CONTEXT_CHARS): AgentMessage[] {
   const size = (m: AgentMessage) => m.content.length + (m.role === 'assistant' ? (m.tool_calls ?? []).reduce((sum, call) => sum + call.function.arguments.length, 0) : 0);
-  let total = messages.reduce((sum, m) => sum + size(m), 0);
+  const total = messages.reduce((sum, m) => sum + size(m), 0);
   if (total <= limit) return messages;
   const results = messages.map((m, index) => (m.role === 'tool' ? index : -1)).filter(index => index >= 0);
-  const droppable = new Set(results.slice(0, Math.max(0, results.length - ALWAYS_KEEP)));
-  return messages.map((m, index) => {
-    if (total <= limit || !droppable.has(index) || m.role !== 'tool' || m.content.startsWith(LEFT_OUT_START)) return m;
+  const droppable = results.slice(0, Math.max(0, results.length - ALWAYS_KEEP));
+  const notes = new Map<number, string>();
+  for (const index of droppable) {
+    const m = messages[index];
+    if (m.role !== 'tool' || m.content.startsWith(LEFT_OUT_START)) continue;
     const call = describeCall(messages, m.tool_call_id);
-    const note = `${LEFT_OUT_START} to save space${call ? ` (${call})` : ''}. Run it again if you need it.]`;
-    total -= Math.max(0, m.content.length - note.length);
-    return { ...m, content: note };
+    notes.set(index, `${LEFT_OUT_START} to save space${call ? ` (${call})` : ''}. Run it again if you need it.]`);
+  }
+  let left = total;
+  let count = 0;
+  for (const index of droppable) {
+    if (left <= limit) break;
+    const note = notes.get(index);
+    if (note) left -= Math.max(0, messages[index].content.length - note.length);
+    count++;
+  }
+  const out = new Set(droppable.slice(0, Math.min(droppable.length, Math.ceil(count / TRIM_RESULTS_STEP) * TRIM_RESULTS_STEP)));
+  return messages.map((m, index) => {
+    const note = notes.get(index);
+    return out.has(index) && note && m.role === 'tool' ? { ...m, content: note } : m;
   });
 }
 

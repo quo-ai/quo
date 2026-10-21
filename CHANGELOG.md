@@ -13,6 +13,7 @@ Notable changes to Quo. Quo Web and the desktop app ship together under the desk
 - **No engine from a CDN** — in Safari and older browsers, the offline model's engine came from a public CDN (jsDelivr). Quo now ships that version itself and loads it only where it's needed.
 
 ### Improved
+- **Much faster follow-ups with offline models** — the model now reuses what it already read of the chat instead of reading it all again: the prompt no longer changes every minute (it has the date, not the time), and long chats and Code sessions drop old parts in steps. In a test in the browser, a follow-up in a 2,300-token chat took 2 seconds instead of 114.
 - **Clearer replies** — every model is asked to write plainly: the answer first, short sentences, no filler, and the same style in the code and text it writes.
 - **Code colours** — code in replies and in the desktop file panel is coloured by language (about 50, with the grammars VS Code uses), in calm colours that follow your theme and accent. Code blocks are light in Light mode, like GitHub.
 - **Maths** — formulas are drawn properly, inline and on their own line, however the model writes them; prices like $5 stay as text.

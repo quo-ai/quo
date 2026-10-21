@@ -1,6 +1,10 @@
 /**
- * What every model is told about the moment it is answering: today's date and time, which model it is and where it runs.
+ * What every model is told about the moment it is answering: today's date, which model it is and where it runs.
  * Three short lines, at the end of the system prompt.
+ *
+ * The date, not the time: the system prompt is the start of the prompt the engines and providers cache, so text that
+ * changed every minute made the whole conversation be read again on every turn (in the browser, 2 s became 114 s for a
+ * 2,300-token chat). The phone app does the same (apps/mobile/services/llm/prompt.ts).
  *
  * It is kept this small on purpose. The products that get this right say no more: Claude.ai's own prompt has the current
  * date and one short paragraph about being unsure, and OpenRouter adds nothing of its own beyond "a web search was
@@ -8,7 +12,7 @@
  * kind of question) made small models refuse plain questions or talk about the prompt itself, so none of it is here. What a
  * model can do is already in the tools it is given.
  *
- * The time is on the person's clock. Only the clock's offset from UTC is used (never a place), and it is not shown.
+ * The date is on the person's clock. Only the clock's offset from UTC is used (never a place), and it is not shown.
  */
 
 export interface Environment {
@@ -30,16 +34,15 @@ export function validOffset(value: unknown): number | undefined {
 const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
-/** "Monday 19 October 2026, 15:42": the time on the person's clock. With no usable offset it is UTC, and says so. Written by hand so every runtime agrees. */
-export function describeNow(now: Date, utcOffset?: number): string {
+/** "Monday 19 October 2026": today on the person's clock. With no usable offset it is the UTC date, and says so. Written by hand so every runtime agrees. */
+export function describeToday(now: Date, utcOffset?: number): string {
   const offset = validOffset(utcOffset);
   const local = new Date(now.getTime() + (offset ?? 0) * 60_000);
-  const two = (n: number) => String(n).padStart(2, '0');
-  const text = `${WEEKDAYS[local.getUTCDay()]} ${local.getUTCDate()} ${MONTHS[local.getUTCMonth()]} ${local.getUTCFullYear()}, ${two(local.getUTCHours())}:${two(local.getUTCMinutes())}`;
-  return offset === undefined ? `${text} UTC` : text;
+  const text = `${WEEKDAYS[local.getUTCDay()]} ${local.getUTCDate()} ${MONTHS[local.getUTCMonth()]} ${local.getUTCFullYear()}`;
+  return offset === undefined ? `${text} (UTC)` : text;
 }
 
-/** The note: today, which model, and not to guess. (The changing part is last, so the fixed prompt before it can still be cached.) */
+/** The note: today, which model, and not to guess. (It changes once a day, and last, so the fixed prompt before it stays cached.) */
 export function environmentNote(env: Environment): string {
   const where =
     env.route === 'device' ? 'running on this computer'
@@ -48,7 +51,7 @@ export function environmentNote(env: Environment): string {
   const model = `${env.model.name}${env.model.provider && env.model.provider !== env.ownProvider ? ` (${env.model.provider})` : ''}`;
   return [
     '',
-    `Today is ${describeNow(env.now, env.utcOffset)}. You are ${model}, ${where}.`,
+    `Today is ${describeToday(env.now, env.utcOffset)}. You are ${model}, ${where}.`,
     'If you are not sure something you recall is true, say so instead of guessing.',
   ].join('\n');
 }

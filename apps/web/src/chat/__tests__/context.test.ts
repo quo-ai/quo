@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { textOf } from '../../engine/localEngine';
 import type { Attachment } from '../types';
-import { buildContext, estimateTokens, userText } from '../context';
+import { buildContext, estimateTokens, TRIM_STEP, userText } from '../context';
 
 const SYSTEM = 'system prompt';
 const msg = (role: 'user' | 'assistant', content: string) => ({ role, content });
@@ -38,6 +38,25 @@ describe('buildContext', () => {
     expect(context[1].role).toBe('user');
     expect(textOf(context[1].content).length).toBeGreaterThan(0);
     expect(estimateTokens(textOf(context[1].content))).toBeLessThanOrEqual(4096 - 1024);
+  });
+
+  it('drops old messages in steps, so the start of a long chat stays the same for several turns (the cached part)', () => {
+    const turns = Array.from({ length: 200 }, (_, i) => msg(i % 2 ? 'assistant' : 'user', `${i} ${'w'.repeat(700)}`));
+    const starts: string[] = [];
+    for (let n = 41; n <= 200; n += 2) {
+      const context = buildContext(SYSTEM, turns.slice(0, n), 8192, 2048);
+      const first = turns.findIndex(turn => turn.content === context[1].content);
+      expect(first % TRIM_STEP, `with ${n} messages`).toBe(0);
+      expect(context[1].role).toBe('user');
+      expect(context[context.length - 1].content).toBe(turns[n - 1].content);
+      const used = context.slice(1).reduce((sum, turn) => sum + estimateTokens(textOf(turn.content)), 0);
+      expect(used).toBeLessThanOrEqual(8192 - 2048);
+      starts.push(context[1].content as string);
+    }
+    // 80 turns: the start moves once every TRIM_STEP / 2 turns, not on every turn.
+    const moves = starts.filter((start, i) => i > 0 && start !== starts[i - 1]).length;
+    expect(moves).toBeLessThanOrEqual(Math.ceil(starts.length / (TRIM_STEP / 2)) + 1);
+    expect(moves).toBeGreaterThan(0);
   });
 
   it('skips empty messages (e.g. a reply still being written)', () => {

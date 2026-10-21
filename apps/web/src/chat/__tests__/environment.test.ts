@@ -1,22 +1,29 @@
 import { describe, expect, it } from 'vitest';
 import { agentSystemPrompt } from '../../../shared/agentTools';
-import { describeNow, environmentNote, validOffset, type Environment } from '../../../shared/environment';
+import { describeToday, environmentNote, validOffset, type Environment } from '../../../shared/environment';
 
 const NOW = new Date('2026-10-19T14:42:00Z'); // 15:42 in London (BST), 07:42 in Los Angeles
 const base: Environment = { now: NOW, utcOffset: 60, model: { name: 'GPT-6 Luna', provider: 'OpenAI' }, route: 'quo-cloud' };
 
-describe('the date and time a model is told', () => {
+describe('the date a model is told', () => {
   it('is on the person’s clock, with the weekday, and does not show the offset', () => {
-    expect(describeNow(NOW, 60)).toBe('Monday 19 October 2026, 15:42');
-    expect(describeNow(NOW, -420)).toBe('Monday 19 October 2026, 07:42');
-    expect(describeNow(new Date('2026-12-31T23:30:00Z'), 540)).toBe('Friday 1 January 2027, 08:30');
-    expect(describeNow(NOW, 330)).toBe('Monday 19 October 2026, 20:12');
-    expect(describeNow(new Date('2026-03-01T00:10:00Z'), -30)).toBe('Saturday 28 February 2026, 23:40');
+    expect(describeToday(NOW, 60)).toBe('Monday 19 October 2026');
+    expect(describeToday(NOW, -420)).toBe('Monday 19 October 2026');
+    expect(describeToday(new Date('2026-12-31T23:30:00Z'), 540)).toBe('Friday 1 January 2027');
+    expect(describeToday(NOW, 330)).toBe('Monday 19 October 2026');
+    expect(describeToday(new Date('2026-03-01T00:10:00Z'), -30)).toBe('Saturday 28 February 2026');
+  });
+
+  it('stays the same all day, so the system prompt before it (and the chat after it) is read from the cache', () => {
+    const at = (iso: string) => environmentNote({ now: new Date(iso), utcOffset: 60, model: { name: 'Qwen3.5 2B' }, route: 'device' });
+    expect(at('2026-10-19T08:01:00Z')).toBe(at('2026-10-19T22:58:00Z'));
+    expect(at('2026-10-19T22:58:00Z')).not.toBe(at('2026-10-19T23:01:00Z')); // midnight in London
+    expect(at('2026-10-19T14:42:00Z')).not.toMatch(/\d\d:\d\d/);
   });
 
   it('is UTC, and says so, when the offset is missing or not sensible', () => {
-    expect(describeNow(NOW)).toBe('Monday 19 October 2026, 14:42 UTC');
-    for (const bad of [Number.NaN, 99999, -9999, 1.5, '60' as unknown as number]) expect(describeNow(NOW, bad)).toBe('Monday 19 October 2026, 14:42 UTC');
+    expect(describeToday(NOW)).toBe('Monday 19 October 2026 (UTC)');
+    for (const bad of [Number.NaN, 99999, -9999, 1.5, '60' as unknown as number]) expect(describeToday(NOW, bad)).toBe('Monday 19 October 2026 (UTC)');
   });
 
   it('checks what a device says about itself', () => {
@@ -29,7 +36,7 @@ describe('the note', () => {
   it('is three short lines: today, which model and where it runs, and not to guess', () => {
     const note = environmentNote(base);
     expect(note.trim().split('\n')).toEqual([
-      'Today is Monday 19 October 2026, 15:42. You are GPT-6 Luna (OpenAI), running in the cloud through Quo.',
+      'Today is Monday 19 October 2026. You are GPT-6 Luna (OpenAI), running in the cloud through Quo.',
       'If you are not sure something you recall is true, say so instead of guessing.',
     ]);
     expect(note.length).toBeLessThan(260);

@@ -10,6 +10,10 @@ import type { Message } from './types';
  *
  * Attached documents go into the user's message in <document> tags before the
  * question, and attached images become image parts, the same as the phone apps.
+ *
+ * Old messages are dropped in steps of TRIM_STEP, not one turn at a time: the
+ * engines (and providers) reuse the cached start of the prompt, and a start
+ * that moved on every turn made a long chat be read again in full each time.
  */
 
 const CHARS_PER_TOKEN = 3.5;
@@ -17,6 +21,8 @@ const PER_MESSAGE_OVERHEAD = 6;
 const SAFETY_MARGIN = 256;
 /** What one attached image costs the context, on average. */
 const IMAGE_TOKENS = 800;
+/** Messages are dropped from the front in groups this size (an even number keeps a user turn first). */
+export const TRIM_STEP = 8;
 
 const DEFAULT_DOCUMENT_PROMPT = 'Please analyse this document.';
 const DEFAULT_IMAGE_PROMPT = 'What do you see in this image? Describe it in detail.';
@@ -72,6 +78,8 @@ export function buildContext(
 ): ChatTurn[] {
   let budget = contextSize - maxTokens - SAFETY_MARGIN - estimateTokens(systemPrompt);
   const kept: ChatTurn[] = [];
+  const keptAt: number[] = [];
+  let trimmed = false;
   for (let i = messages.length - 1; i >= 0; i--) {
     const message = messages[i];
     if (!message.content && !message.attachments?.length) continue;
@@ -93,11 +101,26 @@ export function buildContext(
           : { role: turn.role, content: [...turn.content.filter(part => part.type === 'image_url'), { type: 'text', text: shortened }] };
       }
       kept.unshift(turn);
+      keptAt.unshift(i);
+      trimmed = i > 0;
       break;
     }
-    if (cost > budget) break;
+    if (cost > budget) {
+      trimmed = true;
+      break;
+    }
     budget -= cost;
     kept.unshift(turn);
+    keptAt.unshift(i);
+  }
+  // Something had to go: start at the next step boundary, so the same start holds for the next few turns. The newest
+  // message always stays.
+  if (trimmed && kept.length > 1) {
+    const start = Math.ceil(keptAt[0] / TRIM_STEP) * TRIM_STEP;
+    while (kept.length > 1 && keptAt[0] < start) {
+      kept.shift();
+      keptAt.shift();
+    }
   }
   // A chat should open with a user turn; drop a leading orphaned reply.
   while (kept.length > 1 && kept[0].role === 'assistant') kept.shift();
