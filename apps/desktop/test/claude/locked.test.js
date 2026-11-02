@@ -47,6 +47,13 @@ test('only the person’s own claude is found: never through a relative PATH ent
   assert.equal(findClaude({ env: { QUO_CLAUDE_PATH: '/abs/claude' }, platform: 'linux', home: '/home/a', executable }), '/abs/claude');
 });
 
+test('on Windows it looks for claude.exe with Windows paths, and also never through a relative PATH entry', () => {
+  const at = new Set(['C:\\Users\\a\\.local\\bin\\claude.exe', 'bin\\claude.exe']);
+  const executable = file => at.has(file);
+  assert.equal(findClaude({ env: { Path: 'bin;.' }, platform: 'win32', home: 'C:\\Users\\a', executable }), 'C:\\Users\\a\\.local\\bin\\claude.exe');
+  assert.equal(findClaude({ env: { QUO_CLAUDE_PATH: 'claude.exe' }, platform: 'win32', home: 'C:\\Users\\a', executable }), null);
+});
+
 test('the page learns how Claude Code is signed in, never the email or organization', () => {
   const account = accountOf({ email: 'someone@example.com', organization: 'Org', subscriptionType: 'Claude Pro', apiProvider: 'firstParty' });
   assert.deepEqual(account, { signedIn: true, kind: 'subscription', plan: 'Claude Pro' });

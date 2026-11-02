@@ -21,22 +21,27 @@ function isExecutable(file) {
 }
 
 /** Where to look, in order: the PATH, then where Claude Code's installers put it (apps started from the desktop often don't get the shell's PATH). */
+/** Paths as the platform being searched writes them (at run time the computer's own; tests can name another). */
+const pathsFor = platform => (platform === 'win32' ? path.win32 : path.posix);
+
 function searchDirs({ env, platform, home }) {
+  const p = pathsFor(platform);
   const separator = platform === 'win32' ? ';' : ':';
   const dirs = String(env.PATH ?? env.Path ?? '').split(separator);
-  if (home) dirs.push(path.join(home, '.local', 'bin'), path.join(home, '.claude', 'local'), path.join(home, '.npm-global', 'bin'), path.join(home, '.bun', 'bin'));
+  if (home) dirs.push(p.join(home, '.local', 'bin'), p.join(home, '.claude', 'local'), p.join(home, '.npm-global', 'bin'), p.join(home, '.bun', 'bin'));
   if (platform === 'darwin') dirs.push('/opt/homebrew/bin', '/usr/local/bin');
   if (platform === 'linux') dirs.push('/usr/local/bin', '/usr/bin');
   // A relative entry ("." or "bin") would find a program in whatever folder Quo happens to be in.
-  return [...new Set(dirs.filter(dir => dir && path.isAbsolute(dir)))];
+  return [...new Set(dirs.filter(dir => dir && p.isAbsolute(dir)))];
 }
 
 function findClaude({ env = process.env, platform = process.platform, home = os.homedir(), executable = isExecutable } = {}) {
+  const p = pathsFor(platform);
   const chosen = env.QUO_CLAUDE_PATH;
-  if (chosen) return path.isAbsolute(chosen) && executable(chosen) ? chosen : null;
+  if (chosen) return p.isAbsolute(chosen) && executable(chosen) ? chosen : null;
   const name = platform === 'win32' ? 'claude.exe' : 'claude';
   for (const dir of searchDirs({ env, platform, home })) {
-    const file = path.join(dir, name);
+    const file = p.join(dir, name);
     if (executable(file)) return file;
   }
   return null;
