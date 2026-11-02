@@ -79,7 +79,7 @@ describe('personal traces', () => {
   it('finds an email address that is not ours, and allows ours, placeholders and noreply addresses', () => {
     assert.deepEqual(rules(`contact ${email('someone.private', 'proton.me')}`), ['an email address that isn’t ours']);
     assert.deepEqual(rules(`contact ${email('astralabsltd', 'gmail.com')}`), []);
-    assert.deepEqual(rules(`${email('me', 'example.com')}, ${email('a', 'example.org')}, ${email('123+user', 'users.noreply.github.com')}, ${email('signin', 'quo.computer')}`), []);
+    assert.deepEqual(rules(`${email('me', 'example.com')}, ${email('a', 'example.org')}, ${email('123+user', 'users.noreply.github.com')}, ${email('signin', 'quo.computer')}, ${email('hello', 'quoai.app')}`), []);
   });
 
   it('does not read lockfiles, where package authors’ addresses are listed', () => {
