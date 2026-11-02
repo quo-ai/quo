@@ -141,3 +141,12 @@
 /* The model chip says where the chosen model runs with its icon: this device in indigo, the cloud in sky. */
 .model-chip[data-where="device"] > svg:first-child { color: var(--indigo); }
 .model-chip[data-where="cloud"] > svg:first-child { color: var(--sky); }
+
+/* Editing a sent message in place: the box takes the bubble's place, with what sending does under it. */
+.edit-message { width: min(100%, 640px); display: flex; flex-direction: column; gap: 8px; }
+.edit-message textarea { width: 100%; resize: none; padding: 10px 14px; border-radius: var(--r-card); border: var(--bw) solid var(--rule-strong); background: var(--sheet); color: var(--ink); font: inherit; line-height: 1.5; }
+.edit-message textarea:focus-visible { outline: 2px solid var(--indigo); outline-offset: 1px; }
+.edit-foot { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px; }
+.edit-foot .note { margin-right: auto; color: var(--ink-3); font-size: var(--t-small); }
+/* No hover on touch screens: every message's actions stay in view (invisible buttons would still take taps). */
+@media (hover: none) { .msg-actions { opacity: 1; } }

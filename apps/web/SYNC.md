@@ -67,6 +67,8 @@ Chats mostly grow at the end. When both sides changed a chat (`src/sync/merge.ts
 - same messages → the later edit wins;
 - they really diverged → the later edit keeps the chat, and the other version is kept as a **copy** titled "… (other device)". Nothing is discarded.
 
+Messages removed **on purpose** (going back to an earlier reply, or editing an earlier message) are recorded on the chat in `x.cut`: `{ at, ids }`, the removed messages' ids and when. Before comparing, both versions lose every message in the joined record, so a device that still has them doesn't bring them back, while messages another device added are kept (a real divergence still keeps both). The record travels with the chat (it is in `x`, which every platform passes on unchanged), up to the newest 1,000 ids. Undoing a removal brings the messages back with new ids, so the record stays true. Removing messages any other way (shortening a chat without a record) would be undone by the next sync.
+
 A memory edited on two devices: the later edit wins. Deleted on one device but edited on another → the edit is kept and uploaded again. A chat is never changed while a reply is being written into it (sync waits), and a write that finds the chat changed since it was read is abandoned and retried, so an edit made at the same moment is never overwritten.
 
 ## One engine, two apps

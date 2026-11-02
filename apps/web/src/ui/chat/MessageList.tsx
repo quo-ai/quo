@@ -1,6 +1,7 @@
-import { Fragment, useMemo, useState, type RefObject, type UIEvent } from 'react';
-import { Brain, Check, Copy, Layers, RotateCcw, Undo2, Volume2, VolumeX } from 'lucide-react';
+import { Fragment, useEffect, useMemo, useState, type RefObject, type UIEvent } from 'react';
+import { Brain, Check, Copy, CornerUpLeft, Layers, Pencil, RotateCcw, Undo2, Volume2, VolumeX } from 'lucide-react';
 import type { CodeSession } from '../../agent/session';
+import { laterMessages } from '../../chat/rewind';
 import type { Message } from '../../chat/types';
 import type { ModelChoice } from '../../models';
 import { isClaudeAgent } from '../../providers/claudeAgent';
@@ -8,6 +9,7 @@ import { greeting, pickStarters, type StarterMode } from '../../chat/starters';
 import { workingLabel } from '../../chat/working';
 import { canSpeak } from '../../voice/readAloud';
 import { AgentSteps } from '../AgentSteps';
+import { EditMessage } from './EditMessage';
 import { MessageAttachments } from '../Attachments';
 import { Markdown } from '../Markdown';
 import { GeneratedImages } from './GeneratedImages';
@@ -34,6 +36,10 @@ interface MessageListProps {
   onSuggest: (prompt: string) => void;
   onRetry: () => void;
   onUndo: () => void;
+  /** Send an earlier message again, edited: the messages after it go (Chat.tsx). */
+  onEdit: (messageId: string, text: string) => void;
+  /** Go back to an earlier reply: the messages after it go, with a moment to undo. */
+  onGoBack: (messageId: string) => void;
   /** Code mode could start here (the desktop app, a model that can use tools): starters mix in things to build. */
   canBuild?: boolean;
   onAction: (action: ChatAction) => void;
@@ -57,8 +63,10 @@ function intro(choice: ModelChoice | null, code: CodeSession | null): string {
 }
 
 /** The conversation: a greeting with starters when it's empty, then every message, then a failed turn's next steps. */
-export function MessageList({ conversationId, messages, busy, choice, code, failure, offlineReady, signedIn, undo, scroller, onScroll, onSuggest, onRetry, onUndo, canBuild = false, onAction }: MessageListProps) {
+export function MessageList({ conversationId, messages, busy, choice, code, failure, offlineReady, signedIn, undo, scroller, onScroll, onSuggest, onRetry, onUndo, onEdit, onGoBack, canBuild = false, onAction }: MessageListProps) {
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  useEffect(() => setEditingId(null), [conversationId]);
   const speech = useReadAloud(conversationId);
   const lastId = messages[messages.length - 1]?.id;
   const moved = useMemo(() => moves(messages), [messages]);
@@ -107,7 +115,33 @@ export function MessageList({ conversationId, messages, busy, choice, code, fail
               {move && <ModelChange move={move} />}
               <article className="msg user">
                 <MessageAttachments items={message.attachments ?? []} />
-                {message.content && <div className="bubble">{message.content}</div>}
+                {editingId === message.id && !busy
+                  ? (
+                    <EditMessage
+                      initial={message.content}
+                      later={laterMessages(messages, messages.indexOf(message))}
+                      onCancel={() => setEditingId(null)}
+                      onSend={text => {
+                        setEditingId(null);
+                        onEdit(message.id, text);
+                      }}
+                    />
+                  )
+                  : (
+                    <>
+                      {message.content && <div className="bubble">{message.content}</div>}
+                      {!busy && message.content && (
+                        <div className="msg-actions">
+                          <button className="icon-btn press" onClick={() => setEditingId(message.id)} aria-label="Edit this message" title="Edit, and go on from here">
+                            <Pencil size={15} />
+                          </button>
+                          <button className="icon-btn press" onClick={() => void copy(message)} aria-label="Copy message" title="Copy">
+                            {copiedId === message.id ? <Check size={16} color="var(--indigo)" /> : <Copy size={15} />}
+                          </button>
+                        </div>
+                      )}
+                    </>
+                  )}
               </article>
             </Fragment>
           );
@@ -153,6 +187,11 @@ export function MessageList({ conversationId, messages, busy, choice, code, fail
                 {isLast && (
                   <button className="icon-btn press" onClick={onRetry} aria-label="Try again" title="Try again">
                     <RotateCcw size={15} />
+                  </button>
+                )}
+                {!isLast && !busy && (
+                  <button className="icon-btn press" onClick={() => onGoBack(message.id)} aria-label="Go back to this reply" title="Go back to here: the messages after this reply are removed">
+                    <CornerUpLeft size={15} />
                   </button>
                 )}
                 <ReplyWhere message={message} />

@@ -42,6 +42,32 @@ describe('reconcileChat', () => {
     expect(other.copy!.messages.map(m => m.id)).toEqual(['a', 'x']);
   });
 
+  it('a chat someone went back in stays that way: the removed messages don’t come back from another device', () => {
+    const cut = (at: number, ids: string[]) => ({ cut: { at, ids } });
+    const full = chat(10, 'a', 'b', 'c', 'd');
+    const wentBack = { ...chat(20, 'a', 'b'), x: cut(20, ['c', 'd']) };
+    expect(reconcileChat(wentBack, full, newId)).toEqual({ item: wentBack, pushNeeded: true });
+    expect(reconcileChat(full, wentBack, newId)).toEqual({ item: wentBack, pushNeeded: false });
+
+    // Went back, then carried on: no copy of the old ending is kept, it was removed on purpose.
+    const carriedOn = { ...chat(30, 'a', 'b', 'e'), x: cut(20, ['c', 'd']) };
+    const merged = reconcileChat(carriedOn, full, newId);
+    expect(merged.item.messages.map(m => m.id)).toEqual(['a', 'b', 'e']);
+    expect(merged.copy).toBeUndefined();
+    expect(merged.pushNeeded).toBe(true);
+
+    // Another device added a message this one never saw: it stays (here both versions ended differently, so both are kept).
+    const otherAdded = chat(25, 'a', 'b', 'c', 'd', 'f');
+    const kept = reconcileChat(carriedOn, otherAdded, newId);
+    expect(kept.item.messages.map(m => m.id)).toEqual(['a', 'b', 'e']);
+    expect(kept.copy!.messages.map(m => m.id)).toEqual(['a', 'b', 'f']);
+
+    // The record of what was removed travels on, joined from both sides.
+    const both = reconcileChat({ ...chat(40, 'a'), x: cut(40, ['b']) }, { ...chat(30, 'a', 'b', 'c'), x: cut(30, ['c']) }, newId);
+    expect(both.item.messages.map(m => m.id)).toEqual(['a']);
+    expect(both.item.x).toEqual({ cut: { at: 40, ids: ['b', 'c'] } });
+  });
+
   it('never loses a message', () => {
     const local = chat(30, 'a', 'b', 'x');
     const remote = chat(20, 'a', 'b', 'y');

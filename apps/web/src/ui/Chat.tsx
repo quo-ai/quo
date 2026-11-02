@@ -35,6 +35,7 @@ import { useCodeMode } from './chat/useCodeMode';
 import type { CodeSession } from '../agent/session';
 import { useWebMode } from './chat/useWebMode';
 import { toast } from './Toasts';
+import { changedFiles, cutFrom, restoreCut } from '../chat/rewind';
 
 /** The free model's daily searches running out is said once, not after every reply. */
 let searchLimitShown = false;
@@ -302,6 +303,52 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
     retry();
   }, [modelId]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // The chat as it is now, for an undo that must not overwrite anything sent since.
+  const latest = useRef(conversation);
+  useEffect(() => {
+    latest.current = conversation;
+  }, [conversation]);
+
+  /** What going back leaves behind in Code mode: the files stay as they are, and the take-back offer goes with its reply. */
+  function afterCut(removed: Message[]): string {
+    if (undo && removed.some(m => m.id === undo.messageId)) setUndo(null);
+    setFailure(null);
+    return changedFiles(removed) ? ' Files the agent changed stay as they are.' : '';
+  }
+
+  /** Sends an earlier message again, edited (with its files): the messages from it on are removed, and the chat goes on from there. */
+  function editFrom(messageId: string, text: string) {
+    if (!conversation || busy) return;
+    const index = conversation.messages.findIndex(m => m.id === messageId);
+    if (index < 0) return;
+    const { conversation: base, removed } = cutFrom(conversation, index);
+    const files = afterCut(removed);
+    if (files) toast(files.trim());
+    void run(base, text, false, conversation.messages[index].attachments);
+  }
+
+  /** Goes back to an earlier reply: the messages after it are removed, with a few seconds to undo. */
+  function goBack(messageId: string) {
+    if (!conversation || busy) return;
+    const index = conversation.messages.findIndex(m => m.id === messageId);
+    if (index < 0 || index === conversation.messages.length - 1) return;
+    const { conversation: cut, removed } = cutFrom(conversation, index + 1);
+    const files = afterCut(removed);
+    onChange(cut, true);
+    composer.current?.focus();
+    toast(`Went back. ${removed.length} message${removed.length === 1 ? '' : 's'} removed.${files}`, {
+      durationMs: 8000,
+      action: {
+        label: 'Undo',
+        run: () => {
+          const now = latest.current;
+          if (now?.id === cut.id && now.messages.length === cut.messages.length) onChange(restoreCut(now, removed), true);
+          else toast('The chat changed since, so it can’t be undone.');
+        },
+      },
+    });
+  }
+
   /** Regenerates the last reply (or retries a failed turn) with the current model. */
   function retry() {
     if (!conversation || busy) return;
@@ -384,6 +431,8 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
         canBuild={codeMode.available && codeSettings().autoStart}
         onRetry={retry}
         onUndo={() => void takeBack()}
+        onEdit={editFrom}
+        onGoBack={goBack}
         onAction={onAction}
       />
       {!atBottom && messages.length > 0 && (
