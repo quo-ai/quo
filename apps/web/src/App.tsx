@@ -377,7 +377,6 @@ export function App() {
 
   return (
     <>
-      <div className="lightfield" />
       <div className={`app${collapsed ? ' sidebar-collapsed' : ''}`}>
         <Sidebar
           conversations={conversations}

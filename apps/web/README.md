@@ -26,7 +26,7 @@ The app is static (`dist/`) and must be served with cross-origin isolation heade
 |---|---|
 | Dev server | `vite.config.ts` (via `server/node.ts`) |
 | Vercel (now) | `api/index.ts`, with `vercel.json` rewriting `/api/*` to it |
-| Your own server (later) | `npm run build && npm start` (`server/serve.ts`: app + API on `PORT`, default 3000) |
+| Your own server | `npm run build && npm start` (`server/serve.ts`: app + API on `HOST`:`PORT`, default every interface, 3000) |
 
 **Environment** (`server/env.ts`):
 
@@ -35,7 +35,7 @@ The app is static (`dist/`) and must be served with cross-origin isolation heade
 | `QUO_ENV=production` | production | Real services only; nothing simulated |
 | `DATABASE_URL` | production | Postgres (Neon on Vercel today) |
 | `SESSION_SECRET` | production | Signs session cookies; long random string |
-| `APP_URL` | production | Public URL, e.g. `https://quoai-app.vercel.app` |
+| `APP_URL` | production | Public URL, e.g. `https://app.quo.computer` |
 | `OPENROUTER_API_KEY` | for cloud models | Without it, cloud models are hidden |
 | `RESEND_API_KEY`, `EMAIL_FROM` | for sign-in | Emails sign-in codes; needs a verified sending domain. Without it, sign-in, paid models and Quo Sync answer `setup_required` |
 | `PADDLE_*` (incl. `PADDLE_PRICE_SYNC_YEARLY`) | for purchases | Paddle merchant of record; without it, purchases answer `setup_required` |
@@ -46,13 +46,19 @@ The app is static (`dist/`) and must be served with cross-origin isolation heade
 
 The server reports what's switched on in `/api/me` (`features`). Services that aren't set up yet **stay visible** in the app and answer `503 setup_required` with a plain message when used (sign-in, paid models, purchases, Quo Sync), so the app shows "coming soon" instead of hiding them; set the variables and they just work. The database schema is created automatically on first use.
 
-**Vercel (temporary):** project `quoai-app` in London (`lhr1`), with the Neon integration providing `DATABASE_URL`. Deploy with `bash scripts/deploy.sh` (it uploads a copy from outside git; Vercel builds it).
+**Vercel (the old address):** project `quoai-app` in London (`lhr1`), with the Neon integration providing `DATABASE_URL`. It keeps running for apps that have `quoai-app.vercel.app` built in (desktop 1.5.0, the Android app). Deploy with `bash scripts/deploy.sh` (it uploads a copy from outside git; Vercel builds it). Vercel won't give back variables marked sensitive, so the server's settings can't be pulled from it.
 
 **Moving to your own host and domain:**
-1. Run `npm run build && npm start` behind a reverse proxy with TLS (it must forward `X-Forwarded-For`).
+1. Run `npm run build && npm start` behind a reverse proxy with TLS. The server counts free use by the first `X-Forwarded-For` address, so the proxy must set that header itself and drop the visitor's.
 2. Keep Neon (it's plain Postgres and works from anywhere), or move the data with `pg_dump` / `pg_restore`.
 3. Set the variables above, with `APP_URL` on the new domain.
 4. Point the clients at the new address: `WEB_APP_URL` in `src/platform.ts`, `API_ORIGIN` in `apps/desktop/src/protocol.js`, and `LINKS.webapp` in `website/assets/site.js`.
+
+**Quo's own server** (Windows, with Apache already serving other sites; scripts in `scripts/server/`):
+- `app.quo.computer` (Quo Web and the API) and `quo.computer` (the website) are Apache vhosts in `scripts/server/apache.conf`, behind Cloudflare. Apache takes the visitor's address from `CF-Connecting-IP` only when the connection comes from Cloudflare's ranges, and sets `X-Forwarded-For` from it. Cloudflare closes a request that is silent for 100 s, so chat streams send a keep-alive comment every 20 s and both image attempts fit in 90 s.
+- The app runs as the `QuoWeb` Windows service (WinSW, as LOCAL SERVICE) on `127.0.0.1:3000`, with its settings in `C:\quo\config\quo.env` (readable only by the service and administrators; never in the repo). Logs are in `C:\quo\logs`.
+- Figures: `bash scripts/stats-server.sh [days]` prints the free tier's cost per person a day, paid use, sales, how much of Pro's allowance and the trial is used, and accounts (`server/stats.ts`, from the daily totals in `server/costs.ts` and the account tables; nothing names a person).
+- Once: `setup.ps1` (folders and their access, the service, a stand-in certificate, one `IncludeOptional` line in `httpd.conf`). When the domain points at the server, the Let's Encrypt certificate (win-acme in `C:\quo\win-acme`, which renews it daily as needed and then reloads Apache gracefully): `wacs.exe --source manual --host quo.computer,www.quo.computer,app.quo.computer --friendlyname quo.computer --validation filesystem --webroot C:\quo\acme --store pemfiles --pemfilespath C:\quo\tls --pemfilesname quo.computer --installation script --script <Apache>\bin\httpd.exe --scriptparameters "-k restart -n Apache2.4" --accepttos`. Then deploy with `bash scripts/deploy-server.sh` (SSH host `QUO_SERVER`, default `quo-server`): it copies the working tree, the server installs packages only when the lockfile changed, builds into `dist-next` and swaps it in, mirrors the website, and reloads Apache only when it accepts the new config.
 
 ## Local models
 
@@ -65,6 +71,7 @@ The server reports what's switched on in `/api/me` (`features`). Services that a
 | Safari | Install to Dock/Home Screen (PWA) to escape the 7-day storage cap. |
 | Size limit | wllama's main build (JSPI and 64-bit memory: current Chrome, Edge, Firefox) reads model files in pieces, so files of 2 GiB or more load (Gemma 4 E2B, 2.6 GB). Its compatibility build (Safari, older browsers; hosted by the app, `src/engine/compat.ts`) holds at most 4 GB and can't, so such models aren't offered there (`src/engine/wasm.ts`). The desktop app has no such limit. |
 | Desktop app | `window.quoDesktop.engine` (see `src/native.ts`) switches the app to llama.cpp running natively: a larger catalog (Qwen3.5 4B and 9B, Qwen3.8 27B, Gemma 4 up to 26B A4B, Llama 3.2, Phi-4 mini) with image input, real GPU memory for recommendations, and models you already have from LM Studio or Ollama. Same `InferenceEngine` interface (`src/engine/`), so the chat code doesn't know the difference. See `apps/desktop/README.md`. |
+| Images | Ask any cloud or own-key model for a picture (or `/image …` with any model): it writes the prompt, Quo's server makes the image through OpenRouter (FLUX 3 Klein; Gemini 3.1 Flash Lite Image to change one), and it shows under the reply with its prompt and a save button. A few free a day (`FREE_DAILY_IMAGES`), then credits. Kept on the device, never synced. |
 | Files | Paperclip or drag and drop: PDFs (pdf.js, loaded only when used) and text files are read to text in `<document>` tags; photos are shrunk to 1024 px JPEGs for models that read images. To an offline model they stay on the device; to a cloud model or one reached with the person's own key (Claude Agent too) they go with the message (`shared/content.ts`: images as data addresses only, the newest 4 per request, only to models that read images; the server checks each). Never synced. |
 | Voice | Mic button: Whisper (base, multilingual) via Transformers.js in a worker on the processor, about 8x faster than real time. ~80 MB downloaded on first use and cached. Its WebAssembly runtime ships with the app (not a CDN). Read aloud uses the system's built-in voices. |
 | Offline | Service worker caches the app shell (not built yet); models already local. |
@@ -128,7 +135,7 @@ A new provider in either format is one line in `registry.ts` and one in the desk
 
 ## Look and commands
 
-`styles/crt.css` is the look of motion: an ordered (Bayer 4×4) dither in 2px cells, drawn once as small SVG masks (custom properties), so new things *dissolve* in (`mask-image` stepping from sparse to solid), "working" is a dither bar sweeping (`dither-run`, in `steps()`), and terminal output gets scanlines. Keep new motion stepped and let it stop for reduced motion (the global rule in `responsive.css`). `chat/commands.ts` and `ui/chat/useCommands.ts` are the slash commands: the list is built from the chat's state, so only commands that apply are offered. `ui/AgentSteps.tsx` folds long runs of steps; `ui/Markdown.tsx` gives code blocks their header and copy button.
+The look is a set of colour roles per appearance in `styles/appearances.ts` (`npm run tokens` writes `styles/tokens.css`; `src/__tests__/appearances.test.ts` checks contrast and that no other stylesheet writes a colour), chosen by `theme.ts` from a mode and three switches (Black, High contrast, E-ink), each automatic until changed. Surfaces are solid; type is Atkinson Hyperlegible Next and Mono, bundled in `styles/fonts/`. `styles/motion.css` is the interface's motion (a short rise); `styles/dither.css` is the model's: what it makes dissolves in through a 2px dither and its work in progress sweeps, in indigo on the device and sky in the cloud (`ui/fresh.ts` times the newest words of a reply). All of it stops for reduced motion and in E-ink. `ui/chat/Where.tsx` shows where each reply ran, and marks the place a chat moves to the cloud or a provider and back. `chat/commands.ts` and `ui/chat/useCommands.ts` are the slash commands: the list is built from the chat's state, so only commands that apply are offered. `ui/AgentSteps.tsx` folds long runs of steps; `ui/Markdown.tsx` gives code blocks their header and copy button.
 
 ## Getting Quo onto the computer
 
@@ -152,7 +159,7 @@ End-to-end encrypted sync of chats and memories between a user's devices (Quo We
 
 1. **Local core** (in progress): catalog, resumable downloads, OPFS storage, engine, chat. ✔ first version.
 2. **Local polish:** chats saved in IndexedDB, markdown rendering, offline app shell (PWA, install prompt), device check and model recommendation, "keep models in a folder" (Chromium), split hosting for > 2 GiB models, export/import.
-3. **Deploy** ✔ Live at https://quoai-app.vercel.app with the API and a Neon database (temporary; moves to its own host and domain later, see Hosting).
+3. **Deploy** ✔ Live at https://app.quo.computer with the API and a Neon database, on Quo's own server (see Hosting).
 4. **Accounts and billing:** passwordless sign-in, Paddle subscription + packs, credit ledger.
 5. **Cloud models:** gateway proxy (OpenRouter + direct providers where cheaper), metering, model picker with "Cloud" labelling, trial credits.
 6. **Done:** local documents, images (desktop) and voice input; end-to-end encrypted sync (needs sign-in and purchases switched on).

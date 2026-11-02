@@ -6,7 +6,7 @@ const GITHUB = 'https://github.com/quo-ai/quo';
 const RELEASES = `${GITHUB}/releases/latest`;
 
 const LINKS = {
-  webapp: 'https://quoai-app.vercel.app/',
+  webapp: 'https://app.quo.computer/',
   github: GITHUB,
   releases: RELEASES,
   contribute: `${GITHUB}/blob/master/.github/CONTRIBUTING.md`,

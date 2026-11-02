@@ -1,0 +1,53 @@
+/* ---------- Surfaces ----------
+   Solid, never see-through: a sheet colour, a hairline edge, and a soft shadow where the appearance has one (Light).
+   The class keeps its old name, .glass, so the components did not have to change; .thick is the same surface now. */
+.glass {
+  position: relative;
+  background: var(--sheet);
+  border: var(--bw) solid var(--rule);
+  box-shadow: var(--shadow);
+}
+
+/* ---------- Buttons ---------- */
+.press { transition: transform var(--d-micro) var(--e-out), background-color var(--d-micro) var(--e-out), border-color var(--d-micro) var(--e-out), color var(--d-micro) var(--e-out); }
+.press:active:not(:disabled) { transform: translateY(1px) scale(0.985); }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  height: 40px; padding: 0 18px; border-radius: var(--r-pill); border: var(--bw) solid transparent;
+  font-weight: var(--w-strong); font-size: 0.9375rem; white-space: nowrap;
+}
+/* The one solid indigo on a screen: the next thing to do. */
+.btn-primary { color: var(--on-indigo); background: var(--indigo-fill); }
+.btn-primary:hover:not(:disabled) { background: color-mix(in oklab, var(--indigo-fill) 86%, var(--ink)); }
+/* Second choices: an edge, no fill. */
+.btn-glass { color: var(--ink); border-color: var(--rule-strong); background: transparent; }
+.btn-glass:hover:not(:disabled) { background: var(--sheet-2); }
+.btn-soft { background: var(--sheet-2); color: var(--ink); }
+.btn-soft:hover:not(:disabled) { background: var(--rule); }
+.btn-ghost { background: transparent; color: var(--ink-2); }
+.btn-ghost:hover:not(:disabled) { background: var(--sheet-2); color: var(--ink); }
+.btn-lg { height: 52px; padding: 0 26px; font-size: 1.0625rem; }
+.btn-block { width: 100%; }
+
+.icon-btn {
+  display: inline-grid; place-items: center; width: 36px; height: 36px; border-radius: var(--r-pill);
+  border: 0; background: transparent; color: var(--ink-2);
+}
+.icon-btn:hover:not(:disabled) { background: var(--sheet-2); color: var(--ink); }
+.icon-btn.round { border-radius: var(--r-pill); }
+
+/* Keyboard shortcuts mean nothing on a touch screen. */
+@media (pointer: coarse) { .kbd { display: none; } }
+.kbd { margin-left: auto; font: var(--w-strong) 0.6875rem/1 var(--mono); color: var(--ink-3); padding: 3px 6px; border-radius: var(--r-inner); background: var(--sheet-2); }
+
+/* Black: no large bright fills in a dark room; E-ink and High contrast: edges instead of tints. */
+:root[data-env="black"] .btn-primary { border-color: var(--rule-strong); }
+:root[data-env="eink"] .btn-soft, :root[data-env="contrast"] .btn-soft, :root[data-env="contrast-dark"] .btn-soft { border-color: var(--rule-strong); }
+
+/* Facts (ui/Facts.tsx): items in a line with a thin rule between, instead of dots. */
+.fact + .vh + .fact::before { content: ''; display: inline-block; width: 1px; height: 0.85em; margin: 0 0.5em; vertical-align: -0.08em; background: currentColor; opacity: 0.35; }
+
+/* Deleting for good: the danger colour as a fill, the page colour on it (readable in every appearance). */
+.btn-danger { background: var(--danger); color: var(--ground); }
+.btn-danger:hover:not(:disabled) { background: color-mix(in oklab, var(--danger) 86%, var(--ink)); }

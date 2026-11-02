@@ -1,0 +1,300 @@
+/* GENERATED from styles/appearances.ts by `node scripts/tokens.ts`. Edit that file, not this one. */
+
+:root, :root[data-env="light"] {
+  color-scheme: light;
+  --w-body: 400; --w-strong: 650; --w-head: 760;
+  --stroke: 1.75; --bw: 1px;
+  --shadow: 0 1px 1px rgb(20 18 60 / 0.05), 0 10px 28px -14px rgb(20 18 60 / 0.22);
+  --ground: #f9fafd;
+  --ground-2: #f1f2f7;
+  --sheet: #fefeff;
+  --sheet-2: #eaecf3;
+  --sunken: #f3f4f9;
+  --scrim: rgba(18, 16, 48, 0.36);
+  --ink: #131522;
+  --ink-2: #494c5a;
+  --ink-3: #616470;
+  --ink-off: #a2a4ac;
+  --rule: #dddfe8;
+  --rule-strong: #7c808d;
+  --indigo: #3b2eff;
+  --indigo-fill: #3b2eff;
+  --on-indigo: #fdfdff;
+  --indigo-wash: #e5eaff;
+  --sky: #006d8f;
+  --sky-wash: #e0f4fd;
+  --danger: #be222d;
+  --danger-wash: #ffecea;
+  --caution: #955816;
+  --caution-wash: #fdf1d9;
+  --add: #137738;
+  --you-bg: #e5eaff;
+  --you-ink: #131522;
+  --you-edge: #d0d7fb;
+  --code-bg: #f3f4f9;
+  --code-ink: #1c1e2b;
+  --syn-keyword: #5e2fc1;
+  --syn-string: #15733c;
+  --syn-constant: #a55115;
+  --syn-function: #00668b;
+  --syn-type: #006e73;
+  --syn-punct: #525561;
+  --syn-comment: #686b78;
+  --focus: #3b2eff;
+  --field: #3b2eff;
+  --on-field: #fdfdff;
+  --field-2: #ccd5ff;
+}
+
+:root[data-env="dark"] {
+  color-scheme: dark;
+  --w-body: 380; --w-strong: 620; --w-head: 720;
+  --stroke: 1.75; --bw: 1px;
+  --shadow: none;
+  --ground: #0d0f16;
+  --ground-2: #090a11;
+  --sheet: #151720;
+  --sheet-2: #20222d;
+  --sunken: #07080d;
+  --scrim: rgba(0, 0, 0, 0.55);
+  --ink: #ebedf2;
+  --ink-2: #babdc7;
+  --ink-3: #989ba6;
+  --ink-off: #555860;
+  --rule: #2a2c36;
+  --rule-strong: #686b79;
+  --indigo: #9ea4ff;
+  --indigo-fill: #444df6;
+  --on-indigo: #fdfdff;
+  --indigo-wash: #202446;
+  --sky: #78cbe7;
+  --sky-wash: #0f2732;
+  --danger: #f68482;
+  --danger-wash: #391919;
+  --caution: #ebb761;
+  --caution-wash: #30200d;
+  --add: #75d291;
+  --you-bg: #202446;
+  --you-ink: #ebedf2;
+  --you-edge: #323866;
+  --code-bg: #07080d;
+  --code-ink: #dbdee5;
+  --syn-keyword: #b6a5ff;
+  --syn-string: #81d39f;
+  --syn-constant: #f3b680;
+  --syn-function: #7dcae5;
+  --syn-type: #7dcece;
+  --syn-punct: #a7aab4;
+  --syn-comment: #8f929c;
+  --focus: #9ea4ff;
+  --field: #191c5b;
+  --on-field: #f4f5f9;
+  --field-2: #c1c8ec;
+}
+
+:root[data-env="black"] {
+  color-scheme: dark;
+  --w-body: 420; --w-strong: 650; --w-head: 720;
+  --stroke: 1.75; --bw: 1px;
+  --shadow: none;
+  --ground: #000000;
+  --ground-2: #040302;
+  --sheet: #090705;
+  --sheet-2: #120f0c;
+  --sunken: #010101;
+  --scrim: rgba(0, 0, 0, 0.7);
+  --ink: #b7b0a8;
+  --ink-2: #968f88;
+  --ink-3: #837c74;
+  --ink-off: #46423d;
+  --rule: #1d1a17;
+  --rule-strong: #665f5a;
+  --indigo: #8d88d2;
+  --indigo-fill: #211e4e;
+  --on-indigo: #c0c0e7;
+  --indigo-wash: #0b0b1c;
+  --sky: #6ca2b0;
+  --sky-wash: #010d12;
+  --danger: #d17468;
+  --danger-wash: #1a0705;
+  --caution: #c99c59;
+  --caution-wash: #150b01;
+  --add: #69aa77;
+  --you-bg: #000000;
+  --you-ink: #b7b0a8;
+  --you-edge: #5f5b94;
+  --code-bg: #020201;
+  --code-ink: #b0aaa1;
+  --syn-keyword: #9786c9;
+  --syn-string: #6fa87b;
+  --syn-constant: #c79263;
+  --syn-function: #6ea1b2;
+  --syn-type: #6ba4a4;
+  --syn-punct: #8b857e;
+  --syn-comment: #807971;
+  --focus: #8d88d2;
+  --field: #000000;
+  --on-field: #b7b0a8;
+  --field-2: #867f77;
+}
+
+:root[data-env="contrast"] {
+  color-scheme: light;
+  --w-body: 480; --w-strong: 720; --w-head: 800;
+  --stroke: 2.25; --bw: 2px;
+  --shadow: none;
+  --ground: #ffffff;
+  --ground-2: #f1f2f6;
+  --sheet: #ffffff;
+  --sheet-2: #e6e8ed;
+  --sunken: #eff0f4;
+  --scrim: rgba(0, 0, 0, 0.5);
+  --ink: #06070f;
+  --ink-2: #262833;
+  --ink-3: #3a3c48;
+  --ink-off: #7e8086;
+  --rule: #7d8088;
+  --rule-strong: #2a2d38;
+  --indigo: #2216be;
+  --indigo-fill: #2216be;
+  --on-indigo: #ffffff;
+  --indigo-wash: #dee5ff;
+  --sky: #00475e;
+  --sky-wash: #d4ecf8;
+  --danger: #940015;
+  --danger-wash: #fce1de;
+  --caution: #723e06;
+  --caution-wash: #f9eaca;
+  --add: #005121;
+  --you-bg: #dee5ff;
+  --you-ink: #06070f;
+  --you-edge: #2a2d38;
+  --code-bg: #eff0f4;
+  --code-ink: #06070f;
+  --syn-keyword: #4912a2;
+  --syn-string: #005121;
+  --syn-constant: #803200;
+  --syn-function: #004964;
+  --syn-type: #004c50;
+  --syn-punct: #30323d;
+  --syn-comment: #444753;
+  --focus: #2216be;
+  --field: #2216be;
+  --on-field: #ffffff;
+  --field-2: #e1e7fd;
+}
+
+:root[data-env="contrast-dark"] {
+  color-scheme: dark;
+  --w-body: 420; --w-strong: 680; --w-head: 780;
+  --stroke: 2.25; --bw: 2px;
+  --shadow: none;
+  --ground: #05050a;
+  --ground-2: #030306;
+  --sheet: #0c0d13;
+  --sheet-2: #20222d;
+  --sunken: #07080d;
+  --scrim: rgba(0, 0, 0, 0.55);
+  --ink: #fbfcff;
+  --ink-2: #dbdee5;
+  --ink-3: #c8cad3;
+  --ink-off: #555860;
+  --rule: #60636f;
+  --rule-strong: #b4b7c5;
+  --indigo: #c0c5ff;
+  --indigo-fill: #3330d6;
+  --on-indigo: #fdfdff;
+  --indigo-wash: #202446;
+  --sky: #a4e3f9;
+  --sky-wash: #0f2732;
+  --danger: #ffaaa7;
+  --danger-wash: #2e1010;
+  --caution: #ebb761;
+  --caution-wash: #30200d;
+  --add: #75d291;
+  --you-bg: #202446;
+  --you-ink: #ebedf2;
+  --you-edge: #323866;
+  --code-bg: #07080d;
+  --code-ink: #dbdee5;
+  --syn-keyword: #b6a5ff;
+  --syn-string: #81d39f;
+  --syn-constant: #f3b680;
+  --syn-function: #7dcae5;
+  --syn-type: #7dcece;
+  --syn-punct: #a7aab4;
+  --syn-comment: #8f929c;
+  --focus: #cfd4ff;
+  --field: #191c5b;
+  --on-field: #f4f5f9;
+  --field-2: #c1c8ec;
+}
+
+:root[data-env="eink"] {
+  color-scheme: light;
+  --w-body: 460; --w-strong: 720; --w-head: 800;
+  --stroke: 2; --bw: 1.5px;
+  --shadow: none;
+  --ground: #ffffff;
+  --ground-2: #ffffff;
+  --sheet: #ffffff;
+  --sheet-2: #e8e8e8;
+  --sunken: #f2f2f2;
+  --scrim: rgba(255, 255, 255, 0.85);
+  --ink: #000000;
+  --ink-2: #1f1f1f;
+  --ink-3: #333333;
+  --ink-off: #8a8a8a;
+  --rule: #000000;
+  --rule-strong: #000000;
+  --indigo: #000000;
+  --indigo-fill: #000000;
+  --on-indigo: #ffffff;
+  --indigo-wash: #e8e8e8;
+  --sky: #000000;
+  --sky-wash: #e8e8e8;
+  --danger: #000000;
+  --danger-wash: #e8e8e8;
+  --caution: #000000;
+  --caution-wash: #e8e8e8;
+  --add: #000000;
+  --you-bg: #ffffff;
+  --you-ink: #000000;
+  --you-edge: #000000;
+  --code-bg: #f2f2f2;
+  --code-ink: #000000;
+  --syn-keyword: #000000;
+  --syn-string: #333333;
+  --syn-constant: #000000;
+  --syn-function: #000000;
+  --syn-type: #000000;
+  --syn-punct: #333333;
+  --syn-comment: #333333;
+  --focus: #000000;
+  --field: #000000;
+  --on-field: #ffffff;
+  --field-2: #e8e8e8;
+}
+
+/* Before theme.ts runs: follow the device. Phones (touch, no hover) get Black in dark mode, as theme.ts decides. */
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-env]) { color-scheme: dark; --w-body: 380; --w-strong: 620; --w-head: 720; --stroke: 1.75; --bw: 1px; --shadow: none; --ground: #0d0f16; --ground-2: #090a11; --sheet: #151720; --sheet-2: #20222d; --sunken: #07080d; --scrim: rgba(0, 0, 0, 0.55); --ink: #ebedf2; --ink-2: #babdc7; --ink-3: #989ba6; --ink-off: #555860; --rule: #2a2c36; --rule-strong: #686b79; --indigo: #9ea4ff; --indigo-fill: #444df6; --on-indigo: #fdfdff; --indigo-wash: #202446; --sky: #78cbe7; --sky-wash: #0f2732; --danger: #f68482; --danger-wash: #391919; --caution: #ebb761; --caution-wash: #30200d; --add: #75d291; --you-bg: #202446; --you-ink: #ebedf2; --you-edge: #323866; --code-bg: #07080d; --code-ink: #dbdee5; --syn-keyword: #b6a5ff; --syn-string: #81d39f; --syn-constant: #f3b680; --syn-function: #7dcae5; --syn-type: #7dcece; --syn-punct: #a7aab4; --syn-comment: #8f929c; --focus: #9ea4ff; --field: #191c5b; --on-field: #f4f5f9; --field-2: #c1c8ec; }
+}
+
+@media (prefers-color-scheme: dark) and (pointer: coarse) and (hover: none) {
+  :root:not([data-env]) { color-scheme: dark; --w-body: 420; --w-strong: 650; --w-head: 720; --stroke: 1.75; --bw: 1px; --shadow: none; --ground: #000000; --ground-2: #040302; --sheet: #090705; --sheet-2: #120f0c; --sunken: #010101; --scrim: rgba(0, 0, 0, 0.7); --ink: #b7b0a8; --ink-2: #968f88; --ink-3: #837c74; --ink-off: #46423d; --rule: #1d1a17; --rule-strong: #665f5a; --indigo: #8d88d2; --indigo-fill: #211e4e; --on-indigo: #c0c0e7; --indigo-wash: #0b0b1c; --sky: #6ca2b0; --sky-wash: #010d12; --danger: #d17468; --danger-wash: #1a0705; --caution: #c99c59; --caution-wash: #150b01; --add: #69aa77; --you-bg: #000000; --you-ink: #b7b0a8; --you-edge: #5f5b94; --code-bg: #020201; --code-ink: #b0aaa1; --syn-keyword: #9786c9; --syn-string: #6fa87b; --syn-constant: #c79263; --syn-function: #6ea1b2; --syn-type: #6ba4a4; --syn-punct: #8b857e; --syn-comment: #807971; --focus: #8d88d2; --field: #000000; --on-field: #b7b0a8; --field-2: #867f77; }
+}
+
+@media (prefers-color-scheme: light) and (prefers-contrast: more) {
+  :root:not([data-env]) { color-scheme: light; --w-body: 480; --w-strong: 720; --w-head: 800; --stroke: 2.25; --bw: 2px; --shadow: none; --ground: #ffffff; --ground-2: #f1f2f6; --sheet: #ffffff; --sheet-2: #e6e8ed; --sunken: #eff0f4; --scrim: rgba(0, 0, 0, 0.5); --ink: #06070f; --ink-2: #262833; --ink-3: #3a3c48; --ink-off: #7e8086; --rule: #7d8088; --rule-strong: #2a2d38; --indigo: #2216be; --indigo-fill: #2216be; --on-indigo: #ffffff; --indigo-wash: #dee5ff; --sky: #00475e; --sky-wash: #d4ecf8; --danger: #940015; --danger-wash: #fce1de; --caution: #723e06; --caution-wash: #f9eaca; --add: #005121; --you-bg: #dee5ff; --you-ink: #06070f; --you-edge: #2a2d38; --code-bg: #eff0f4; --code-ink: #06070f; --syn-keyword: #4912a2; --syn-string: #005121; --syn-constant: #803200; --syn-function: #004964; --syn-type: #004c50; --syn-punct: #30323d; --syn-comment: #444753; --focus: #2216be; --field: #2216be; --on-field: #ffffff; --field-2: #e1e7fd; }
+}
+
+@media (prefers-color-scheme: dark) and (prefers-contrast: more) {
+  :root:not([data-env]) { color-scheme: dark; --w-body: 420; --w-strong: 680; --w-head: 780; --stroke: 2.25; --bw: 2px; --shadow: none; --ground: #05050a; --ground-2: #030306; --sheet: #0c0d13; --sheet-2: #20222d; --sunken: #07080d; --scrim: rgba(0, 0, 0, 0.55); --ink: #fbfcff; --ink-2: #dbdee5; --ink-3: #c8cad3; --ink-off: #555860; --rule: #60636f; --rule-strong: #b4b7c5; --indigo: #c0c5ff; --indigo-fill: #3330d6; --on-indigo: #fdfdff; --indigo-wash: #202446; --sky: #a4e3f9; --sky-wash: #0f2732; --danger: #ffaaa7; --danger-wash: #2e1010; --caution: #ebb761; --caution-wash: #30200d; --add: #75d291; --you-bg: #202446; --you-ink: #ebedf2; --you-edge: #323866; --code-bg: #07080d; --code-ink: #dbdee5; --syn-keyword: #b6a5ff; --syn-string: #81d39f; --syn-constant: #f3b680; --syn-function: #7dcae5; --syn-type: #7dcece; --syn-punct: #a7aab4; --syn-comment: #8f929c; --focus: #cfd4ff; --field: #191c5b; --on-field: #f4f5f9; --field-2: #c1c8ec; }
+}
+
+@media (update: slow), (monochrome) {
+  :root:not([data-env]) { color-scheme: light; --w-body: 460; --w-strong: 720; --w-head: 800; --stroke: 2; --bw: 1.5px; --shadow: none; --ground: #ffffff; --ground-2: #ffffff; --sheet: #ffffff; --sheet-2: #e8e8e8; --sunken: #f2f2f2; --scrim: rgba(255, 255, 255, 0.85); --ink: #000000; --ink-2: #1f1f1f; --ink-3: #333333; --ink-off: #8a8a8a; --rule: #000000; --rule-strong: #000000; --indigo: #000000; --indigo-fill: #000000; --on-indigo: #ffffff; --indigo-wash: #e8e8e8; --sky: #000000; --sky-wash: #e8e8e8; --danger: #000000; --danger-wash: #e8e8e8; --caution: #000000; --caution-wash: #e8e8e8; --add: #000000; --you-bg: #ffffff; --you-ink: #000000; --you-edge: #000000; --code-bg: #f2f2f2; --code-ink: #000000; --syn-keyword: #000000; --syn-string: #333333; --syn-constant: #000000; --syn-function: #000000; --syn-type: #000000; --syn-punct: #333333; --syn-comment: #333333; --focus: #000000; --field: #000000; --on-field: #ffffff; --field-2: #e8e8e8; }
+}
+

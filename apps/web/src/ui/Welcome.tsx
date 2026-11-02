@@ -46,7 +46,7 @@ export function Welcome({ device, downloads, onBrowseModels, onOpenKeys, cloudMo
               <span>{formatBytes(state?.loaded ?? 0)} of {formatBytes(total)}</span>
             </div>
             <div className="progress lg" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label="Model download">
-              <div className="progress-fill" style={{ width: `${pct}%` }} />
+              <div className="progress-fill working" style={{ width: `${pct}%` }} />
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 6 }}>
               <p className="note" style={{ margin: 0, flex: 1 }}>{isDesktopApp() ? 'Quit the app' : 'Close the tab'} or go offline anytime. It picks up where it left off.</p>
@@ -65,10 +65,10 @@ export function Welcome({ device, downloads, onBrowseModels, onOpenKeys, cloudMo
           <>
             <button className="btn btn-primary btn-lg press" onClick={() => void startDownload(target)}>
               <Download size={19} />
-              {status === 'partial' ? `Resume ${target.name} · ${pct}%` : `Download ${target.name}`}
+              {status === 'partial' ? `Resume ${target.name} at ${pct}%` : `Download ${target.name}`}
             </button>
-            <p className="note">
-              {formatBytes(total)} · free, no account · <button className="btn-link" onClick={onBrowseModels}>other models</button> · <button className="btn-link" onClick={onOpenKeys}>your own API key</button>
+            <p className="note welcome-meta">
+              <span>{formatBytes(total)}</span><span>Free, no account</span><button className="btn-link" onClick={onBrowseModels}>Other models</button><button className="btn-link" onClick={onOpenKeys}>Your own API key</button>
             </p>
             {status === 'error' && <p className="error">{downloadErrorText(state?.error)}</p>}
           </>

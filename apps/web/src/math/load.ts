@@ -15,5 +15,5 @@ export interface MathPlugins { remark: Plugin; rehype: Plugin }
 
 export const MATH: MathPlugins = {
   remark: [remarkMath, { singleDollarTextMath: true }],
-  rehype: [rehypeKatex, { throwOnError: false, errorColor: 'var(--error)', strict: 'ignore', trust: false, maxSize: 20, maxExpand: 500, output: 'htmlAndMathml' }],
+  rehype: [rehypeKatex, { throwOnError: false, errorColor: 'var(--danger)', strict: 'ignore', trust: false, maxSize: 20, maxExpand: 500, output: 'htmlAndMathml' }],
 };

@@ -23,7 +23,7 @@ contextBridge.exposeInMainWorld('quoDesktop', {
   platform: process.platform,
   version,
   // Light, dark or the system's: every window follows it, the approval window too.
-  appearance: { set: (mode, dark) => invoke('app:theme', { mode, dark }) },
+  appearance: { set: (mode, look) => invoke('app:theme', { mode, look }) },
   // Code mode: the project folder is chosen in a native dialog and edits and commands
   // are approved in native dialogs, so none of this takes a path or an approval from the page.
   agent: {

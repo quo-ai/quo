@@ -1,4 +1,3 @@
-import { readFileSync } from 'node:fs';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
@@ -6,44 +5,49 @@ import { installLocalStorage } from '../../providers/__tests__/helpers';
 
 installLocalStorage();
 
-async function picker(mode: string | null) {
+async function picker(saved: Record<string, string>, says: { phone?: boolean; contrast?: boolean; dark?: boolean } = {}) {
   localStorage.clear();
-  if (mode) localStorage.setItem('quo.theme', mode);
+  for (const [key, value] of Object.entries(saved)) localStorage.setItem(key, value);
+  vi.stubGlobal('matchMedia', (q: string) => ({ matches: (q.includes('pointer: coarse') && Boolean(says.phone)) || (q.includes('prefers-contrast') && Boolean(says.contrast)) || (q.includes('prefers-color-scheme: dark') && Boolean(says.dark)), addEventListener: () => {} }));
   vi.resetModules();
   const { AppearancePicker } = await import('../AppearancePicker');
   return renderToStaticMarkup(createElement(AppearancePicker));
 }
 
 describe('Settings → Appearance', () => {
-  it('offers the dark style only where it applies: Dark, and System (dark when the computer is), not Light', async () => {
-    expect(await picker('light')).not.toContain('Dark style');
-    expect(await picker('dark')).toContain('Dark style');
-    expect(await picker(null)).toContain('Dark style');
-    for (const mode of ['light', 'dark', null]) {
-      const page = await picker(mode);
-      expect(page).toContain('Mode');
-      expect(page).toContain('Accent');
-    }
-  });
-});
-
-describe('the dissolve', () => {
-  const css = readFileSync(new URL('../../styles/crt.css', import.meta.url), 'utf8');
-  const cells = (level: number) => {
-    const path = new RegExp(`--dither-${level}: url\\("[^"]*d='([^']*)'`).exec(css)![1];
-    return [...path.matchAll(/M(\d+)%20(\d+)h(\d+)/g)].reduce((sum, m) => sum + Number(m[3]) / 2, 0);
-  };
-
-  it('fills an ordered 4x4 dither through all 16 levels, one 2px cell more each frame', () => {
-    for (let level = 1; level <= 15; level++) expect(cells(level), `level ${level}`).toBe(level);
-    const frames = css.slice(css.indexOf('@keyframes dissolve'), css.indexOf('}\n}', css.indexOf('@keyframes dissolve')));
-    expect(frames.match(/var\(--dither-\d+\)/g)?.length).toBe(30); // 15 levels, -webkit- and standard
+  it('offers Black only where it can apply, and says when it will', async () => {
+    expect(await picker({ 'quo.theme': 'light' })).not.toContain('Black background');
+    expect(await picker({ 'quo.theme': 'dark' })).toContain('Black background');
+    expect(await picker({})).toContain('Takes effect when your device is in dark mode.');
+    expect(await picker({}, { dark: true })).not.toContain('Takes effect when');
   });
 
-  it('moves the working bar one dither cell a step, and every animation still stops for reduced motion', () => {
-    expect(css).not.toMatch(/steps\(16\) infinite/);
-    expect(css.match(/dither-run [\d.]+s steps\(32\) infinite/g)?.length).toBe(2);
-    const responsive = readFileSync(new URL('../../styles/responsive.css', import.meta.url), 'utf8');
-    expect(responsive).toMatch(/prefers-reduced-motion: reduce/);
+  it('says when a switch is overridden: E-ink over High contrast, High contrast over Black', async () => {
+    const eink = await picker({ 'quo.theme': 'dark', 'quo.theme.eink': 'on' });
+    expect(eink.match(/E-ink is on, so this has no effect now\./g)).toHaveLength(2);
+    expect(eink).toContain('In use: E-ink');
+    const contrast = await picker({ 'quo.theme': 'dark', 'quo.theme.contrast': 'on', 'quo.theme.black': 'on' });
+    expect(contrast).toContain('High contrast is on, and it has its own dark.');
+    expect(contrast).toContain('In use: High contrast dark');
+  });
+
+  it('offers the mode and three switches, each saying what automatic chose and why', async () => {
+    const page = await picker({});
+    for (const text of ['Auto', 'Light', 'Dark', 'Black background', 'High contrast', 'E-ink', 'In use: Light']) expect(page).toContain(text);
+    expect(page).toContain('Automatic: off on computers');
+    expect(page).not.toContain('Use automatic');
+  });
+
+  it('turns Black on for a phone, and follows the device’s contrast setting', async () => {
+    const page = await picker({}, { phone: true, contrast: true });
+    expect(page).toContain('Automatic: on, because this is a phone');
+    expect(page).toContain('Automatic: on, from your device’s contrast setting');
+    expect(page.match(/role="switch" aria-checked="true"/g)).toHaveLength(2);
+  });
+
+  it('shows a choice the person made, with the way back to automatic', async () => {
+    const page = await picker({ 'quo.theme.eink': 'on' });
+    expect(page).toContain('Set by you.');
+    expect(page).toContain('Use automatic');
   });
 });

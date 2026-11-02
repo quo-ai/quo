@@ -51,9 +51,9 @@ export function OfflineModelCard({ modelId, state, onPause, onResume }: OfflineM
       <span className="offline-icon">{showReady ? <Check size={16} strokeWidth={3} /> : <HardDriveDownload size={16} />}</span>
       <div className="offline-text">
         <strong>{label}</strong>
-        <span>{showReady ? 'Works without internet, fully private' : `${model.name} · ${formatBytes(state?.loaded ?? 0)} of ${formatBytes(total)}`}</span>
+        <span>{showReady ? 'Works without internet, fully private' : `${model.name}: ${formatBytes(state?.loaded ?? 0)} of ${formatBytes(total)}`}</span>
         {!showReady && (
-          <div className="progress mini" aria-hidden="true"><div className="progress-fill" style={{ width: `${pct}%` }} /></div>
+          <div className="progress mini" aria-hidden="true"><div className="progress-fill working" style={{ width: `${pct}%` }} /></div>
         )}
       </div>
       {!showReady && (status === 'downloading' || status === 'waiting') && (

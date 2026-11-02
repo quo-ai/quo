@@ -46,7 +46,7 @@ export function EngineAccelerator() {
       </p>
       {progress !== null && (
         <div className="progress" role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100} aria-label="Faster engine download">
-          <div className="progress-fill" style={{ width: `${progress}%` }} />
+          <div className="progress-fill working" style={{ width: `${progress}%` }} />
         </div>
       )}
       {error && <p className="note" role="alert">{error}</p>}

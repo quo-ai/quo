@@ -7,6 +7,7 @@ import { removeProviderModels } from '../../providers/ownModels';
 import { toast } from '../Toasts';
 import { CustomForm } from './CustomForm';
 import { ProviderModels } from './ProviderModels';
+import { Facts } from '../Facts';
 
 interface ProviderDetailProps {
   account: ProviderAccount;
@@ -81,7 +82,7 @@ export function ProviderDetail({ account, selectedKey, onBack, onUse }: Provider
         <CustomForm existing={info} onSaved={() => { setEditing(false); setListed(null); }} onRemoved={onBack} onCancel={() => setEditing(false)} />
       ) : (
         <>
-          {info.custom && <p className="note keys-url">{info.baseUrl} · {info.protocol === 'anthropic' ? 'Anthropic-style' : 'OpenAI-style'}</p>}
+          {info.custom && <p className="note keys-url"><Facts items={[info.baseUrl, info.protocol === 'anthropic' ? 'Anthropic-style' : 'OpenAI-style']} /></p>}
           {account.configured && !replacing ? (
             <div className="keys-saved">
               <span className="grow"><span className="title">Key saved</span><span className="sub">•••• {account.last4}</span></span>

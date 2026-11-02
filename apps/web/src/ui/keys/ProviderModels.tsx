@@ -77,9 +77,9 @@ export function ProviderModels({ provider, listed, loading, problem, selectedKey
                 <button type="button" className="menu-item press" onClick={() => addOwnModel(provider, model.id, { name: model.name, contextTokens: model.contextTokens, agent: model.tools, thinking: model.thinking, thinkingHints: model.thinkingHints, thinkingDefault: model.thinkingDefault })}>
                   <span className="grow">
                     <span className="title">{model.name}</span>
-                    {(model.description || model.name !== model.id) && <span className="sub">{[model.description, model.name !== model.id ? model.id : ''].filter(Boolean).join(' · ')}</span>}
+                    {(model.description || model.name !== model.id) && <span className="sub">{[model.description, model.name !== model.id ? model.id : ''].filter(Boolean).join(', ')}</span>}
                   </span>
-                  <Plus size={16} color="var(--text-3)" />
+                  <Plus size={16} color="var(--ink-3)" />
                 </button>
               </Fragment>
             ))}

@@ -1,27 +1,16 @@
 #!/usr/bin/env bash
-# Deploys website/ to Vercel (project "quo", https://quoai.vercel.app).
-# `--preview` deploys to a preview address instead, to check a change first.
-# Runs from a copy outside the git repo: Vercel's Hobby plan blocks
-# deployments whose git commit author isn't on the team. The copy carries the
-# project link (.vercel/) but never .env* files.
+# Deploys website/ to Quo's own server (https://quo.computer), through apps/web/scripts/deploy-server.sh --site.
+# `--vercel` instead redeploys the old address (Vercel project "quo", https://quoai.vercel.app), which only redirects
+# every page to quo.computer (vercel.json). That runs from a copy outside git: Vercel's Hobby plan blocks deployments
+# whose git commit author isn't on the team.
 set -euo pipefail
 cd "$(dirname "$0")/.."
+[ "${1:-}" = "--vercel" ] || exec bash ../apps/web/scripts/deploy-server.sh --site
 [ -d .vercel ] || { echo "website/ isn't linked: run 'npx vercel link --project quo' in website/ first" >&2; exit 1; }
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
-cp -r ./* .vercel "$tmp"/  # every page and asset; hidden files (.env*) stay behind
-rm -rf "$tmp/scripts"         # tooling, not part of the site
+cp -r vercel.json .vercel "$tmp"/
+# Vercel builds no routes for a deployment without files: one page, never shown while the redirect works.
+printf '<!doctype html><meta charset="utf-8"><title>Quo</title><meta http-equiv="refresh" content="0; url=https://quo.computer/"><a href="https://quo.computer/">Quo is at quo.computer</a>\n' > "$tmp/index.html"
 cd "$tmp"
-# The brand page's "Download everything" zip is built here rather than committed.
-python3 - <<'PY'
-import os, zipfile
-with zipfile.ZipFile('assets/brand/quo-brand-kit.zip', 'w', zipfile.ZIP_DEFLATED) as z:
-    for name in sorted(os.listdir('assets/brand')):
-        if not name.endswith('.zip'):
-            z.write(f'assets/brand/{name}', f'quo-brand-kit/logo/{name}')
-    for name in sorted(os.listdir('assets/shots')):
-        z.write(f'assets/shots/{name}', f'quo-brand-kit/screenshots/{name}')
-PY
-target=--prod
-[ "${1:-}" = "--preview" ] && target=
-npx -y vercel@latest deploy $target --yes
+npx -y vercel@latest deploy --prod --yes

@@ -1,113 +1,86 @@
-/* Quo Web — "liquid glass" in Quo's language: electric indigo, translucent floating chrome over a soft light-field,
-   springy motion, in light and dark. Content stays crisp and opaque; only chrome is glass. */
+/* Quo's look: solid surfaces, electric indigo for the one thing to do next, and text built to be read anywhere.
+   Colours are roles from tokens.css (generated from appearances.ts, one set per appearance; theme.ts picks it). This file
+   holds what every appearance shares: the fonts, spacing, shape and motion, and element defaults. */
 
-/* Every colour has a light and a dark value (light-dark()); the scheme follows the system, or the choice in Settings
-   (data-theme on <html>). Text and status colours pass AA on the glass in both. The dark values here are Black (true
-   black page, neutral surfaces, no glow); themes.css has Midnight and the Mono accent. */
+/* Atkinson Hyperlegible Next and Mono (SIL Open Font License, fonts/OFL.txt): drawn for low vision, so letters that are
+   easy to confuse (Il1, O0, rn) look different, which model names are full of. Bundled with the app, never a font service. */
+@font-face { font-family: "Atkinson Hyperlegible Next"; src: url("./fonts/AtkinsonHyperlegibleNext.ttf") format("truetype"); font-weight: 200 800; font-style: normal; font-display: swap; }
+@font-face { font-family: "Atkinson Hyperlegible Next"; src: url("./fonts/AtkinsonHyperlegibleNext-Italic.ttf") format("truetype"); font-weight: 200 800; font-style: italic; font-display: swap; }
+@font-face { font-family: "Atkinson Hyperlegible Mono"; src: url("./fonts/AtkinsonHyperlegibleMono.ttf") format("truetype"); font-weight: 200 800; font-style: normal; font-display: swap; }
+
 :root {
-  color-scheme: light dark;
-  /* Brand fills (buttons, bubbles, badges): the same in both, with --on-brand on them. */
-  --brand: #3b2eff;
-  --brand-2: #5a4dff;
-  --violet: #8f87ff;
-  --on-brand: #ffffff;
-  --glow: #3b2eff; /* coloured shadows under brand fills and the cursor, mixed down to the alpha each one needs */
-  --shade: #281e8c; /* the tint of the glass's shadow in light */
-  /* Terminal output (always a dark block): indigo phosphor in light, neutral white phosphor on Black. */
-  --term-bg: light-dark(#0e0e1f, #0a0a0b);
-  --term-ink: light-dark(#cfd0ff, #e4e4e7);
-  --term-glow: light-dark(#7c74ff, rgba(255, 255, 255, 0.6));
-  /* Indigo as text, icons, rings and decoration: lighter in the dark so it reads. */
-  --indigo: light-dark(#3b2eff, #a8a2ff);
-  --bg: light-dark(#f5f5fb, #000000);
-  --ink: light-dark(#0e0e1a, #ededf0);
-  --text: light-dark(#0e0e1a, #ededf0);
-  --text-2: light-dark(#4c4c62, #b4b4bd);
-  --text-3: light-dark(#68687d, #94949f); /* AA on the glass and raised controls in both (themes.css.test.ts) */
-  --hairline: light-dark(rgba(14, 14, 40, 0.08), rgba(255, 255, 255, 0.1));
-  --edge: light-dark(rgba(14, 14, 60, 0.08), rgba(255, 255, 255, 0.11)); /* the thin outline of cards */
-  --error: light-dark(#c4243f, #ff7d8f);
-  --warn: light-dark(#9a5b00, #f2b05e);
-  --success: light-dark(#17773f, #5ad08f);
-  /* Fills and tints: one value per role, so states stay consistent everywhere. */
-  --fill: light-dark(rgba(14, 14, 40, 0.05), rgba(255, 255, 255, 0.06));        /* chips, inputs, code, list-row hover */
-  --fill-strong: light-dark(rgba(14, 14, 40, 0.08), rgba(255, 255, 255, 0.1));  /* hover on a filled thing, icon tiles, bars */
-  --accent-soft: light-dark(rgba(59, 46, 255, 0.07), rgba(143, 135, 255, 0.12)); /* indigo hover, notes */
-  --accent-tint: light-dark(rgba(59, 46, 255, 0.1), rgba(143, 135, 255, 0.18));  /* selected and on states, accent icon tiles */
-  --focus-ring: light-dark(rgba(59, 46, 255, 0.12), rgba(143, 135, 255, 0.3));
-  /* Surfaces: cards inside sheets, raised controls (a selected segment, a key), the dimmed page behind a sheet, code. */
-  --surface: light-dark(rgba(255, 255, 255, 0.75), rgba(255, 255, 255, 0.05));
-  --surface-soft: light-dark(rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0.035));
-  --raised: light-dark(#ffffff, #2a2a2e);
-  --scrim: light-dark(rgba(20, 16, 60, 0.18), rgba(0, 0, 0, 0.6));
-  --code-bg: light-dark(#fafafc, #111113); /* code follows the theme, like GitHub; terminal output stays dark */
+  --font: "Atkinson Hyperlegible Next", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: "Atkinson Hyperlegible Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  /* Text sizes, in rem so they follow the person's text size. */
+  --t-micro: 0.75rem;   /* 12: badges, counts */
+  --t-meta: 0.8125rem;  /* 13: facts, hints, secondary lines */
+  --t-small: 0.875rem;  /* 14: menus, chips, rows */
+  --t-ui: 0.9375rem;    /* 15: titles of rows and buttons */
+  --t-body: 1rem;       /* 16: text, the message box */
+  --t-read: 1.0625rem;  /* 17: lead lines */
+  --t-lead: 1.25rem;    /* 20: sheet titles */
+  --track-tight: -0.02em;
+  --track-display: -0.035em;
 
-  --glass: light-dark(rgba(255, 255, 255, 0.58), rgba(20, 20, 22, 0.72));
-  --glass-strong: light-dark(rgba(255, 255, 255, 0.78), rgba(28, 28, 31, 0.86));
-  --glass-thick: light-dark(rgba(255, 255, 255, 0.97), rgba(18, 18, 20, 0.97));
-  --glass-thick-2: light-dark(rgba(250, 250, 255, 0.94), rgba(12, 12, 14, 0.96));
-  --glass-blur: blur(28px) saturate(185%);
-  --glass-shadow:
-    inset 0 1px 0 light-dark(rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.08)),
-    inset 0 -1px 0 light-dark(rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0.03)),
-    0 0 0 0.5px var(--edge),
-    0 12px 32px -14px light-dark(color-mix(in srgb, var(--shade) 28%, transparent), rgba(0, 0, 0, 0.5)),
-    0 34px 70px -36px light-dark(color-mix(in srgb, var(--shade) 22%, transparent), rgba(0, 0, 0, 0.45));
-  --rim: 1; /* how bright the glass's specular edge is */
-  --bloom: 0.55;
+  /* Shape: one radius per level. Things you press are pills; sheets and panels 22px; cards and inputs 14px; parts of
+     cards 8px. */
+  --r-pill: 999px;
+  /* The chat's one column: the conversation, the message box, the greeting and its starters, and notices share its edges. */
+  --column: 760px;
+  --gutter: max(24px, calc((100% - var(--column)) / 2));
+  --r-surface: 1.375rem;
+  --r-card: 0.875rem;
+  --r-inner: 0.5rem;
 
-  --r-panel: 28px;
-  --r-card: 20px;
-
-  /* Spring curves: --jelly overshoots then settles (press release,
-     popovers); --ease is a soft deceleration for everything else. */
-  --jelly: linear(0, 0.009, 0.035 2.1%, 0.141 4.4%, 0.723 12.9%, 0.938 16.7%, 1.017 19.4%, 1.067, 1.099 24.3%, 1.108 26%, 1.104, 1.088 30.6%, 1.019 39.4%, 0.996 43.8%, 0.987 48.3%, 0.991 57.3%, 1.001 74.5%, 1);
-  --ease: cubic-bezier(0.22, 1, 0.36, 1);
-  /* Durations: quick for colour and exits, base for small moves, spring for presses and pops, enter for surfaces. */
-  --t-quick: 0.2s;
-  --t-base: 0.3s;
-  --t-spring: 0.5s;
-  --t-enter: 0.6s;
+  /* Motion shows state, never decoration: colour on hover (micro), switches and small moves (short), sheets rising and
+     notes arriving (medium). Things settle (out); work in progress pulses (inout). */
+  --d-micro: 120ms;
+  --d-short: 200ms;
+  --d-medium: 320ms;
+  --d-long: 560ms;
+  --e-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --e-inout: cubic-bezier(0.65, 0, 0.35, 1);
 }
-:root[data-theme="light"] { color-scheme: light; }
-:root[data-theme="dark"] { color-scheme: dark; }
-/* Numbers can't use light-dark(): the dark values for the background glow and the glass edge (none and faint in
-   Black, themes.css has Midnight's). */
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bloom: 0; --rim: 0.12; } }
-:root[data-theme="dark"] { --bloom: 0; --rim: 0.12; }
 
 * { box-sizing: border-box; }
 html, body, #root { height: 100%; }
 body {
   margin: 0;
-  color: var(--text);
-  background: var(--bg);
-  font: 15.5px/1.55 Inter, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  color: var(--ink);
+  background: var(--ground);
+  font: var(--w-body) 1rem/1.55 var(--font);
+  font-synthesis: none;
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
   overflow: hidden;
 }
+b, strong { font-weight: var(--w-strong); }
+h1, h2, h3, h4 { font-weight: var(--w-head); letter-spacing: var(--track-tight); }
+code, kbd, pre, samp { font-family: var(--mono); }
 button { font: inherit; color: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
-button:disabled { cursor: default; opacity: 0.4; }
-:focus-visible { outline: 2px solid var(--indigo); outline-offset: 2px; }
-/* Selection, the text cursor, native controls and scrollbars take the accent, not the browser's blue and grey. */
-:root { caret-color: var(--indigo); accent-color: var(--indigo); scrollbar-color: color-mix(in srgb, var(--text) 22%, transparent) transparent; }
-::selection { background: color-mix(in srgb, var(--indigo) 28%, transparent); }
+button:disabled { cursor: default; opacity: 0.45; }
+/* Focus: the same 2px ring everywhere, at once. */
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+:root { caret-color: var(--indigo); accent-color: var(--indigo); scrollbar-color: var(--rule-strong) transparent; }
+::selection { background: var(--indigo-wash); color: var(--ink); }
 svg { flex: none; }
+/* Read by screen readers, not shown. */
+.vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+/* Lucide icons take the appearance's stroke: heavier in High contrast. */
+svg.lucide { stroke-width: var(--stroke); }
 
-/* Light-field behind the glass: two faint blooms, indigo top left and violet bottom right (::before), and the same
-   blooms again as a sparse pixel grain (::after, crt.css's --dither-grain), so the glow fades out through dither dots.
-   Both follow --bloom: none in Black, so its pixels stay off. */
-.lightfield { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
-.lightfield::before, .lightfield::after { content: ''; position: absolute; inset: 0; opacity: var(--bloom); }
-.lightfield::before {
-  filter: blur(80px);
-  background:
-    radial-gradient(circle 30vw at 12vw 4vw, color-mix(in srgb, var(--brand-2) 28%, transparent), transparent),
-    radial-gradient(circle 27.5vw at 92.5vw calc(100% + 0.5vw), color-mix(in srgb, var(--violet) 30%, transparent), transparent);
+@keyframes pulse { 50% { opacity: 0.3; transform: scale(0.75); } }
+@keyframes fade-in { from { opacity: 0; } }
+@keyframes rise { from { opacity: 0; transform: translateY(6px); } }
+
+/* Motion off for people who ask, and on e-ink, where every frame is a flash. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 1ms !important; animation-iteration-count: 1 !important; transition-duration: 1ms !important; scroll-behavior: auto !important; }
 }
-.lightfield::after {
-  background:
-    radial-gradient(circle 36vw at 12vw 4vw, color-mix(in srgb, var(--brand-2) 40%, transparent), transparent),
-    radial-gradient(circle 33vw at 92.5vw calc(100% + 0.5vw), color-mix(in srgb, var(--violet) 45%, transparent), transparent);
-  -webkit-mask: var(--dither-grain) 0 0 / 8px 8px; mask: var(--dither-grain) 0 0 / 8px 8px;
+:root[data-env="eink"] *, :root[data-env="eink"] *::before, :root[data-env="eink"] *::after { animation: none !important; transition: none !important; }
+
+/* Windows contrast themes: the system's colours take over, and edges carry what fills did. */
+@media (forced-colors: active) {
+  :root { --shadow: none; }
+  .glass, .btn, .chip, .composer, .bubble { border: 1px solid CanvasText; }
 }

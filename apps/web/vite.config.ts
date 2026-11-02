@@ -92,7 +92,7 @@ export default defineConfig({
         short_name: 'Quo',
         description: 'Private AI that runs on your computer. Works offline, no account, and nothing you type leaves your device.',
         theme_color: '#3b2eff',
-        background_color: '#f5f5fb',
+        background_color: '#f9fafd',
         display: 'standalone',
         start_url: '/',
         scope: '/',
@@ -111,7 +111,7 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,wasm,png,svg}'],
+        globPatterns: ['**/*.{js,css,html,wasm,png,svg,ttf}'],
         // Voice input, PDF reading and wllama's build for older browsers load on demand; they're cached when first used
         // (below). So do code colours (one file per language) and maths (KaTeX and its fonts).
         globIgnores: ['checkout.html', 'screenshots/**', '**/ort-wasm-*', '**/pdf.worker*', '**/pdf-*.js', '**/wllama-compat-*', '**/lang-*', '**/math-*'],

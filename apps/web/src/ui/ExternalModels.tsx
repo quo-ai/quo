@@ -4,6 +4,7 @@ import { addCustomModel, addCustomModelFile, findExternalModels, useCustomModels
 import type { CustomModelEntry } from '../native';
 import { formatBytes } from './format';
 import { toast } from './Toasts';
+import { Facts } from './Facts';
 
 const SOURCE_LABEL = { lmstudio: 'LM Studio', ollama: 'Ollama' } as const;
 
@@ -57,9 +58,9 @@ export function ExternalModels() {
             <li key={entry.path}>
               <span className="found-name" title={entry.path}>
                 <strong>{entry.name}</strong>
-                <small>{entry.source ? SOURCE_LABEL[entry.source] : 'This computer'} · {formatBytes(entry.sizeBytes)}{entry.mmprojPath ? ' · reads images' : ''}</small>
+                <small><Facts items={[entry.source ? SOURCE_LABEL[entry.source] : 'This computer', formatBytes(entry.sizeBytes), entry.mmprojPath && 'reads images']} /></small>
               </span>
-              <button className="btn btn-primary press" disabled={busy} onClick={() => void use(entry)}>Use</button>
+              <button className="btn btn-glass press" disabled={busy} onClick={() => void use(entry)}>Use</button>
             </li>
           ))}
         </ul>

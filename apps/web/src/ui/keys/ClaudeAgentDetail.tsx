@@ -28,7 +28,7 @@ function summary(status: ClaudeStatus | null): { title: string; sub: string } {
   if (status.problem) return { title: 'Claude Code needs attention', sub: status.problem };
   if (!status.signedIn) return { title: 'Claude Code isn’t signed in', sub: 'Run `claude auth login` in a terminal, then check again.' };
   const note = status.kind ? KIND_NOTE[status.kind] : '';
-  return { title: `Signed in${status.plan ? ` · ${status.plan}` : ''}`, sub: [note, status.version ? `Claude Code ${status.version}` : ''].filter(Boolean).join(' · ') };
+  return { title: `Signed in${status.plan ? ` (${status.plan})` : ''}`, sub: [note, status.version ? `Claude Code ${status.version}` : ''].filter(Boolean).join('. ') };
 }
 
 /** Claude Agent: Claude through your own Claude Code login. There is no key: Claude Code signs itself in, and Quo never sees it. */

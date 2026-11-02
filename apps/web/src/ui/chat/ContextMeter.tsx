@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { setAutoSummarize, useAutoSummarize } from '../../context/settings';
 import { formatTokens, ratio, type ContextUsage } from '../../context/usage';
+import { Facts } from '../Facts';
 
 interface ContextMeterProps {
   usage: ContextUsage;
@@ -59,8 +60,8 @@ export function ContextMeter({ usage, busy, canSummarize, onSummarize, onNewChat
               <span className={`conv ${level}`} style={{ width: width(conversation) }} />
             </div>
           )}
-          <p className="ctx-line">{usage.limit ? `${formatTokens(usage.used)} of ${formatTokens(usage.limit)} tokens (${percent}%)` : `About ${formatTokens(usage.used)} tokens`} · {usage.exact ? 'counted by the provider' : 'estimated'}</p>
-          <p className="ctx-sub">Rules and tools {formatTokens(usage.fixed)} · conversation {formatTokens(conversation)}</p>
+          <p className="ctx-line">{usage.limit ? `${formatTokens(usage.used)} of ${formatTokens(usage.limit)} tokens (${percent}%)` : `About ${formatTokens(usage.used)} tokens`}, {usage.exact ? 'counted by the provider' : 'estimated'}</p>
+          <p className="ctx-sub"><Facts items={[`Rules and tools ${formatTokens(usage.fixed)}`, `conversation ${formatTokens(conversation)}`]} /></p>
           <p className="note">When it fills, old tool output is dropped, and Quo can summarise the earlier messages so the conversation goes on.</p>
           <div className="ctx-actions">
             <button type="button" className="btn btn-soft press small" disabled={busy || !canSummarize} onClick={() => { setOpen(false); onSummarize(); }}>Summarise earlier messages</button>

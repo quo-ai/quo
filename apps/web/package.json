@@ -10,7 +10,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p server/tsconfig.json --noEmit",
     "test": "vitest run",
     "start": "tsx server/serve.ts",
-    "test:interop": "vitest run --config vitest.interop.config.ts"
+    "test:interop": "vitest run --config vitest.interop.config.ts",
+    "tokens": "node scripts/tokens.ts"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.8",

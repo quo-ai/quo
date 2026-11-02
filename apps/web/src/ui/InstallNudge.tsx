@@ -94,7 +94,7 @@ export function InstallNudge({ slowBrowser, onMore }: { slowBrowser: boolean; on
           <h3 id="install-nudge-title">Install Quo on this computer</h3>
           <p>Open it from your dock or taskbar, in its own window. Works offline, nothing extra to download.</p>
           <div className="nudge-actions">
-            <button className="btn btn-primary press" onClick={() => void install()}>Install</button>
+            <button className="btn btn-glass press" onClick={() => void install()}>Install</button>
             <button className="btn btn-ghost press" onClick={notNow}>Not now</button>
           </div>
         </>
@@ -105,7 +105,7 @@ export function InstallNudge({ slowBrowser, onMore }: { slowBrowser: boolean; on
             ? 'The desktop app uses your graphics card, so replies are much faster than in this browser.'
             : 'Quo as an app on your computer. Opens from your dock or taskbar and works offline.'}</p>
           <div className="nudge-actions">
-            <button className="btn btn-primary press" onClick={download}>Download</button>
+            <button className="btn btn-glass press" onClick={download}>Download</button>
             <button className="btn btn-ghost press" onClick={notNow}>Not now</button>
           </div>
           <button className="btn-link nudge-more" onClick={onMore}>Other ways to get Quo</button>

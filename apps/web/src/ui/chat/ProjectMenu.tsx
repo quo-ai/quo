@@ -52,7 +52,7 @@ export function ProjectMenu({ project, info, disabled, starting = false, onPick,
         disabled={disabled || starting}
         onClick={() => setOpen(o => !o)}
         title={project
-          ? `${project.name}${info?.hint ? ` · ${info.hint}` : ''}. Quo reads files here, and changes them or runs commands only when you say yes each time.`
+          ? `${project.name}${info?.hint ? ` (${info.hint})` : ''}. Quo reads files here, and changes them or runs commands only when you say yes each time.`
           : 'No project folder. Add one and Quo can read your code, make changes and run commands there, asking you each time.'}
       >
         {starting ? <Loader2 size={14} className="spin" /> : <FolderOpen size={14} />} <span className="chip-name">{project ? project.name : 'No folder'}</span>
@@ -74,12 +74,12 @@ export function ProjectMenu({ project, info, disabled, starting = false, onPick,
           {recent !== null && recent.length === 0 && !project && <p className="menu-note">Quo works in a folder you choose, and asks before it changes anything.</p>}
           {((recent?.length ?? 0) > 0 || project) && <div className="menu-divider" />}
           <button type="button" className="menu-item press" role="menuitem" onClick={() => { setOpen(false); onBrowse(); }}>
-            <FolderPlus size={17} color="var(--text-2)" />
+            <FolderPlus size={17} color="var(--ink-2)" />
             <span className="grow"><span className="title">{project ? 'Choose another folder…' : 'Choose a folder…'}</span></span>
           </button>
           {project && onRemove && (
             <button type="button" className="menu-item press" role="menuitem" onClick={() => { setOpen(false); onRemove(); }}>
-              <X size={17} color="var(--text-2)" />
+              <X size={17} color="var(--ink-2)" />
               <span className="grow"><span className="title">Don’t use a folder in this chat</span></span>
             </button>
           )}

@@ -1,5 +1,5 @@
 import { forwardRef, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
-import { AlertTriangle, ArrowUp, Cloud, HardDrive, Loader2, Mic, Paperclip, Square } from 'lucide-react';
+import { AlertTriangle, ArrowUp, Loader2, Mic, Paperclip, Square } from 'lucide-react';
 import { ACCEPT_DOCUMENTS, ACCEPT_IMAGES } from '../../attachments';
 import type { Attachment } from '../../chat/types';
 import { localEngine } from '../../engine/localEngine';
@@ -105,6 +105,11 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
   const slashOpen = slash.length > 0 && !slashClosed;
 
   function runCommand(command: Command) {
+    if (command.fills) {
+      setInput(command.fills);
+      inputRef.current?.focus();
+      return;
+    }
     setInput('');
     command.run();
   }
@@ -154,14 +159,14 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
         <div className="code-caution glass thick" role="alert">
           <p><AlertTriangle size={16} /> <span><strong>{codeMode.gate.name}</strong> for Code mode: {codeMode.gate.note} You still approve every change and command.</span></p>
           <div className="code-caution-actions">
-            <button type="button" className="btn btn-soft press small" onClick={codeMode.dismissCaution}>Not now</button>
-            <button type="button" className="btn btn-primary press small" onClick={() => void codeMode.confirmCaution()}>Turn on anyway</button>
+            <button type="button" className="btn btn-ghost press small" onClick={codeMode.dismissCaution}>Not now</button>
+            <button type="button" className="btn btn-glass press small" onClick={() => void codeMode.confirmCaution()}>Turn on anyway</button>
           </div>
         </div>
       )}
       {slashOpen && <CommandList items={slash} index={slashIndex} onHover={setSlashIndex} onRun={runCommand} />}
       <MentionList items={mentions.items} index={mentions.index} onHover={mentions.setIndex} onPick={mentions.choose} />
-      <form className={`composer glass${files.dragging ? ' dragging' : ''}${busy ? ' busy' : ''}`} onSubmit={event => { event.preventDefault(); send(); }} {...files.dropTarget}>
+      <form className={`composer glass${files.dragging ? ' dragging' : ''}${busy ? ' busy' : ''}`} data-where={cloud ? 'cloud' : choice?.kind === 'own' ? 'own' : 'device'} onSubmit={event => { event.preventDefault(); send(); }} {...files.dropTarget}>
         <AttachmentChips items={files.attachments} onRemove={files.remove} />
         <textarea
           ref={inputRef}
@@ -223,13 +228,13 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
             />
           )}
           {thinkingLevels.length > 1 && !code && <ThinkingMenu levels={thinkingLevels} value={thinking} onChange={onThinking} disabled={busy} local={choice?.kind === 'local'} hints={choice?.kind === 'own' ? choice.model.thinkingHints : undefined} />}
-          <span className="engine-note">
+          <span className={`engine-note${status === 'loading' || voice.state === 'transcribing' ? ' working' : ''}`}>
             {voice.state === 'recording' ? `Listening… ${Math.floor(voice.seconds / 60)}:${String(voice.seconds % 60).padStart(2, '0')}`
               : voice.state === 'transcribing' ? (voice.download !== null ? `Getting the speech model… ${Math.round(voice.download * 100)}%` : 'Turning speech into text…')
               : status === 'loading' ? 'Loading model…'
-              : cloud ? <><Cloud size={13} /> Cloud{freeLeft !== null ? ` · ${freeLeft} free today` : ''}</>
+              : cloud ? <><span className="where" data-where="cloud">In the cloud</span>{freeLeft !== null && <span className="engine-fact">{freeLeft} free today</span>}</>
                 : choice?.kind === 'own' ? ''
-                : choice ? <><HardDrive size={13} /> <span title={info?.gpuMissing ? 'Your computer has a graphics card, but this model is running on the processor, which is much slower. A graphics driver may be missing.' : info?.device ?? undefined}>{info?.gpu ? 'On your GPU' : info?.gpuMissing ? 'On your processor' : 'On this device'}</span> · private</> : ''}
+                : choice ? <span className="where" data-where="device" title={info?.gpuMissing ? 'Your computer has a graphics card, but this model is running on the processor, which is much slower. A graphics driver may be missing.' : info?.device ?? undefined}>{info?.gpu ? 'On your graphics card' : info?.gpuMissing ? 'On your processor' : 'On this device'}</span> : ''}
           </span>
           <span className="spacer" />
           {choice?.kind === 'own' && isClaudeAgent(choice.provider) && <PlanUsage />}

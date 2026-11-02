@@ -6,6 +6,7 @@ import { parameterCount, repoFiles, searchModels, suggestFile, toLocalModel, typ
 import { startDownload } from '../storage/downloads';
 import { formatBytes } from './format';
 import { toast } from './Toasts';
+import { Facts } from './Facts';
 
 const SUPPORT_NOTE = {
   yes: null,
@@ -77,7 +78,7 @@ export function HuggingFaceModels({ device }: { device: DeviceProfile | null }) 
             <select value={open.file?.path ?? ''} onChange={event => setOpen({ ...open, file: open.files.models.find(file => file.path === event.target.value) ?? null })}>
               {open.files.models.map(file => (
                 <option key={file.path} value={file.path}>
-                  {file.quant ?? file.path.split('/').pop()} · {formatBytes(file.sizeBytes)}{file === suggested ? ' · suggested' : ''}
+                  {file.quant ?? file.path.split('/').pop()}, {formatBytes(file.sizeBytes)}{file === suggested ? ' (suggested)' : ''}
                 </option>
               ))}
             </select>
@@ -103,8 +104,7 @@ export function HuggingFaceModels({ device }: { device: DeviceProfile | null }) 
                 <span className="found-name" title={result.repo}>
                   <strong>{result.repo}</strong>
                   <small>
-                    {[result.architecture, result.parameters ? `${parameterCount(result.parameters)} parameters` : null, `${short(result.downloads)} downloads`, result.thinking ? 'thinks' : null].filter(Boolean).join(' · ')}
-                    {note ? ` · ${note}` : ''}
+                    <Facts items={[result.architecture, result.parameters ? `${parameterCount(result.parameters)} parameters` : null, `${short(result.downloads)} downloads`, result.thinking ? 'thinks' : null, note]} />
                   </small>
                 </span>
                 <button className="btn btn-soft press" disabled={busy || result.support === 'not-chat' || result.support === 'newer-engine'} onClick={() => void choose(result)}>Choose</button>

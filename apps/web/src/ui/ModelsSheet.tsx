@@ -79,7 +79,7 @@ export function ModelsSheet({ initialTab = 'device', device, downloads, activeMo
             </div>
           ) : (
             <>
-          <div className="sheet-section-title">Runs on this device · free · works offline</div>
+          <div className="sheet-section-title">On this device: free, and works offline</div>
           <ModelList device={device} downloads={downloads} activeModelId={activeModelId} onUse={onUse} />
           {hasNativeEngine() && (
             <>

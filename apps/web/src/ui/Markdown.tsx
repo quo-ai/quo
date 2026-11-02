@@ -1,4 +1,4 @@
-import { memo, isValidElement, useState, type ReactElement, type ReactNode } from 'react';
+import { memo, isValidElement, useLayoutEffect, useRef, useState, type ReactElement, type ReactNode } from 'react';
 import { Check, Copy } from 'lucide-react';
 import ReactMarkdown, { type Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -8,6 +8,7 @@ import { CodeText } from '../code/CodeText';
 import { languageOf } from '../code/languages';
 import { hasMath, normalizeMath } from '../math/normalize';
 import { useMath } from '../math/useMath';
+import { rehypeFresh, syncFresh, useFresh } from './fresh';
 
 /**
  * Renders model output as markdown (GitHub-flavoured: tables, lists, code), with code coloured (code/) and maths drawn
@@ -46,7 +47,7 @@ function CodeBlock({ children }: { children?: ReactNode }) {
         <span>{language ?? 'code'}</span>
         <button type="button" className="code-copy" onClick={() => void copy()} aria-label="Copy code">{copied ? <><Check size={13} /> Copied</> : <><Copy size={13} /> Copy</>}</button>
       </div>
-      <pre><code className={code?.props.className}><CodeText code={text} language={languageOf(language)} /></code></pre>
+      <pre><code className={code?.props.className}><CodeText code={text.replace(/\n$/, '')} language={languageOf(language)} /></code></pre>
     </div>
   );
 }
@@ -84,13 +85,19 @@ const components: Components = {
 
 const plugins = [remarkGfm];
 
-export const Markdown = memo(function Markdown({ text, muted = false }: { text: string; muted?: boolean }) {
+/** `live` while the reply is being written: its newest words dissolve in, and a caret follows them (fresh.ts). */
+export const Markdown = memo(function Markdown({ text, muted = false, live = false }: { text: string; muted?: boolean; live?: boolean }) {
   const math = useMath(hasMath(text));
+  const source = math ? normalizeMath(text) : text;
+  const chunks = useFresh(source, live);
+  const root = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    if (live && root.current) syncFresh(root.current);
+  });
+  const rehype = [...(math ? [math.rehype] : []), ...(live ? [rehypeFresh(chunks)] : [])];
   return (
-    <div className={muted ? 'md muted' : 'md'}>
-      {math
-        ? <ReactMarkdown remarkPlugins={[remarkGfm, math.remark]} rehypePlugins={[math.rehype]} components={components}>{normalizeMath(text)}</ReactMarkdown>
-        : <ReactMarkdown remarkPlugins={plugins} components={components}>{text}</ReactMarkdown>}
+    <div ref={root} className={muted ? 'md muted' : 'md'}>
+      <ReactMarkdown remarkPlugins={math ? [remarkGfm, math.remark] : plugins} rehypePlugins={rehype} components={components}>{source}</ReactMarkdown>
     </div>
   );
 });

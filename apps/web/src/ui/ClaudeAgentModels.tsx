@@ -45,7 +45,7 @@ export function ClaudeAgentModels({ own, selected, onPick }: ClaudeAgentModelsPr
   return (
     <>
       <div className="popover-section"><KeyRound size={13} /> {CLAUDE_AGENT.name}</div>
-      {newest.map(model => row(keyOf(model.id), model.name, [model.resolved, model.description.replace(/^[^·]*·\s*/, '')].filter(Boolean).join(' · '), () => choose(model)))}
+      {newest.map(model => row(keyOf(model.id), model.name, [model.resolved, model.description.replace(/^[^·]*·\s*/, '')].filter(Boolean).join(', '), () => choose(model)))}
       {others.map(model => row(`own:${model.id}`, model.name, model.name !== model.apiModel ? model.apiModel : '', () => onPick(`own:${model.id}`)))}
       {pinned.length > 0 && (
         <button className="menu-item press" aria-expanded={showPinned} onClick={() => setShowPinned(shown => !shown)}>
@@ -53,10 +53,10 @@ export function ClaudeAgentModels({ own, selected, onPick }: ClaudeAgentModelsPr
             <span className="title">Specific versions</span>
             <span className="sub">{pinned.length} models that stay the same when a newer one comes out</span>
           </span>
-          {showPinned ? <ChevronDown size={17} color="var(--text-3)" /> : <ChevronRight size={17} color="var(--text-3)" />}
+          {showPinned ? <ChevronDown size={17} color="var(--ink-3)" /> : <ChevronRight size={17} color="var(--ink-3)" />}
         </button>
       )}
-      {showPinned && pinned.map(model => row(keyOf(model.id), model.name, [model.id, contextOf(model.contextTokens), model.description].filter(Boolean).join(' · '), () => choose(model)))}
+      {showPinned && pinned.map(model => row(keyOf(model.id), model.name, [model.id, contextOf(model.contextTokens), model.description].filter(Boolean).join(', '), () => choose(model)))}
     </>
   );
 }

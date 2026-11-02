@@ -56,7 +56,7 @@ export function claudeThinking(spec: ClaudeModel['thinking']): { levels: ThinkCh
   const levels: ThinkChoice[] = [...(spec.off ? ['off' as const] : []), ...(fallback ? [] : ['auto' as const]), ...efforts];
   if (levels.length < 2) return none;
   const hints: Partial<Record<ThinkChoice, string>> = { off: 'No thinking: the fastest replies', auto: 'Claude Code’s default for this model' };
-  for (const effort of efforts) hints[effort] = effort === fallback ? `${EFFORT_HINT[effort]} · Claude Code’s default for this model` : EFFORT_HINT[effort];
+  for (const effort of efforts) hints[effort] = effort === fallback ? `${EFFORT_HINT[effort]}. Claude Code’s default for this model.` : EFFORT_HINT[effort];
   return { levels, hints, start: fallback ?? 'auto' };
 }
 

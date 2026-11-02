@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Generates the website's document pages (privacy, terms, support, brand,
-404) in website/.
+"""Generates the website's document pages (privacy, terms, refunds, pricing,
+support, brand, delete account, 404) in website/.
 
 Header, footer and the icon sprite are taken from website/index.html so every
 page stays in sync with the home page. Edit the content below, then run:
@@ -12,10 +12,11 @@ data off the device (analytics events, a new SDK, a network feature), this
 policy and the Play Data safety / App Store privacy answers must change too.
 """
 import re
+from datetime import datetime
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent  # website/
-SITE = 'https://quoai.vercel.app'
+SITE = 'https://quo.computer'
 EMAIL = 'astralabsltd@gmail.com'
 COMPANY = 'Astra Labs Ltd'
 COMPANY_DETAILS = ('a company registered in England and Wales (company number 16558481), '
@@ -27,6 +28,8 @@ SYMBOL = re.search(r'<svg width="0".*?</svg>', home, re.S).group(0)
 HEADER = re.search(r'<header class="site-header">.*?</header>', home, re.S).group(0)
 FOOTER = re.search(r'<footer class="site-footer">.*?</footer>', home, re.S).group(0)
 MAIL = f'<a href="mailto:{EMAIL}">{EMAIL}</a>'
+# The pricing page is the home page's pricing section, so the two always match.
+PRICING = re.search(r'<section id="pricing" class="sec">.*?</section>', home, re.S).group(0).replace('<h2>', '<h1>', 1).replace('</h2>', '</h1>', 1)
 
 
 def page(title, desc, body, path, main='doc'):
@@ -34,10 +37,11 @@ def page(title, desc, body, path, main='doc'):
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>{title}</title>
 <meta name="description" content="{desc}">
-<meta name="theme-color" content="#3b2eff">
+<meta name="theme-color" content="#f9fafd" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0d0f16" media="(prefers-color-scheme: dark)">
 <link rel="canonical" href="{SITE}{path}">
 <meta property="og:title" content="{title}">
 <meta property="og:description" content="{desc}">
@@ -45,13 +49,18 @@ def page(title, desc, body, path, main='doc'):
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="/assets/favicon.png">
 <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<link rel="preload" href="/assets/fonts/AtkinsonHyperlegibleNext.ttf" as="font" type="font/ttf" crossorigin>
+<script src="/assets/appearance.js"></script>
+<link rel="stylesheet" href="/assets/tokens.css">
+<link rel="stylesheet" href="/assets/base.css">
 <link rel="stylesheet" href="/assets/site.css">
 <script src="/assets/site.js" defer></script>
 </head>
 <body>
 {SYMBOL}
+<a class="skip" href="#main">Skip to content</a>
 {HEADER}
-<main class="{main}">
+<main id="main" class="{main}">
 {body}
 </main>
 {FOOTER}
@@ -61,7 +70,7 @@ def page(title, desc, body, path, main='doc'):
 
 
 privacy = f'''<h1>Privacy Policy</h1>
-<p class="meta">Last updated {UPDATED} · Applies to the Quo apps (phone, web and desktop) and this website</p>
+<p class="meta">Last updated {UPDATED}. Applies to the Quo apps (phone, web and desktop) and this website.</p>
 <div class="summary"><p><strong>In short:</strong> Quo runs its AI on your device. Your conversations, files, photos, voice and memories are processed and stored only on your device and are never sent to us or anyone else, unless you choose the optional cloud model in Quo Web or the desktop app; those messages, and any files or photos you attach to them, are sent to the model’s provider to answer, and nobody keeps them. If you choose to turn on Quo Sync (optional, and it needs a Quo account), your chats and memories are uploaded only after being encrypted on your device with a key we never receive, so we still can’t read them. To fix crashes and improve the app, Quo collects limited usage and crash data that never includes your content: in the EU and EEA only if you allow it, and anywhere you can turn it off at any time in Settings.</p></div>
 
 <h2>Who we are</h2>
@@ -98,7 +107,7 @@ privacy = f'''<h1>Privacy Policy</h1>
 <h2>Accounts and Quo Sync</h2>
 <p>You only need a Quo account to use Quo Sync, which keeps your chats and memories in step between your devices (Quo Web, the desktop app and the Android app), or to buy Quo Pro or a Quo Sync plan. Everything else works without one.</p>
 <h3>Your account</h3>
-<p>You sign in with your email address: we email you a six-digit code (through our email provider, Resend), which works for 10 minutes. We keep your email address, a one-way hash of the code until it is used or replaced, and records of your plan and credits. Staying signed in uses a secure cookie (Quo Web and the desktop app) or a token held in your phone’s secure storage; signing out removes it from that device, and “sign out of all devices” ends every sign-in at once.</p>
+<p>You sign in with your email address: we email you a six-digit code (through our email provider, Resend), which works for 10 minutes. We keep your email address, a one-way hash of the code until it is used or replaced, and records of your plan and credits. So the free trial can be given only once, we also keep a one-way keyed hash of your email address for a year after the trial, even if you delete your account; it can’t be turned back into your address. Staying signed in uses a secure cookie (Quo Web and the desktop app) or a token held in your phone’s secure storage; signing out removes it from that device, and “sign out of all devices” ends every sign-in at once.</p>
 <h3>What Quo Sync stores</h3>
 <p>If you turn on Quo Sync, each chat and memory is encrypted on your device before it is uploaded, with a key made from a recovery key that you save and that we never receive. We store the encrypted data, a random identifier for each item, its size and when it last changed, and a small encrypted check value that lets a new device confirm your recovery key. The names of attached files are part of the encrypted data; the files, photos and models themselves are never synced.</p>
 <p>We can’t read, search or recover your synced chats and memories, and if you lose your recovery key nobody can open them. We can tell that your account uses Quo Sync, roughly how many items it holds, how big they are and when they changed, but not what they say.</p>
@@ -116,7 +125,7 @@ privacy = f'''<h1>Privacy Policy</h1>
 <p>Quo asks for access to the microphone (voice input), camera and photos (to attach images) and files (to attach documents) only when you use those features. What they capture is processed on your device.</p>
 
 <h2>This website</h2>
-<p>This website uses no cookies, analytics or trackers. It is hosted by Vercel, which processes standard server logs (such as IP address, browser type and the pages requested) to deliver and secure the site.</p>
+<p>This website uses no cookies, analytics or trackers. It runs on our own server in the UK, behind Cloudflare, which delivers it and protects it from attacks. Our server and Cloudflare process standard request information (such as IP address, browser type and the pages requested) to deliver and secure the site.</p>
 
 <h2>Quo Web and Quo for desktop</h2>
 <p>With offline models, everything happens on your computer: your chats are saved only in your browser’s or the app’s storage on that computer, and nothing you type is sent anywhere. Models are downloaded once from Hugging Face, and the desktop app checks GitHub for updates; like any download, these requests show your IP address to those services.</p>
@@ -127,9 +136,11 @@ privacy = f'''<h1>Privacy Policy</h1>
 <h3>Web search</h3>
 <p>Models can search the web when they decide a message needs it; there is no switch in the chat. You can turn searching off in <strong>Models &amp; storage → Web</strong>: it is allowed by default for cloud models and your own API keys, and off for offline models until you turn it on, so an offline chat stays offline. In the desktop app, models can also read pages. When it is on, the words the model searches for go to the search service you chose (Brave Search, Tavily or Exa with your own key, a SearXNG address, or DuckDuckGo), and pages are fetched by your computer, not through our servers. Quo only opens addresses you wrote, that a search returned, or that a page it read links to, and never addresses on your own computer or network. Keys for search services are kept like other API keys. In a browser, web search is done by OpenRouter or Anthropic, if you use your own key with them.</p>
 <p>With Quo&rsquo;s cloud models, when the model decides to search, the words it searches for go through OpenRouter to its search partner, Exa, and the results come back to the model. The free model includes a few searches a day.</p>
+<h3>Making images</h3>
+<p>When you ask for an image, the model you are chatting with writes a description of it (a prompt). That prompt, and the image you ask to change if you ask for a change, goes through our server to OpenRouter and on to an image model’s provider, which makes the image. Only providers that don’t keep or train on what they receive are used, and our server doesn’t store the prompt or the image. With an offline model, the prompt is written on your device and only the prompt leaves it. Images you make are kept on your device and are not synced. A few images a day are free (a change to an image counts as two).</p>
 <h3>Your own API keys</h3>
-<p>You can also use models with an API key of your own (from OpenRouter, Anthropic, OpenAI, Google, xAI, DeepSeek, Mistral, Groq, or a server you run yourself), with no Quo account. When you do, the messages in that chat, and in Code mode the files Quo reads, go <strong>straight from your computer to that provider</strong>, under that provider’s terms and privacy policy. They do not go through our servers, and we never see your key or your messages. In the desktop app your key is saved encrypted by your operating system’s secure storage (where it has none, it is kept in memory until you quit) and the app’s pages can never read it back; in a browser it is saved in that browser only. Keys are never synced and never sent to us. Memories and attached files are not sent to these models, as with our own cloud model.</p>
-<p>To keep the free allowance fair, our server counts how many cloud messages are sent each day per device and per IP address. It stores these counts under one-way keyed hashes, never the IP address or the app’s random device ID itself, and deletes them after two days. There are no accounts on Quo Web yet.</p>
+<p>You can also use models with an API key of your own (from OpenRouter, Anthropic, OpenAI, Google, xAI, DeepSeek, Mistral, Groq, or a server you run yourself), with no Quo account. When you do, the messages in that chat, and in Code mode the files Quo reads, go <strong>straight from your computer to that provider</strong>, under that provider’s terms and privacy policy. They do not go through our servers, and we never see your key or your messages. In the desktop app your key is saved encrypted by your operating system’s secure storage (where it has none, it is kept in memory until you quit) and the app’s pages can never read it back; in a browser it is saved in that browser only. Keys are never synced and never sent to us. Memories are not sent to these models, as with our own cloud model; files you attach go with your message.</p>
+<p>To keep the free allowance fair, our server counts how many cloud messages are sent each day per device and per IP address. It stores these counts under one-way keyed hashes, never the IP address or the app’s random device ID itself, and deletes them after two days. We also keep daily totals of how many cloud requests were made and what they cost, with nothing about who made them.</p>
 
 <h2>Why we use your data (legal bases)</h2>
 <p>Where UK or EU data protection law applies, we rely on:</p>
@@ -142,7 +153,7 @@ privacy = f'''<h1>Privacy Policy</h1>
 </ul>
 
 <h2>Service providers and international transfers</h2>
-<p>Google (Firebase), Vercel (hosting), Neon (our database, in London) and Resend (sign-in emails) process data for us as service providers, and Paddle sells Quo Pro and Quo Sync plans as merchant of record. When you choose a cloud model, OpenRouter and that model’s provider process those messages to answer them. They may process it outside the UK and EU, including in the United States. Where they do, the transfer is protected by recognised safeguards such as the EU–US Data Privacy Framework and its UK Extension, or Standard Contractual Clauses.</p>
+<p>This website, Quo Web and our server run on our own server in the UK. Google (Firebase), Cloudflare (which delivers and protects them), Neon (our database, in London) and Resend (sign-in emails) process data for us as service providers, Vercel runs our old web addresses for older versions of the apps, and Paddle sells Quo Pro, Quo Sync and credit packs as merchant of record. When you choose a cloud model, OpenRouter and that model’s provider process those messages to answer them. They may process it outside the UK and EU, including in the United States. Where they do, the transfer is protected by recognised safeguards such as the EU–US Data Privacy Framework and its UK Extension, or Standard Contractual Clauses.</p>
 
 <h2>How long we keep data</h2>
 <ul>
@@ -150,10 +161,10 @@ privacy = f'''<h1>Privacy Policy</h1>
 <li><strong>Usage data</strong> is kept by Google for no longer than 14 months.</li>
 <li><strong>Crash reports</strong> are kept by Google for about 90 days.</li>
 <li><strong>Emails</strong> are kept only as long as needed to help you.</li>
-<li><strong>Website logs</strong> are kept briefly by Vercel under its retention policy.</li>
+<li><strong>Server logs</strong> (IP address, the page or request, and when) are kept on our server for 14 days, and by Cloudflare and Vercel under their retention policies.</li>
 <li><strong>Cloud messages</strong> aren’t stored by us; OpenRouter and the providers we use don’t retain them.</li>
 <li><strong>Free cloud message counts</strong> are deleted after two days.</li>
-<li><strong>Your account</strong> (email address, plan and credit records) is kept until you delete it. A sign-in code stops working after 10 minutes.</li>
+<li><strong>Your account</strong> (email address, plan and credit records) is kept until you delete it. A sign-in code stops working after 10 minutes. The hash that stops a second free trial is kept for a year after the trial, also after you delete your account.</li>
 <li><strong>Quo Sync data</strong> is kept until you delete it or your account. If your plan ends, it stays for 180 days (you can still download it to your devices), we email you once 30 days before it is deleted, and then it is deleted for good. Records that tell your other devices a chat was deleted are removed after 90 days.</li>
 </ul>
 
@@ -173,7 +184,7 @@ privacy = f'''<h1>Privacy Policy</h1>
 <p>We may update this policy. We will post the new version here with a new date, and tell you in the app if a change is significant.</p>
 
 <h2>Contact</h2>
-<p>{COMPANY}, 82 James Carter Road, Mildenhall, IP28 7DE, United Kingdom · {MAIL}</p>
+<p>{COMPANY}, 82 James Carter Road, Mildenhall, IP28 7DE, United Kingdom.<br>{MAIL}</p>
 '''
 
 terms = f'''<h1>Terms of Use</h1>
@@ -205,8 +216,18 @@ terms = f'''<h1>Terms of Use</h1>
 
 <h2>Accounts, Quo Pro and Quo Sync</h2>
 <p>You don’t need an account to use Quo. An account (an email address, confirmed with a code) is needed for Quo Sync, and for Quo Pro and paid cloud models. Keep your sign-in secure: you’re responsible for what is done with your account. You can delete your account yourself at any time (<strong>Settings → Sync</strong> in the Android app, <strong>Plan &amp; credits</strong> in Quo Web and the desktop app), once any running plan has been cancelled.</p>
+<h3>Buying a plan or credits</h3>
+<p>Quo Pro, Quo Sync and credit packs are bought on the web or in the desktop app and are sold by Paddle, our merchant of record, which takes the payment and handles tax. The price, renewal and cancellation terms are shown at checkout. Cancelling stops renewal; the plan runs to the end of the period you paid for. Refunds are explained in our <a href="/refunds/">refund policy</a>.</p>
+<h3>Quo Pro and credits</h3>
+<p>Paid cloud models and making images use credits. Each model shows what a typical message costs before you choose it. Credits come from:</p>
+<ul>
+<li><strong>The trial.</strong> Each email address gets 25 free credits once, which last 90 days.</li>
+<li><strong>Quo Pro</strong> ($12 a month or $99 a year). It gives 1,000 credits each month, which last until the next month’s arrive, and includes Quo Sync.</li>
+<li><strong>Credit packs</strong> (1,000 credits for $12, 2,750 for $30 or 6,000 for $60). One-off purchases; their credits last 12 months.</li>
+</ul>
+<p>Credits that expire first are used first. Credits have no cash value and can’t be transferred to another account.</p>
 <h3>Quo Sync</h3>
-<p>Quo Sync keeps your chats and memories in step between your devices. It is included with Quo Pro, or can be bought on its own as a yearly plan. Plans are bought on the web or in the desktop app and are sold by Paddle, our merchant of record. The price, renewal and cancellation terms are shown at checkout, and refunds follow Paddle’s buyer terms and your legal rights. Cancelling stops renewal; the plan runs to the end of the period you paid for.</p>
+<p>Quo Sync keeps your chats and memories in step between your devices. It is included with Quo Pro, or can be bought on its own as a yearly plan ($24 a year).</p>
 <ul>
 <li><strong>Your recovery key.</strong> Your synced chats are encrypted with a key made from a recovery key that only you hold. We can’t see it and can’t reset it. If you lose it, nobody can open the cloud copy. The chats on your devices aren’t affected, and you can delete the cloud copy and start again.</li>
 <li><strong>Limits.</strong> One account can hold up to 250 MB of synced data and 20,000 chats. A single chat larger than about 1 MB stays on your device and isn’t synced. Photos, files and models aren’t synced.</li>
@@ -264,7 +285,7 @@ faq = [
     ('How do I delete my data?',
      'Your chats and memories are on your device: delete them in Settings, or uninstall Quo to remove everything. If you use Quo Sync, delete your account to remove the cloud copy too (see below). For the limited usage data described in our <a href="/privacy/">Privacy Policy</a>, email us.'),
     ('Where can I use Quo?',
-     'In your browser at <a data-link="webapp" href="https://quoai-app.vercel.app/">Quo Web</a> (Chrome or Edge work best), as a <a href="/#desktop">desktop app</a> for Mac, Windows and Linux, and on Android. The iPhone app is coming soon. Each keeps its chats on that device only.'),
+     'In your browser at <a data-link="webapp" href="https://app.quo.computer/">Quo Web</a> (Chrome or Edge work best), as a <a href="/#desktop">desktop app</a> for Mac, Windows and Linux, and on Android. The iPhone app is coming soon. Each keeps its chats on that device only.'),
     ('Why are replies slow in my browser?',
      'Chrome and Edge can use your graphics card, which makes replies much faster. Firefox and Safari run Quo on your processor. If you’d rather not switch browsers, use the desktop app.'),
     ('My computer warns about the desktop app. Is it safe?',
@@ -283,18 +304,18 @@ support = f'''<h1>Support</h1>
 brand = '''<h1>Brand assets</h1>
 <p class="meta">Logos, colours, screenshots and how to describe Quo.</p>
 <div class="summary"><p>Writing or making a video about Quo? Use anything on this page. Please don't change the logo's shape or colours, and don't use it in a way that suggests we endorse your product. Forks of the code need their own name and icon (<a href="https://github.com/quo-ai/quo/blob/master/TRADEMARKS.md">see TRADEMARKS.md</a>).</p></div>
-<p><a class="btn btn-primary" href="/assets/brand/quo-brand-kit.zip" download>Download everything (.zip)</a></p>
+<p><a class="btn solid" href="/assets/brand/quo-brand-kit.zip" download>Download everything (.zip)</a></p>
 
 <h2>Logo</h2>
-<p>The mark is a speech bubble shaped like a Q, circled by an orbit: a conversation that lives in its own small world. Use the full logo where there's room, and the mark on its own for small spaces and avatars. Leave clear space around it at least as wide as the Q's tail.</p>
+<p>The mark is a speech bubble shaped like a Q, with an orbit around it. Use the full logo where there's room, and the mark on its own for small spaces and avatars. Leave clear space around it at least as wide as the Q's tail.</p>
 <div class="brand-grid"><div class="brand-tile"><div class="art light"><img src="/assets/brand/quo-lockup.svg" alt="Logo"></div><div class="tile-meta"><span>Logo</span><nav><a href="/assets/brand/quo-lockup.svg" download>SVG</a><a href="/assets/brand/quo-lockup.png" download>PNG</a></nav></div></div><div class="brand-tile"><div class="art indigo"><img src="/assets/brand/quo-lockup-white.svg" alt="Logo, reversed"></div><div class="tile-meta"><span>Logo, reversed</span><nav><a href="/assets/brand/quo-lockup-white.svg" download>SVG</a><a href="/assets/brand/quo-lockup-white.png" download>PNG</a></nav></div></div><div class="brand-tile"><div class="art tint"><img src="/assets/brand/quo-mark-indigo.svg" alt="Mark"></div><div class="tile-meta"><span>Mark</span><nav><a href="/assets/brand/quo-mark-indigo.svg" download>SVG</a><a href="/assets/brand/quo-mark-indigo.png" download>PNG</a></nav></div></div><div class="brand-tile"><div class="art ink"><img src="/assets/brand/quo-mark-white.svg" alt="Mark, reversed"></div><div class="tile-meta"><span>Mark, reversed</span><nav><a href="/assets/brand/quo-mark-white.svg" download>SVG</a><a href="/assets/brand/quo-mark-white.png" download>PNG</a></nav></div></div><div class="brand-tile"><div class="art light"><img class="icon" src="/assets/brand/quo-app-icon.svg" alt="App icon"></div><div class="tile-meta"><span>App icon</span><nav><a href="/assets/brand/quo-app-icon.svg" download>SVG</a><a href="/assets/brand/quo-app-icon-1024.png" download>PNG</a></nav></div></div><div class="brand-tile"><div class="art tint"><img src="/assets/brand/quo-mark-ink.svg" alt="Mark, one colour"></div><div class="tile-meta"><span>Mark, one colour</span><nav><a href="/assets/brand/quo-mark-ink.svg" download>Mark SVG</a><a href="/assets/brand/quo-wordmark-ink.svg" download>Wordmark SVG</a></nav></div></div></div>
 
 <h2>Colour</h2>
-<p>Electric indigo on white is Quo. Use indigo for one thing per view: the main action or the mark. Ink and Mist do everything else.</p>
-<div class="swatches"><div class="swatch"><i class="sw-indigo"></i><span>Indigo</span><code>#3B2EFF</code></div><div class="swatch"><i class="sw-violet"></i><span>Violet</span><code>#8F87FF</code></div><div class="swatch"><i class="sw-ink"></i><span>Ink</span><code>#0E0E1A</code></div><div class="swatch"><i class="sw-mist"></i><span>Mist</span><code>#F5F5FB</code></div><div class="swatch"><i class="sw-white"></i><span>White</span><code>#FFFFFF</code></div></div>
+<p>Electric indigo on a near-white or deep ink ground is Quo. Use solid indigo for one thing per view: the main action or the mark. Ink and Ground do everything else. In the apps, Cloud marks anything that runs off the device.</p>
+<div class="swatches"><div class="swatch"><i class="sw-indigo"></i><span>Indigo</span><code>#3B2EFF</code></div><div class="swatch"><i class="sw-ink"></i><span>Ink</span><code>#131522</code></div><div class="swatch"><i class="sw-ground"></i><span>Ground</span><code>#F9FAFD</code></div><div class="swatch"><i class="sw-dark"></i><span>Dark</span><code>#0D0F16</code></div><div class="swatch"><i class="sw-cloud"></i><span>Cloud</span><code>#006D8F</code></div></div>
 
 <h2>Type</h2>
-<p>Inter, in SemiBold for headlines with slightly tight letter spacing, and Regular for text. On the web, Quo uses the system font where Inter isn't installed, so pages load fast and make no outside requests.</p>
+<p>Atkinson Hyperlegible Next for everything: heavy and slightly tight for headlines, Regular for text. Atkinson Hyperlegible Mono for code and figures. Both are free (SIL Open Font License) and bundled with the apps and this site, so nothing loads from a font service.</p>
 
 <h2>Name and description</h2>
 <ul>
@@ -306,10 +327,9 @@ brand = '''<h1>Brand assets</h1>
 
 <h2>Screenshots</h2>
 <ul>
-<li><a href="/assets/shots/web-chat.webp" download>Quo Web, a chat</a> (2400 × 1500)</li>
-<li><a href="/assets/shots/web-welcome.webp" download>Quo Web, first run</a> (2400 × 1500)</li>
-<li><a href="/assets/shots/web-get-app.webp" download>Quo Web, getting the apps</a> (2400 × 1500)</li>
-<li>Phone: <a href="/assets/shots/01-offline.webp" download>offline</a>, <a href="/assets/shots/03-documents.webp" download>documents</a>, <a href="/assets/shots/04-vision.webp" download>photos</a>, <a href="/assets/shots/07-thinking.webp" download>thinking</a></li>
+<li><a href="/assets/shots/hero-light.webp" download>Quo Web, a chat with Wi-Fi off</a> (2560 × 1600), or <a href="/assets/shots/hero-dark.webp" download>in Dark</a></li>
+<li><a href="/assets/shots/code-light.webp" download>The desktop app, Code mode</a> (3200 × 1800), or <a href="/assets/shots/code-dark.webp" download>in Dark</a></li>
+<li>Phone (780 × 1688): <a href="/assets/shots/phone-offline-light.webp" download>offline</a>, <a href="/assets/shots/phone-document-light.webp" download>documents</a>, <a href="/assets/shots/phone-vision-light.webp" download>photos</a>, <a href="/assets/shots/phone-thinking-light.webp" download>thinking</a>, each also in Black (<code>-dark</code>)</li>
 </ul>
 
 <h2>Contact</h2>
@@ -332,25 +352,55 @@ delete_account = f'''<h1>Delete your Quo account</h1>
 <li>Your synced chats and memories (the encrypted copy on our servers)</li>
 <li>Your credits, their history and your plan records</li>
 </ul>
-<p>It happens straight away. <strong>What stays:</strong> the chats and memories on your own devices, which are not touched, and Paddle’s own records of any purchases you made, which it keeps as the law requires.</p>
+<p>It happens straight away. <strong>What stays:</strong> the chats and memories on your own devices, which are not touched; Paddle’s own records of any purchases you made, which it keeps as the law requires; and, for a year after your free trial, a one-way keyed hash of your email address, only so the trial can’t be claimed twice (it can’t be turned back into your address).</p>
 
 <h2>Can’t sign in?</h2>
 <p>Email {MAIL} from the address on the account and ask us to delete it. We’ll check it’s you and do it within 30 days. You can also delete only your synced chats and keep the account, from Quo Sync’s settings (<strong>Delete the cloud copy</strong>).</p>
 <p>See our <a href="/privacy/">Privacy Policy</a> for what we hold and for how long.</p>
 '''
 
+refunds = f'''<h1>Refund policy</h1>
+<p class="meta">Last updated {UPDATED}</p>
+<p>This policy covers what you buy from us on the web and in the Quo desktop app: Quo Pro, Quo Sync and credit packs. These are sold by Paddle, our merchant of record, so your payment and any refund go through Paddle.</p>
+
+<h2>14 days to change your mind</h2>
+<ul>
+<li><strong>Quo Pro and Quo Sync.</strong> Ask within 14 days of your first payment, or of a renewal, and we refund that payment in full. The plan then ends.</li>
+<li><strong>Credit packs.</strong> Ask within 14 days of buying a pack and we refund the credits you haven’t used. If you haven’t used any, that is the full price.</li>
+</ul>
+<p>When a payment is refunded, the credits still unused from it are removed from your account.</p>
+
+<h2>How to ask</h2>
+<ul>
+<li>Use the link in the receipt Paddle emailed you, or look up your order at <a href="https://www.paddle.net/">paddle.net</a>.</li>
+<li>Or email {MAIL} from the address on your Quo account, with the order number from your receipt.</li>
+</ul>
+<p>Paddle returns the money to the card or account you paid with.</p>
+
+<h2>After 14 days</h2>
+<p>You can cancel a plan at any time (<strong>Plan &amp; credits → Manage subscription</strong>). It stops the next renewal, and the plan runs to the end of the period you paid for. We don’t refund the rest of a period after the first 14 days, and credits that have expired aren’t refunded. If something you paid for didn’t work and we couldn’t fix it, tell us and we’ll refund you.</p>
+
+<h2>Premium in the phone apps</h2>
+<p>Premium bought in the Android or iPhone app is sold by Google Play or the App Store. Ask them for a refund: their own policies apply.</p>
+
+<h2>Your legal rights</h2>
+<p>Nothing in this policy limits your rights under consumer law. Paddle’s <a href="https://www.paddle.com/legal/checkout-buyer-terms">buyer terms</a> also apply to purchases made through it.</p>
+'''
+
 not_found = '''<div>
   <svg class="mark" viewBox="0 0 900 755" aria-hidden="true"><use href="#quo-mark"/></svg>
   <h1>Nothing here.</h1>
   <p>This page doesn't exist, or it moved.</p>
-  <div class="actions"><a class="btn btn-primary" href="/">Go to the home page</a><a class="btn btn-outline" data-link="webapp" href="https://quoai-app.vercel.app/">Try Quo</a></div>
+  <div class="actions"><a class="btn solid" href="/">Go to the home page</a><a class="btn line" data-link="webapp" href="https://app.quo.computer/">Try Quo</a></div>
 </div>'''
 
 PAGES = [
     ('privacy/index.html', '/privacy/', 'Privacy Policy — Quo', 'How Quo handles your data: AI runs on your device, and your chats never leave it.', privacy, 'doc'),
-    ('terms/index.html', '/terms/', 'Terms of Use — Quo', 'Terms of use for Quo.', terms, 'doc'),
-    ('support/index.html', '/support/', 'Support — Quo', 'Get help with Quo, private AI that works offline.', support, 'doc'),
+    ('terms/index.html', '/terms/', 'Terms of Use — Quo', 'The terms for using Quo, the private AI assistant: your licence, AI models, accounts, Quo Pro, Quo Sync and credits.', terms, 'doc'),
+    ('support/index.html', '/support/', 'Support — Quo', 'Answers to common questions about Quo, the private AI assistant that works offline, and how to reach us.', support, 'doc'),
     ('brand/index.html', '/brand/', 'Brand assets — Quo', 'Quo logos, colours, screenshots and how to describe Quo. Free to use when writing about Quo.', brand, 'doc wide'),
+    ('pricing/index.html', '/pricing/', 'Pricing — Quo', 'Quo is free on your device. Quo Pro, Quo Sync and credit packs for the cloud models.', PRICING, ''),
+    ('refunds/index.html', '/refunds/', 'Refund policy — Quo', 'How to get a refund for Quo Pro, Quo Sync and credit packs.', refunds, 'doc'),
     ('delete-account/index.html', '/delete-account/', 'Delete your Quo account — Quo', 'How to delete your Quo account and the data held for it.', delete_account, 'doc'),
     ('404.html', '/404', 'Page not found — Quo', 'This page doesn’t exist.', not_found, 'not-found'),
 ]
@@ -358,4 +408,30 @@ for file, path, title, desc, body, main in PAGES:
     out = ROOT / file
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(page(title, desc, body, path, main))
-print('wrote', ', '.join(file for file, *_ in PAGES))
+
+# The sitemap: the home page and every page above but the 404, dated by when the pages last changed.
+LASTMOD = datetime.strptime(UPDATED, '%d %B %Y').date().isoformat()
+urls = ['/'] + [path for _, path, *_ in PAGES if path != '/404']
+(ROOT / 'sitemap.xml').write_text('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+                                  + ''.join(f'  <url><loc>{SITE}{path}</loc><lastmod>{LASTMOD}</lastmod></url>\n' for path in urls) + '</urlset>\n')
+
+# llms.txt: a plain summary for AI tools that read it (search engines don't need it). Facts only; prices stay on the
+# pricing page so they can't drift. It says which Quo this is: another company's business phone app is also called Quo.
+(ROOT / 'llms.txt').write_text(f'''# Quo AI
+
+> Quo is a free, open-source AI assistant that runs on your own device: in the browser, on Mac, Windows and Linux, and on Android. It works offline, needs no account, and nothing you type leaves the device unless you choose a cloud model. Made by {COMPANY} in the United Kingdom. Not related to Quo, the business phone service formerly called OpenPhone.
+
+## Using Quo
+- [Home]({SITE}/): what Quo does, the models it runs, the desktop and phone apps, and common questions
+- [Quo Web](https://app.quo.computer/): Quo in the browser, with offline models and optional cloud models
+- [Download for desktop](https://github.com/quo-ai/quo/releases/latest): Mac, Windows and Linux
+- [Android app](https://play.google.com/store/apps/details?id=com.quo.app)
+- [Pricing]({SITE}/pricing/): free on the device; Quo Pro, Quo Sync and credit packs for cloud models
+
+## About
+- [Source code](https://github.com/quo-ai/quo): Apache 2.0
+- [Privacy Policy]({SITE}/privacy/): what stays on the device and what is sent when you choose a cloud model
+- [Terms]({SITE}/terms/), [Refunds]({SITE}/refunds/), [Support]({SITE}/support/), [Brand assets]({SITE}/brand/)
+- Contact: {EMAIL}
+''')
+print('wrote', ', '.join(file for file, *_ in PAGES), '+ sitemap.xml, llms.txt')

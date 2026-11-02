@@ -54,7 +54,7 @@ export function SearchServices({ bridge }: { bridge: DesktopWeb }) {
     event.preventDefault();
     void apply(backend.needsUrl ? bridge.configure({ searxngUrl: draft.trim() }) : bridge.setKey(backend.id, draft.trim()));
   };
-  const status = (backend: WebBackendState) => (backend.needsKey ? (backend.configured ? `Key saved · •••• ${backend.last4}` : 'Needs a key') : backend.needsUrl ? (backend.configured ? state.searxngUrl : 'Needs an address') : 'Ready');
+  const status = (backend: WebBackendState) => (backend.needsKey ? (backend.configured ? `Key saved, ending ${backend.last4}` : 'Needs a key') : backend.needsUrl ? (backend.configured ? state.searxngUrl : 'Needs an address') : 'Ready');
 
   return (
     <>
@@ -71,7 +71,7 @@ export function SearchServices({ bridge }: { bridge: DesktopWeb }) {
                   <span className="title">{backend.name}</span>
                   <span className="sub">{backend.id === 'auto' ? 'Recommended' : status(backend)}</span>
                 </span>
-                <ChevronRight size={16} className={`svc-chev${expanded ? ' open' : ''}`} color="var(--text-3)" />
+                <ChevronRight size={16} className={`svc-chev${expanded ? ' open' : ''}`} color="var(--ink-3)" />
               </button>
             </div>
             {expanded && (

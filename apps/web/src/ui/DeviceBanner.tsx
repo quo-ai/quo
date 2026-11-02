@@ -43,11 +43,11 @@ export function DeviceBanner({ notice, onDismiss, onGetApp }: { notice: DeviceNo
       <p>{notice.message}</p>
       {switchBrowser && !isDesktopApp() && (
         <>
-          <button className="btn btn-primary press" onClick={onGetApp}><Laptop size={15} /> Desktop app</button>
-          <button className="btn btn-soft press secondary" onClick={() => void copyLink()}><Link2 size={15} /> Copy link</button>
+          <button className="btn btn-glass press" onClick={onGetApp}><Laptop size={15} /> Desktop app</button>
+          <button className="btn btn-ghost press secondary" onClick={() => void copyLink()}><Link2 size={15} /> Copy link</button>
         </>
       )}
-      {mobile && <button className="btn btn-primary press" onClick={getMobileApp}>Get the app</button>}
+      {mobile && <button className="btn btn-glass press" onClick={getMobileApp}>Get the app</button>}
       <button className="icon-btn round press" onClick={dismiss} aria-label="Dismiss"><X size={17} /></button>
     </div>
   );

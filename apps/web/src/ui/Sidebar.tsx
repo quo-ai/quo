@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Boxes, Crown, MonitorDown, PanelLeftClose, Plus, Search, Settings, Trash2, UserRound } from 'lucide-react';
+import { Boxes, Cloud, Crown, MonitorDown, PanelLeftClose, Plus, Search, Settings, Trash2, UserRound } from 'lucide-react';
 import type { Account } from '../cloud/account';
 import { groupConversations } from '../chat/groups';
 import type { Conversation } from '../chat/types';
@@ -42,8 +42,8 @@ export function Sidebar({ conversations, currentId, installedCount, account, onO
           </button>
         </div>
 
-        <button className="btn btn-primary btn-block press" onClick={onNewChat}>
-          <Plus size={18} strokeWidth={2.4} /> New chat <span className="kbd">{MOD_KEY}⇧O</span>
+        <button className="btn btn-glass btn-block new-chat press" onClick={onNewChat}>
+          <Plus size={18} /> New chat <span className="kbd">{MOD_KEY}⇧O</span>
         </button>
 
         {conversations.length > 0 && (
@@ -62,7 +62,8 @@ export function Sidebar({ conversations, currentId, installedCount, account, onO
               {group.items.map(conversation => (
                 <div key={conversation.id} className={`chat-item${conversation.id === currentId ? ' active' : ''}`}>
                   <button className="chat-open" onClick={() => onOpen(conversation.id)} aria-current={conversation.id === currentId}>
-                    {conversation.title}
+                    <span className="chat-title">{conversation.title}</span>
+                    {conversation.messages.some(message => message.cloud || message.own) && <><Cloud size={13} className="chat-cloud" aria-hidden="true" /><span className="vh">, used a cloud model</span></>}
                   </button>
                   <button className="icon-btn" onClick={() => onDelete(conversation)} aria-label={`Delete “${conversation.title}”`}>
                     <Trash2 size={15} />
@@ -98,7 +99,7 @@ export function Sidebar({ conversations, currentId, installedCount, account, onO
           ) : account && (
             <div className="signin-row">
               <button className="footer-btn press" onClick={onOpenAccount}><UserRound size={18} /> Sign in</button>
-              <button className="btn btn-primary press get-pro" onClick={onOpenPro}>Get Pro</button>
+              <button className="btn btn-glass press get-pro" onClick={onOpenPro}>Get Pro</button>
             </div>
           )}
         </div>

@@ -1,22 +1,23 @@
-import { useMemo, useState, type RefObject, type UIEvent } from 'react';
+import { Fragment, useMemo, useState, type RefObject, type UIEvent } from 'react';
 import { Brain, Check, Copy, Layers, RotateCcw, Undo2, Volume2, VolumeX } from 'lucide-react';
 import type { CodeSession } from '../../agent/session';
 import type { Message } from '../../chat/types';
 import type { ModelChoice } from '../../models';
 import { isClaudeAgent } from '../../providers/claudeAgent';
-import { reliabilityNote } from '../../chat/reliability';
 import { greeting, pickStarters, type StarterMode } from '../../chat/starters';
 import { workingLabel } from '../../chat/working';
 import { canSpeak } from '../../voice/readAloud';
 import { AgentSteps } from '../AgentSteps';
 import { MessageAttachments } from '../Attachments';
 import { Markdown } from '../Markdown';
+import { GeneratedImages } from './GeneratedImages';
 import { Sources } from './Sources';
 import { QuoMark } from '../QuoMark';
 import { toast } from '../Toasts';
 import { FailureCard } from './FailureCard';
 import type { ChatAction, Failure, Undoable } from './types';
 import { useReadAloud } from './useReadAloud';
+import { ModelChange, ReplyWhere, moves, whereOf } from './Where';
 
 interface MessageListProps {
   conversationId: string | undefined;
@@ -36,27 +37,6 @@ interface MessageListProps {
   /** Code mode could start here (the desktop app, a model that can use tools): starters mix in things to build. */
   canBuild?: boolean;
   onAction: (action: ChatAction) => void;
-}
-
-const formatTokens = (n: number): string => (n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M` : n >= 10_000 ? `${Math.round(n / 1000)}k` : n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n));
-
-function replyMeta(message: Message): string {
-  if (message.stopped) return 'Stopped';
-  if (message.own) {
-    const steps = message.steps?.length ? ` · ${message.steps.length} step${message.steps.length === 1 ? '' : 's'}` : '';
-    const tokens = message.usage ? ` · ${formatTokens(message.usage.input + message.usage.output)} tokens` : '';
-    const exact = message.served && message.served !== message.modelName ? ` · ${message.served}` : '';
-    return `${message.modelName ?? 'Model'}${exact}${steps}${tokens}`;
-  }
-  if (message.cloud) {
-    const cost = message.charged ? `${message.charged} credit${message.charged === 1 ? '' : 's'}` : 'Free';
-    const steps = message.steps?.length ? ` · ${message.steps.length} step${message.steps.length === 1 ? '' : 's'}` : '';
-    return `${message.modelName ?? 'Cloud'}${steps} · ${cost}`;
-  }
-  const caution = reliabilityNote(message.modelId);
-  if (message.steps?.length) return `${message.modelName ?? 'Offline model'} · ${message.steps.length} step${message.steps.length === 1 ? '' : 's'} · on this computer${caution ? ` · ${caution}` : ''}`;
-  const speed = message.stats && message.stats.tokens > 1 ? `${message.stats.tokensPerSecond.toFixed(1)} tokens/s` : '';
-  return [speed, caution].filter(Boolean).join(' · ');
 }
 
 function intro(choice: ModelChoice | null, code: CodeSession | null): string {
@@ -81,6 +61,7 @@ export function MessageList({ conversationId, messages, busy, choice, code, fail
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const speech = useReadAloud(conversationId);
   const lastId = messages[messages.length - 1]?.id;
+  const moved = useMemo(() => moves(messages), [messages]);
   // A new set of starters for each empty chat, steady while it is on screen (the memo only changes with the chat or where it is).
   const empty = messages.length === 0;
   const mode: StarterMode = code ? 'project' : canBuild ? 'mixed' : 'chat';
@@ -100,7 +81,7 @@ export function MessageList({ conversationId, messages, busy, choice, code, fail
   }
 
   return (
-    <div className="messages" ref={scroller} onScroll={onScroll}>
+    <div className={`messages${messages.length === 0 ? ' empty' : ''}`} ref={scroller} onScroll={onScroll}>
       {messages.length === 0 && (
         <div className="hello">
           <QuoMark />
@@ -120,11 +101,15 @@ export function MessageList({ conversationId, messages, busy, choice, code, fail
       {messages.map(message => {
         const isLast = message.id === lastId;
         if (message.role === 'user') {
+          const move = moved.get(message.id);
           return (
-            <article key={message.id} className="msg user">
-              <MessageAttachments items={message.attachments ?? []} />
-              {message.content && <div className="bubble">{message.content}</div>}
-            </article>
+            <Fragment key={message.id}>
+              {move && <ModelChange move={move} />}
+              <article className="msg user">
+                <MessageAttachments items={message.attachments ?? []} />
+                {message.content && <div className="bubble">{message.content}</div>}
+              </article>
+            </Fragment>
           );
         }
         if (message.summary) {
@@ -137,7 +122,7 @@ export function MessageList({ conversationId, messages, busy, choice, code, fail
         }
         const streaming = isLast && busy;
         return (
-          <article key={message.id} className={`msg assistant${isLast ? ' last' : ''}${streaming && message.content ? ' streaming' : ''}`}>
+          <article key={message.id} className={`msg assistant${isLast ? ' last' : ''}${streaming ? ' live' : ''}${streaming && message.content ? ' streaming' : ''}`} data-where={whereOf(message)}>
             {message.steps?.length ? <AgentSteps steps={message.steps} live={streaming} /> : null}
             {undo?.messageId === message.id && !busy && (
               <button type="button" className="chip undo-chip press" onClick={onUndo} title="Put the files back the way they were before this reply">
@@ -147,12 +132,13 @@ export function MessageList({ conversationId, messages, busy, choice, code, fail
             {message.reasoning && (
               <details className={`reasoning${streaming && !message.content ? ' thinking' : ''}`} open={!message.content}>
                 <summary><Brain size={14} /> {message.content ? 'Thought process' : 'Thinking…'}</summary>
-                <Markdown text={message.reasoning} muted />
+                <Markdown text={message.reasoning} muted live={streaming && !message.content} />
               </details>
             )}
             {message.content
-              ? <Markdown text={message.content} />
-              : streaming && !message.reasoning && !message.steps?.some(step => step.status === 'running') && <div className="typing" role="status" aria-label={workingLabel(message) || 'Working'}><span className="bar" /><span className="block" /><span className="typing-label">{workingLabel(message)}</span></div>}
+              ? <Markdown text={message.content} live={streaming} />
+              : streaming && !message.reasoning && !message.images?.length && !message.steps?.some(step => step.status === 'running') && <div className="typing" role="status" aria-label={workingLabel(message) || 'Working'}><span className="bar" /><span className="block" /><span className="typing-label">{workingLabel(message)}</span></div>}
+            {message.images?.length ? <GeneratedImages images={message.images} /> : null}
             {!streaming && message.sources?.length ? <Sources sources={message.sources} /> : null}
             {!streaming && message.content && (
               <div className="msg-actions">
@@ -169,7 +155,7 @@ export function MessageList({ conversationId, messages, busy, choice, code, fail
                     <RotateCcw size={15} />
                   </button>
                 )}
-                <span className="msg-meta">{replyMeta(message)}</span>
+                <ReplyWhere message={message} />
               </div>
             )}
           </article>

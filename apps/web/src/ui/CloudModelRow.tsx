@@ -3,6 +3,7 @@ import type { Account } from '../cloud/account';
 import { lockOf } from '../cloud/access';
 import { isNewModel, type CloudModel } from '../cloud/catalog';
 import { describeCost } from './format';
+import { Facts } from './Facts';
 
 interface CloudModelRowProps {
   model: CloudModel;
@@ -17,7 +18,6 @@ interface CloudModelRowProps {
 export function CloudModelRow({ model, account, selected, onPick, menu }: CloudModelRowProps) {
   const lock = lockOf(model, account);
   const cost = `${describeCost(model.creditsPerMessage, '≈')} per message`;
-  const sub = model.free ? `Free · ${account ? `${account.free.remaining} left today` : 'every day'}` : cost;
   return (
     <button
       className={`menu-item press${lock ? ' locked' : ''}`}
@@ -32,7 +32,7 @@ export function CloudModelRow({ model, account, selected, onPick, menu }: CloudM
           {model.free && <span className="badge green">Free</span>}
           {isNewModel(model) && <span className="badge new">New</span>}
         </span>
-        <span className="sub">{model.provider} · {sub}</span>
+        <span className="sub"><Facts items={[model.provider, model.free ? (account ? `${account.free.remaining} free left today` : 'Free every day') : cost]} /></span>
       </span>
       {lock ? <Lock className="lock" size={16} /> : selected && <Check className="check" size={18} />}
     </button>

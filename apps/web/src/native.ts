@@ -256,7 +256,7 @@ declare global {
     quoDesktop?: {
       platform: string;
       version: string;
-      appearance?: { set: (mode: 'system' | 'light' | 'dark', dark: 'black' | 'midnight') => Promise<unknown> };
+      appearance?: { set: (mode: 'system' | 'light' | 'dark', look: import('./styles/appearances').AppearanceName) => Promise<unknown> };
       agent?: DesktopAgent;
       providers?: DesktopProviders;
       claude?: DesktopClaude;

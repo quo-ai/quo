@@ -1,4 +1,4 @@
-import { AlertCircle, Ban, ChevronRight, FilePlus, FileText, Folder, Globe, Link2, Loader2, Pencil, Search, Square, Terminal, Download, Check, Circle } from 'lucide-react';
+import { AlertCircle, Ban, ChevronRight, FilePlus, FileText, Folder, Globe, Link2, Pencil, Search, Square, Terminal, Download, Check, Circle } from 'lucide-react';
 import { planFromText } from '../agent/plan';
 import type { AgentStep } from '../agent/types';
 import { formatElapsed, useElapsed } from './elapsed';
@@ -21,7 +21,7 @@ const ICONS: Record<string, typeof FileText> = {
 };
 
 function StepIcon({ step }: { step: AgentStep }) {
-  if (step.status === 'running') return <Loader2 size={14} className="spin" />;
+  if (step.status === 'running') return <span className="step-working" aria-hidden="true" />; // a dither block (dither.css)
   if (step.status === 'failed') return <AlertCircle size={14} />;
   if (step.status === 'declined') return <Ban size={14} />;
   if (step.status === 'stopped') return <Square size={12} />;
@@ -60,7 +60,7 @@ function PlanList({ body }: { body: string }) {
     <ul className="step-plan">
       {planFromText(body).map((item, index) => (
         <li key={index} className={item.status}>
-          {item.status === 'completed' ? <Check size={13} /> : item.status === 'in_progress' ? <ChevronRight size={13} /> : <Circle size={11} />}
+          {item.status === 'completed' ? <Check size={13} /> : item.status === 'in_progress' ? <span className="step-working" aria-hidden="true" /> : <Circle size={11} />}
           <span>{item.step}</span>
         </li>
       ))}

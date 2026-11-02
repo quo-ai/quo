@@ -6,6 +6,7 @@ import { useOwnModels } from '../../providers/ownModels';
 import { ClaudeAgentDetail } from './ClaudeAgentDetail';
 import { CustomForm } from './CustomForm';
 import { ProviderDetail } from './ProviderDetail';
+import { Facts } from '../Facts';
 
 type View = { page: 'list' } | { page: 'provider'; id: string } | { page: 'new' };
 
@@ -37,14 +38,14 @@ export function KeysTab({ selectedKey, onChoose }: { selectedKey: string | null;
   const row = (account: (typeof accounts)[number]) => {
     const count = models.filter(model => model.provider === account.info.id).length;
     const status = isClaudeAgent(account.info) ? (account.configured ? 'Your Claude Code login' : 'Needs Claude Code on this computer')
-      : account.configured ? `Connected · •••• ${account.last4}` : account.info.custom ? account.info.baseUrl : 'Not connected';
+      : account.configured ? `Connected, key ending ${account.last4}` : account.info.custom ? account.info.baseUrl : 'Not connected';
     return (
       <button key={account.info.id} className="menu-item press" onClick={() => setView({ page: 'provider', id: account.info.id })}>
         <span className="grow">
           <span className="title">{account.info.name}</span>
-          <span className="sub">{status}{count ? ` · ${count} model${count === 1 ? '' : 's'}` : ''}</span>
+          <span className="sub"><Facts items={[status, count > 0 && `${count} model${count === 1 ? '' : 's'}`]} /></span>
         </span>
-        <ChevronRight size={17} color="var(--text-3)" />
+        <ChevronRight size={17} color="var(--ink-3)" />
       </button>
     );
   };

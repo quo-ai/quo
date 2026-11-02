@@ -117,8 +117,8 @@ function GetPlan() {
     <div className="storage-box">
       <p>Quo Sync is included with <strong>Quo Pro</strong>, or you can get it on its own.</p>
       <div className="model-actions">
-        <button className="btn btn-primary press" disabled={Boolean(busy)} onClick={() => void buy('sync_yearly')}>Quo Sync · $24 / year</button>
-        <button className="btn btn-soft press" disabled={Boolean(busy)} onClick={() => void buy('pro_yearly')}>Quo Pro · $99 / year</button>
+        <button className="btn btn-primary press" disabled={Boolean(busy)} onClick={() => void buy('sync_yearly')}>Quo Sync, $24 a year</button>
+        <button className="btn btn-soft press" disabled={Boolean(busy)} onClick={() => void buy('pro_yearly')}>Quo Pro, $99 a year</button>
       </div>
       <p className="note" style={{ marginTop: 10 }}>Your chats stay on your device and work offline either way. Sync is only for keeping them in step.</p>
     </div>
@@ -253,7 +253,7 @@ function Join({ email, onDone }: { email: string; onDone: () => void }) {
       <p className="note" style={{ marginTop: 14 }}>
         Lost your key? Nobody can recover it, but you can{' '}
         {confirmReset
-          ? <><button type="button" className="btn-link" style={{ color: 'var(--error)' }} disabled={busy} onClick={() => void startOver()}>delete the cloud copy for good</button> (chats on your devices stay).</>
+          ? <><button type="button" className="btn-link danger" disabled={busy} onClick={() => void startOver()}>delete the cloud copy for good</button> (chats on your devices stay).</>
           : <button type="button" className="btn-link" onClick={() => setConfirmReset(true)}>delete the cloud copy and start again</button>}
       </p>
     </form>
@@ -267,7 +267,7 @@ function Connected({ cloud, onChanged, onOpenAccount }: { cloud: Cloud | null; o
 
   const label = sync.phase === 'syncing' ? 'Syncing…'
     : sync.phase === 'error' ? (sync.error?.code === 'offline' ? 'Offline' : 'Needs attention')
-      : sync.lastSyncAt ? `Up to date · ${timeAgo(sync.lastSyncAt)}` : 'Starting…';
+      : sync.lastSyncAt ? `Up to date, synced ${timeAgo(sync.lastSyncAt)}` : 'Starting…';
 
   async function turnOff() {
     await disableSync();
@@ -310,7 +310,7 @@ function Connected({ cloud, onChanged, onOpenAccount }: { cloud: Cloud | null; o
             <div className="progress" role="progressbar" aria-valuenow={percent(cloud.usedBytes, cloud.limitBytes)} aria-valuemin={0} aria-valuemax={100} aria-label="Cloud storage used">
               <div className="progress-fill" style={{ width: `${Math.max(1, percent(cloud.usedBytes, cloud.limitBytes))}%` }} />
             </div>
-            <p className="note" style={{ margin: 0 }}>{formatBytes(cloud.usedBytes)} of {formatBytes(cloud.limitBytes)} · {cloud.records} {cloud.records === 1 ? 'chat' : 'chats'}</p>
+            <p className="note" style={{ margin: 0 }}>{formatBytes(cloud.usedBytes)} of {formatBytes(cloud.limitBytes)} used by {cloud.records} {cloud.records === 1 ? 'chat' : 'chats'}</p>
           </div>
         </>
       )}
@@ -327,7 +327,7 @@ function Connected({ cloud, onChanged, onOpenAccount }: { cloud: Cloud | null; o
         {confirm
           ? (
             <div className="model-actions">
-              <button className="btn btn-primary press" style={{ background: 'var(--error)' }} disabled={busy} onClick={() => void deleteAll()}>{busy ? 'Deleting…' : 'Yes, delete the cloud copy'}</button>
+              <button className="btn btn-danger press" disabled={busy} onClick={() => void deleteAll()}>{busy ? 'Deleting…' : 'Yes, delete the cloud copy'}</button>
               <button className="btn btn-ghost press" disabled={busy} onClick={() => setConfirm(false)}>Cancel</button>
             </div>
           )

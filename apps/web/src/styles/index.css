@@ -1,7 +1,7 @@
+@import './tokens.css';
 @import './base.css';
-@import './themes.css';
 @import './syntax.css';
-@import './glass.css';
+@import './surfaces.css';
 @import './shell.css';
 @import './sheets.css';
 @import './chat.css';
@@ -13,4 +13,5 @@
 @import './code.css';
 @import './panel.css';
 @import './providers.css';
-@import './crt.css';
+@import './motion.css';
+@import './dither.css';

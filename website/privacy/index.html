@@ -2,54 +2,28 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Privacy Policy — Quo</title>
 <meta name="description" content="How Quo handles your data: AI runs on your device, and your chats never leave it.">
-<meta name="theme-color" content="#3b2eff">
-<link rel="canonical" href="https://quoai.vercel.app/privacy/">
+<meta name="theme-color" content="#f9fafd" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0d0f16" media="(prefers-color-scheme: dark)">
+<link rel="canonical" href="https://quo.computer/privacy/">
 <meta property="og:title" content="Privacy Policy — Quo">
 <meta property="og:description" content="How Quo handles your data: AI runs on your device, and your chats never leave it.">
-<meta property="og:image" content="https://quoai.vercel.app/assets/og.png">
+<meta property="og:image" content="https://quo.computer/assets/og.png">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="/assets/favicon.png">
 <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<link rel="preload" href="/assets/fonts/AtkinsonHyperlegibleNext.ttf" as="font" type="font/ttf" crossorigin>
+<script src="/assets/appearance.js"></script>
+<link rel="stylesheet" href="/assets/tokens.css">
+<link rel="stylesheet" href="/assets/base.css">
 <link rel="stylesheet" href="/assets/site.css">
 <script src="/assets/site.js" defer></script>
 </head>
 <body>
-<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="quo-mark" viewBox="55 121 900 755">
-  <defs>
-    <mask id="ringMask" maskUnits="userSpaceOnUse" x="-2000" y="-2000" width="5000" height="5000">
-      <rect x="-2000" y="-2000" width="5000" height="5000" fill="#fff"/>
-      <path d="M 490 200 C 682 200 812 340 812 505 C 812 592 784 652 745 696 L 803 828 Q 816 862 780 856 L 600 798 C 565 808 528 812 490 812 C 298 812 175 680 175 505 C 175 330 298 200 490 200 Z" fill="#000" stroke="#000" stroke-width="30" stroke-linejoin="round"/>
-    </mask>
-    <mask id="qMask" maskUnits="userSpaceOnUse" x="-2000" y="-2000" width="5000" height="5000">
-      <rect x="-2000" y="-2000" width="5000" height="5000" fill="#fff"/>
-      <g transform="translate(505 470) rotate(-18)"><path d="M -455 0 A 455 95 0 0 0 455 0" fill="none" stroke="#000" stroke-width="54"/></g>
-    </mask>
-  </defs>
-  <g fill="currentColor" stroke="none">
-    <g mask="url(#ringMask)"><g transform="translate(505 470) rotate(-18)"><ellipse rx="455" ry="95" fill="none" stroke="currentColor" stroke-width="24"/></g></g>
-    <path mask="url(#qMask)" fill-rule="evenodd" d="M 490 200 C 682 200 812 340 812 505 C 812 592 784 652 745 696 L 803 828 Q 816 862 780 856 L 600 798 C 565 808 528 812 490 812 C 298 812 175 680 175 505 C 175 330 298 200 490 200 Z M 495 320 C 380 320 302 400 302 510 C 302 620 380 700 495 700 C 525 700 552 695 575 688 L 652 734 Q 674 744 667 721 L 640 668 C 670 630 688 580 688 510 C 688 400 610 320 495 320 Z"/>
-    <g transform="translate(505 470) rotate(-18)"><path d="M -455 0 A 455 95 0 0 0 455 0" fill="none" stroke="currentColor" stroke-width="24"/></g>
-    <g stroke="currentColor" stroke-width="6" stroke-linejoin="round"><path d="M 238 128 C 243 166 254 178 294 183 C 254 188 243 200 238 238 C 233 200 222 188 182 183 C 222 178 233 166 238 128 Z"/><path d="M 141 266 C 144 292 151 299 178 303 C 151 307 144 314 141 340 C 138 314 131 307 104 303 C 131 299 138 292 141 266 Z"/><path d="M 886 602 C 890 636 900 645 934 650 C 900 655 890 664 886 698 C 882 664 872 655 838 650 C 872 645 882 636 886 602 Z"/></g>
-  </g></symbol>
-  <symbol id="i-apple" viewBox="0 0 24 24"><path d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.090 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.960.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701"/></symbol>
-  <symbol id="i-android" viewBox="1 4 22 16"><path fill-rule="evenodd" d="M1.5 19a10.5 10.5 0 0 1 21 0zM7.6 14.6a1.15 1.15 0 1 0 0 .01zM16.4 14.6a1.15 1.15 0 1 0 0 .01z"/><path d="M6.4 10.2 4.3 6.6M17.6 10.2l2.1-3.6" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></symbol>
-  <symbol id="i-windows" viewBox="0 0 24 24"><path d="M3 5.1 10.4 4v7.2H3zM11.4 3.9 21 2.5v8.7h-9.6zM3 12.2h7.4v7.3L3 18.4zM11.4 12.2H21v9.3l-9.6-1.4z"/></symbol>
-  <symbol id="i-linux" viewBox="0 0 24 24"><path d="M12 2c-2.2 0-3.6 1.9-3.6 4.6 0 1.4-.4 2.4-1.3 3.7C5.8 12.1 5 14 5 15.9c0 .6.1 1.1.2 1.6-.8.4-1.6 1-1.6 1.9 0 1.4 2 1.6 3.2 2.2.9.5 1.7.9 2.6.9.8 0 1.4-.4 1.8-.9h1.6c.4.5 1 .9 1.8.9.9 0 1.7-.4 2.6-.9 1.2-.6 3.2-.8 3.2-2.2 0-.9-.8-1.5-1.6-1.9.1-.5.2-1 .2-1.6 0-1.9-.8-3.8-2.1-5.6-.9-1.3-1.3-2.3-1.3-3.7C15.6 3.9 14.2 2 12 2zm-1.3 4.2c.4 0 .7.5.7 1.1s-.3 1.1-.7 1.1-.7-.5-.7-1.1.3-1.1.7-1.1zm2.6 0c.4 0 .7.5.7 1.1s-.3 1.1-.7 1.1-.7-.5-.7-1.1.3-1.1.7-1.1zM12 9.2c.9 0 2 .6 2 1.1 0 .4-1.1 1.2-2 1.2s-2-.8-2-1.2c0-.5 1.1-1.1 2-1.1z"/></symbol>
-  <symbol id="i-github" viewBox="0 0 24 24"><path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.1.79-.25.79-.56v-1.96c-3.2.7-3.87-1.54-3.87-1.54-.52-1.33-1.28-1.69-1.28-1.69-1.04-.71.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.76 2.7 1.25 3.36.96.1-.75.4-1.25.73-1.54-2.55-.29-5.24-1.28-5.24-5.68 0-1.25.45-2.28 1.19-3.08-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.17 1.18a11 11 0 0 1 5.77 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.8 1.19 1.83 1.19 3.08 0 4.41-2.69 5.38-5.25 5.67.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5z"/></symbol>
-  <symbol id="i-x" viewBox="0 0 24 24"><path d="M18.9 1.2h3.7l-8 9.2 9.4 12.4h-7.4l-5.8-7.6-6.6 7.6H.5l8.6-9.8L.1 1.2h7.6l5.2 6.9zm-1.3 19.4h2L6.5 3.3H4.3z"/></symbol>
-  <symbol id="i-globe" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9.5"/><path d="M2.5 12h19M12 2.5c2.6 2.8 3.9 6 3.9 9.5s-1.3 6.7-3.9 9.5c-2.6-2.8-3.9-6-3.9-9.5S9.4 5.3 12 2.5z"/></g></symbol>
-  <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12m0 0-5-5m5 5 5-5M4 20h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
-  <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
-  <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
-  <symbol id="i-wifi-off" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h.01M8.5 16.43a5 5 0 0 1 7 0M2 8.82a15 15 0 0 1 4.17-2.65M10.66 5c4.01-.36 8.14.9 11.34 3.76M16.85 11.25a10 10 0 0 1 2.22 1.68M5 13a10 10 0 0 1 5.24-2.76M2 2l20 20"/></g></symbol>
-  <symbol id="i-lock" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></g></symbol>
-  <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
-  <symbol id="i-laptop" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="11" rx="2"/><path d="M2 19h20"/></g></symbol>
-  <symbol id="i-phone" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M11 18h2"/></g></symbol>
-</svg>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="quo-mark" viewBox="55 121 900 755"><defs><mask id="qm-ring" maskUnits="userSpaceOnUse" x="-2000" y="-2000" width="5000" height="5000"><rect x="-2000" y="-2000" width="5000" height="5000" fill="#fff"/><path d="M 490 200 C 682 200 812 340 812 505 C 812 592 784 652 745 696 L 803 828 Q 816 862 780 856 L 600 798 C 565 808 528 812 490 812 C 298 812 175 680 175 505 C 175 330 298 200 490 200 Z" fill="#000" stroke="#000" stroke-width="30" stroke-linejoin="round"/></mask><mask id="qm-q" maskUnits="userSpaceOnUse" x="-2000" y="-2000" width="5000" height="5000"><rect x="-2000" y="-2000" width="5000" height="5000" fill="#fff"/><g transform="translate(505 470) rotate(-18)"><path d="M -455 0 A 455 95 0 0 0 455 0" fill="none" stroke="#000" stroke-width="54"/></g></mask></defs><g fill="currentColor" stroke="none"><g mask="url(#qm-ring)"><g transform="translate(505 470) rotate(-18)"><ellipse rx="455" ry="95" fill="none" stroke="currentColor" stroke-width="24"/></g></g><path mask="url(#qm-q)" fill-rule="evenodd" d="M 490 200 C 682 200 812 340 812 505 C 812 592 784 652 745 696 L 803 828 Q 816 862 780 856 L 600 798 C 565 808 528 812 490 812 C 298 812 175 680 175 505 C 175 330 298 200 490 200 Z M 495 320 C 380 320 302 400 302 510 C 302 620 380 700 495 700 C 525 700 552 695 575 688 L 652 734 Q 674 744 667 721 L 640 668 C 670 630 688 580 688 510 C 688 400 610 320 495 320 Z"/><g transform="translate(505 470) rotate(-18)"><path d="M -455 0 A 455 95 0 0 0 455 0" fill="none" stroke="currentColor" stroke-width="24"/></g><g stroke="currentColor" stroke-width="6" stroke-linejoin="round"><path d="M 238 128 C 243 166 254 178 294 183 C 254 188 243 200 238 238 C 233 200 222 188 182 183 C 222 178 233 166 238 128 Z"/><path d="M 141 266 C 144 292 151 299 178 303 C 151 307 144 314 141 340 C 138 314 131 307 104 303 C 131 299 138 292 141 266 Z"/><path d="M 886 602 C 890 636 900 645 934 650 C 900 655 890 664 886 698 C 882 664 872 655 838 650 C 872 645 882 636 886 602 Z"/></g></g></symbol><symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol><symbol id="i-chevron-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol><symbol id="i-cloud" viewBox="0 0 24 24"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></symbol><symbol id="i-download" viewBox="0 0 24 24"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></symbol><symbol id="i-file-text" viewBox="0 0 24 24"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></symbol><symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></symbol><symbol id="i-image" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></symbol><symbol id="i-laptop" viewBox="0 0 24 24"><path d="M18 5a2 2 0 0 1 2 2v8.526a2 2 0 0 0 .212.897l1.068 2.127a1 1 0 0 1-.9 1.45H3.62a1 1 0 0 1-.9-1.45l1.068-2.127A2 2 0 0 0 4 15.526V7a2 2 0 0 1 2-2z"/><path d="M20.054 15.987H3.946"/></symbol><symbol id="i-lightbulb" viewBox="0 0 24 24"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></symbol><symbol id="i-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></symbol><symbol id="i-lock" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol><symbol id="i-mic" viewBox="0 0 24 24"><path d="M12 19v3"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><rect x="9" y="2" width="6" height="13" rx="3"/></symbol><symbol id="i-smartphone" viewBox="0 0 24 24"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></symbol><symbol id="i-wifi-off" viewBox="0 0 24 24"><path d="M12 20h.01"/><path d="M8.5 16.429a5 5 0 0 1 7 0"/><path d="M5 12.859a10 10 0 0 1 5.17-2.69"/><path d="M19 12.859a10 10 0 0 0-2.007-1.523"/><path d="M2 8.82a15 15 0 0 1 4.177-2.643"/><path d="M22 8.82a15 15 0 0 0-11.288-3.764"/><path d="m2 2 20 20"/></symbol><symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol><symbol id="i-zap" viewBox="0 0 24 24"><path d="M15.914 4a1.5 1.5 0 00-2.474-1.561l-9 9A1.5 1.5 0 005.5 14h4.002a.5.5 0 01.471.666L8.086 20a1.5 1.5 0 002.475 1.56l9-9A1.5 1.5 0 0018.5 10h-3.997a.5.5 0 01-.472-.667z"/></symbol><symbol id="b-apple" viewBox="0 0 24 24"><path d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.090 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.960.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701"/></symbol><symbol id="b-windows" viewBox="0 0 24 24"><path d="M3 5.1 10.4 4v7.2H3zM11.4 3.9 21 2.5v8.7h-9.6zM3 12.2h7.4v7.3L3 18.4zM11.4 12.2H21v9.3l-9.6-1.4z"/></symbol><symbol id="b-linux" viewBox="0 0 24 24"><path d="M12 2c-2.2 0-3.6 1.9-3.6 4.6 0 1.4-.4 2.4-1.3 3.7C5.8 12.1 5 14 5 15.9c0 .6.1 1.1.2 1.6-.8.4-1.6 1-1.6 1.9 0 1.4 2 1.6 3.2 2.2.9.5 1.7.9 2.6.9.8 0 1.4-.4 1.8-.9h1.6c.4.5 1 .9 1.8.9.9 0 1.7-.4 2.6-.9 1.2-.6 3.2-.8 3.2-2.2 0-.9-.8-1.5-1.6-1.9.1-.5.2-1 .2-1.6 0-1.9-.8-3.8-2.1-5.6-.9-1.3-1.3-2.3-1.3-3.7C15.6 3.9 14.2 2 12 2zm-1.3 4.2c.4 0 .7.5.7 1.1s-.3 1.1-.7 1.1-.7-.5-.7-1.1.3-1.1.7-1.1zm2.6 0c.4 0 .7.5.7 1.1s-.3 1.1-.7 1.1-.7-.5-.7-1.1.3-1.1.7-1.1zM12 9.2c.9 0 2 .6 2 1.1 0 .4-1.1 1.2-2 1.2s-2-.8-2-1.2c0-.5 1.1-1.1 2-1.1z"/></symbol><symbol id="b-android" viewBox="1 4 22 16"><path fill-rule="evenodd" d="M1.5 19a10.5 10.5 0 0 1 21 0zM7.6 14.6a1.15 1.15 0 1 0 0 .01zM16.4 14.6a1.15 1.15 0 1 0 0 .01z"/><path d="M6.4 10.2 4.3 6.6M17.6 10.2l2.1-3.6" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></symbol><symbol id="b-github" viewBox="0 0 24 24"><path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.1.79-.25.79-.56v-1.96c-3.2.7-3.87-1.54-3.87-1.54-.52-1.33-1.28-1.69-1.28-1.69-1.04-.71.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.76 2.7 1.25 3.36.96.1-.75.4-1.25.73-1.54-2.55-.29-5.24-1.28-5.24-5.68 0-1.25.45-2.28 1.19-3.08-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.17 1.18a11 11 0 0 1 5.77 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.8 1.19 1.83 1.19 3.08 0 4.41-2.69 5.38-5.25 5.67.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5z"/></symbol></svg>
+<a class="skip" href="#main">Skip to content</a>
 <header class="site-header"><div class="wrap">
   <a class="brand" href="/" aria-label="Quo home"><svg viewBox="0 0 900 755" aria-hidden="true"><use href="#quo-mark"/></svg>Quo</a>
   <nav class="nav" aria-label="Main">
@@ -57,13 +31,13 @@
     <a class="hide-sm" href="/#desktop">Desktop</a>
     <a class="hide-sm" href="/#pricing">Pricing</a>
     <a class="hide-sm" href="/#open-source">Open source</a>
-    <a class="gh-pill hide-xs" data-link="github" href="https://github.com/quo-ai/quo"><svg aria-hidden="true"><use href="#i-github"/></svg><span>GitHub</span></a>
-    <a class="btn btn-primary btn-sm" data-link="webapp" data-try href="https://quoai-app.vercel.app/">Try Quo</a>
+    <a class="hide-xs" data-link="github" href="https://github.com/quo-ai/quo"><svg class="i brand-i" aria-hidden="true"><use href="#b-github"/></svg><span>GitHub</span></a>
+    <a class="btn line small" data-link="webapp" data-try href="https://app.quo.computer/">Try Quo</a>
   </nav>
 </div></header>
-<main class="doc">
+<main id="main" class="doc">
 <h1>Privacy Policy</h1>
-<p class="meta">Last updated 2 November 2026 · Applies to the Quo apps (phone, web and desktop) and this website</p>
+<p class="meta">Last updated 2 November 2026. Applies to the Quo apps (phone, web and desktop) and this website.</p>
 <div class="summary"><p><strong>In short:</strong> Quo runs its AI on your device. Your conversations, files, photos, voice and memories are processed and stored only on your device and are never sent to us or anyone else, unless you choose the optional cloud model in Quo Web or the desktop app; those messages, and any files or photos you attach to them, are sent to the model’s provider to answer, and nobody keeps them. If you choose to turn on Quo Sync (optional, and it needs a Quo account), your chats and memories are uploaded only after being encrypted on your device with a key we never receive, so we still can’t read them. To fix crashes and improve the app, Quo collects limited usage and crash data that never includes your content: in the EU and EEA only if you allow it, and anywhere you can turn it off at any time in Settings.</p></div>
 
 <h2>Who we are</h2>
@@ -100,7 +74,7 @@
 <h2>Accounts and Quo Sync</h2>
 <p>You only need a Quo account to use Quo Sync, which keeps your chats and memories in step between your devices (Quo Web, the desktop app and the Android app), or to buy Quo Pro or a Quo Sync plan. Everything else works without one.</p>
 <h3>Your account</h3>
-<p>You sign in with your email address: we email you a six-digit code (through our email provider, Resend), which works for 10 minutes. We keep your email address, a one-way hash of the code until it is used or replaced, and records of your plan and credits. Staying signed in uses a secure cookie (Quo Web and the desktop app) or a token held in your phone’s secure storage; signing out removes it from that device, and “sign out of all devices” ends every sign-in at once.</p>
+<p>You sign in with your email address: we email you a six-digit code (through our email provider, Resend), which works for 10 minutes. We keep your email address, a one-way hash of the code until it is used or replaced, and records of your plan and credits. So the free trial can be given only once, we also keep a one-way keyed hash of your email address for a year after the trial, even if you delete your account; it can’t be turned back into your address. Staying signed in uses a secure cookie (Quo Web and the desktop app) or a token held in your phone’s secure storage; signing out removes it from that device, and “sign out of all devices” ends every sign-in at once.</p>
 <h3>What Quo Sync stores</h3>
 <p>If you turn on Quo Sync, each chat and memory is encrypted on your device before it is uploaded, with a key made from a recovery key that you save and that we never receive. We store the encrypted data, a random identifier for each item, its size and when it last changed, and a small encrypted check value that lets a new device confirm your recovery key. The names of attached files are part of the encrypted data; the files, photos and models themselves are never synced.</p>
 <p>We can’t read, search or recover your synced chats and memories, and if you lose your recovery key nobody can open them. We can tell that your account uses Quo Sync, roughly how many items it holds, how big they are and when they changed, but not what they say.</p>
@@ -118,7 +92,7 @@
 <p>Quo asks for access to the microphone (voice input), camera and photos (to attach images) and files (to attach documents) only when you use those features. What they capture is processed on your device.</p>
 
 <h2>This website</h2>
-<p>This website uses no cookies, analytics or trackers. It is hosted by Vercel, which processes standard server logs (such as IP address, browser type and the pages requested) to deliver and secure the site.</p>
+<p>This website uses no cookies, analytics or trackers. It runs on our own server in the UK, behind Cloudflare, which delivers it and protects it from attacks. Our server and Cloudflare process standard request information (such as IP address, browser type and the pages requested) to deliver and secure the site.</p>
 
 <h2>Quo Web and Quo for desktop</h2>
 <p>With offline models, everything happens on your computer: your chats are saved only in your browser’s or the app’s storage on that computer, and nothing you type is sent anywhere. Models are downloaded once from Hugging Face, and the desktop app checks GitHub for updates; like any download, these requests show your IP address to those services.</p>
@@ -129,9 +103,11 @@
 <h3>Web search</h3>
 <p>Models can search the web when they decide a message needs it; there is no switch in the chat. You can turn searching off in <strong>Models &amp; storage → Web</strong>: it is allowed by default for cloud models and your own API keys, and off for offline models until you turn it on, so an offline chat stays offline. In the desktop app, models can also read pages. When it is on, the words the model searches for go to the search service you chose (Brave Search, Tavily or Exa with your own key, a SearXNG address, or DuckDuckGo), and pages are fetched by your computer, not through our servers. Quo only opens addresses you wrote, that a search returned, or that a page it read links to, and never addresses on your own computer or network. Keys for search services are kept like other API keys. In a browser, web search is done by OpenRouter or Anthropic, if you use your own key with them.</p>
 <p>With Quo&rsquo;s cloud models, when the model decides to search, the words it searches for go through OpenRouter to its search partner, Exa, and the results come back to the model. The free model includes a few searches a day.</p>
+<h3>Making images</h3>
+<p>When you ask for an image, the model you are chatting with writes a description of it (a prompt). That prompt, and the image you ask to change if you ask for a change, goes through our server to OpenRouter and on to an image model’s provider, which makes the image. Only providers that don’t keep or train on what they receive are used, and our server doesn’t store the prompt or the image. With an offline model, the prompt is written on your device and only the prompt leaves it. Images you make are kept on your device and are not synced. A few images a day are free (a change to an image counts as two).</p>
 <h3>Your own API keys</h3>
-<p>You can also use models with an API key of your own (from OpenRouter, Anthropic, OpenAI, Google, xAI, DeepSeek, Mistral, Groq, or a server you run yourself), with no Quo account. When you do, the messages in that chat, and in Code mode the files Quo reads, go <strong>straight from your computer to that provider</strong>, under that provider’s terms and privacy policy. They do not go through our servers, and we never see your key or your messages. In the desktop app your key is saved encrypted by your operating system’s secure storage (where it has none, it is kept in memory until you quit) and the app’s pages can never read it back; in a browser it is saved in that browser only. Keys are never synced and never sent to us. Memories and attached files are not sent to these models, as with our own cloud model.</p>
-<p>To keep the free allowance fair, our server counts how many cloud messages are sent each day per device and per IP address. It stores these counts under one-way keyed hashes, never the IP address or the app’s random device ID itself, and deletes them after two days. There are no accounts on Quo Web yet.</p>
+<p>You can also use models with an API key of your own (from OpenRouter, Anthropic, OpenAI, Google, xAI, DeepSeek, Mistral, Groq, or a server you run yourself), with no Quo account. When you do, the messages in that chat, and in Code mode the files Quo reads, go <strong>straight from your computer to that provider</strong>, under that provider’s terms and privacy policy. They do not go through our servers, and we never see your key or your messages. In the desktop app your key is saved encrypted by your operating system’s secure storage (where it has none, it is kept in memory until you quit) and the app’s pages can never read it back; in a browser it is saved in that browser only. Keys are never synced and never sent to us. Memories are not sent to these models, as with our own cloud model; files you attach go with your message.</p>
+<p>To keep the free allowance fair, our server counts how many cloud messages are sent each day per device and per IP address. It stores these counts under one-way keyed hashes, never the IP address or the app’s random device ID itself, and deletes them after two days. We also keep daily totals of how many cloud requests were made and what they cost, with nothing about who made them.</p>
 
 <h2>Why we use your data (legal bases)</h2>
 <p>Where UK or EU data protection law applies, we rely on:</p>
@@ -144,7 +120,7 @@
 </ul>
 
 <h2>Service providers and international transfers</h2>
-<p>Google (Firebase), Vercel (hosting), Neon (our database, in London) and Resend (sign-in emails) process data for us as service providers, and Paddle sells Quo Pro and Quo Sync plans as merchant of record. When you choose a cloud model, OpenRouter and that model’s provider process those messages to answer them. They may process it outside the UK and EU, including in the United States. Where they do, the transfer is protected by recognised safeguards such as the EU–US Data Privacy Framework and its UK Extension, or Standard Contractual Clauses.</p>
+<p>This website, Quo Web and our server run on our own server in the UK. Google (Firebase), Cloudflare (which delivers and protects them), Neon (our database, in London) and Resend (sign-in emails) process data for us as service providers, Vercel runs our old web addresses for older versions of the apps, and Paddle sells Quo Pro, Quo Sync and credit packs as merchant of record. When you choose a cloud model, OpenRouter and that model’s provider process those messages to answer them. They may process it outside the UK and EU, including in the United States. Where they do, the transfer is protected by recognised safeguards such as the EU–US Data Privacy Framework and its UK Extension, or Standard Contractual Clauses.</p>
 
 <h2>How long we keep data</h2>
 <ul>
@@ -152,10 +128,10 @@
 <li><strong>Usage data</strong> is kept by Google for no longer than 14 months.</li>
 <li><strong>Crash reports</strong> are kept by Google for about 90 days.</li>
 <li><strong>Emails</strong> are kept only as long as needed to help you.</li>
-<li><strong>Website logs</strong> are kept briefly by Vercel under its retention policy.</li>
+<li><strong>Server logs</strong> (IP address, the page or request, and when) are kept on our server for 14 days, and by Cloudflare and Vercel under their retention policies.</li>
 <li><strong>Cloud messages</strong> aren’t stored by us; OpenRouter and the providers we use don’t retain them.</li>
 <li><strong>Free cloud message counts</strong> are deleted after two days.</li>
-<li><strong>Your account</strong> (email address, plan and credit records) is kept until you delete it. A sign-in code stops working after 10 minutes.</li>
+<li><strong>Your account</strong> (email address, plan and credit records) is kept until you delete it. A sign-in code stops working after 10 minutes. The hash that stops a second free trial is kept for a year after the trial, also after you delete your account.</li>
 <li><strong>Quo Sync data</strong> is kept until you delete it or your account. If your plan ends, it stays for 180 days (you can still download it to your devices), we email you once 30 days before it is deleted, and then it is deleted for good. Records that tell your other devices a chat was deleted are removed after 90 days.</li>
 </ul>
 
@@ -175,17 +151,15 @@
 <p>We may update this policy. We will post the new version here with a new date, and tell you in the app if a change is significant.</p>
 
 <h2>Contact</h2>
-<p>Astra Labs Ltd, 82 James Carter Road, Mildenhall, IP28 7DE, United Kingdom · <a href="mailto:astralabsltd@gmail.com">astralabsltd@gmail.com</a></p>
+<p>Astra Labs Ltd, 82 James Carter Road, Mildenhall, IP28 7DE, United Kingdom.<br><a href="mailto:astralabsltd@gmail.com">astralabsltd@gmail.com</a></p>
 
 </main>
 <footer class="site-footer"><div class="wrap">
-  <div class="foot-brand">
-    <a class="brand" href="/"><svg viewBox="0 0 900 755" aria-hidden="true"><use href="#quo-mark"/></svg>Quo</a>
-    <p>Private AI that works offline.</p>
-  </div>
-  <nav aria-label="Product"><h4>Get Quo</h4><a data-link="webapp" href="https://quoai-app.vercel.app/">Web</a><a href="/#desktop">Desktop</a><a href="/#phones">iPhone and Android</a></nav>
-  <nav aria-label="Open source"><h4>Open source</h4><a data-link="github" href="https://github.com/quo-ai/quo">GitHub</a><a data-link="releases" href="https://github.com/quo-ai/quo/releases/latest">Releases</a><a href="https://github.com/quo-ai/quo/blob/master/CHANGELOG.md">Changelog</a><a href="/brand/">Brand assets</a><a data-link="x" href="#" hidden>X</a></nav>
-  <nav aria-label="Company"><h4>Company</h4><a href="/support/">Support</a><a href="/privacy/">Privacy</a><a href="/terms/">Terms</a></nav>
+  <div class="foot-brand"><a class="brand" href="/"><svg viewBox="0 0 900 755" aria-hidden="true"><use href="#quo-mark"/></svg>Quo</a><p>Private AI that works offline.</p></div>
+  <nav aria-label="Product"><h3>Get Quo</h3><a data-link="webapp" href="https://app.quo.computer/">Web</a><a href="/#desktop">Desktop</a><a href="/#phones">iPhone and Android</a></nav>
+  <nav aria-label="Open source"><h3>Open source</h3><a data-link="github" href="https://github.com/quo-ai/quo">GitHub</a><a data-link="releases" href="https://github.com/quo-ai/quo/releases/latest">Releases</a><a href="https://github.com/quo-ai/quo/blob/master/CHANGELOG.md">Changelog</a><a href="/brand/">Brand assets</a><a data-link="x" href="/#" hidden>X</a></nav>
+  <nav aria-label="Company"><h3>Company</h3><a href="/pricing/">Pricing</a><a href="/support/">Support</a><a href="/privacy/">Privacy</a><a href="/terms/">Terms</a><a href="/refunds/">Refunds</a></nav>
+  <div class="foot-look"><h3>Appearance</h3><div class="seg" role="radiogroup" aria-label="Appearance"><button type="button" role="radio" data-look="auto" aria-checked="true">Auto</button><button type="button" role="radio" data-look="light" aria-checked="false">Light</button><button type="button" role="radio" data-look="dark" aria-checked="false">Dark</button></div></div>
   <p class="copyright">© 2026 Astra Labs Ltd. Quo is open-source, on-device AI. Code licensed under Apache 2.0.</p>
 </div></footer>
 </body>

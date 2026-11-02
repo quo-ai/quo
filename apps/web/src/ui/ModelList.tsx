@@ -71,20 +71,20 @@ function ModelCard({ model, state, active, recommended, fitNote, onUse }: {
       {busy && (
         <>
           <div className="progress" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label={`${model.name} download`}>
-            <div className="progress-fill" style={{ width: `${pct}%` }} />
+            <div className="progress-fill working" style={{ width: `${pct}%` }} />
           </div>
           <p className="model-meta muted">
-            {status === 'waiting' ? `Waiting for connection · ${pct}%`
+            {status === 'waiting' ? `Waiting for connection, ${pct}%`
               : status === 'verifying' ? 'Checking file…'
                 : status === 'moving' ? 'Saving to your folder…'
-                  : `${formatBytes(state?.loaded ?? 0)} of ${formatBytes(total)} · ${pct}%`}
+                  : `${formatBytes(state?.loaded ?? 0)} of ${formatBytes(total)} (${pct}%)`}
           </p>
         </>
       )}
 
       <div className="model-actions">
         {status === 'installed' && !active && (
-          <button className="btn btn-primary press" onClick={onUse}>Use this model</button>
+          <button className="btn btn-glass press" onClick={onUse}>Use this model</button>
         )}
         {(status === 'installed' || (model.source && status !== 'downloading' && status !== 'waiting' && status !== 'verifying')) && (
           <button
@@ -97,10 +97,10 @@ function ModelCard({ model, state, active, recommended, fitNote, onUse }: {
           </button>
         )}
         {(status === 'idle' || status === 'error') && (
-          <button className="btn btn-primary press" onClick={() => void startDownload(model)}><Download size={16} /> Download</button>
+          <button className="btn btn-glass press" onClick={() => void startDownload(model)}><Download size={16} /> Download</button>
         )}
         {status === 'partial' && (
-          <button className="btn btn-primary press" onClick={() => void startDownload(model)}><Play size={15} /> Resume · {pct}%</button>
+          <button className="btn btn-glass press" onClick={() => void startDownload(model)}><Play size={15} /> Resume at {pct}%</button>
         )}
         {(status === 'downloading' || status === 'waiting') && (
           <button className="btn btn-soft press" onClick={() => cancelDownload(model.id)}><Pause size={15} /> Pause</button>

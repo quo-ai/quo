@@ -35,7 +35,7 @@ export function PlanUsageDetails({ usage }: { usage: SavedUsage }) {
             <div className="ctx-bar" aria-hidden="true">
               <span className={`conv ${levelOf(window.used)}`} style={{ width: gone ? '0%' : `${window.used}%` }} />
             </div>
-            <p className="ctx-sub">{gone ? 'Has reset since the last reply' : `${window.used}% used${window.resetsAt ? ` · ${resetsText(window.resetsAt, now)}` : ''}`}</p>
+            <p className="ctx-sub">{gone ? 'Has reset since the last reply' : `${window.used}% used${window.resetsAt ? `, ${resetsText(window.resetsAt, now)}` : ''}`}</p>
           </div>
         );
       })}

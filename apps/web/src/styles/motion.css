@@ -1,0 +1,58 @@
+/* Motion. Parts of the interface that appear (menus, notes, the file panel) fade in and rise 6px. What the model makes,
+   and its work in progress, dissolve through the dither instead (dither.css). All of it stops for reduced motion and
+   on e-ink (base.css). */
+
+.summary-note, .sources, .undo-chip, .ctx-pop, .menu-up, .mention-list, .cmd-list, .jump, .filepanel, .fp-viewer {
+  animation: rise var(--d-medium) var(--e-out) both;
+}
+
+/* Terminal output: the code ground, plain. */
+.step-pre.output { background: var(--code-bg); color: var(--code-ink); border: var(--bw) solid var(--rule); }
+
+/* Code in replies: a header with the language and a copy button. */
+.code { margin: 14px 0; border-radius: var(--r-card); overflow: hidden; background: var(--code-bg); border: var(--bw) solid var(--rule); }
+.code-head { display: flex; align-items: center; justify-content: space-between; padding: 5px 6px 5px 14px; color: var(--ink-3); font: var(--w-strong) 0.75rem/1 var(--mono); border-bottom: var(--bw) solid var(--rule); }
+.code-copy { display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 9px; border: 0; border-radius: var(--r-inner); background: transparent; color: inherit; font: inherit; cursor: pointer; }
+.code-copy:hover { background: var(--sheet-2); color: var(--ink); }
+.md .code pre { margin: 0; border-radius: 0; background: transparent; }
+
+/* Commands, and the jump to the latest reply. */
+.cmd-list { pointer-events: auto; margin: 0 0 8px; padding: 6px; border-radius: var(--r-card); display: grid; gap: 1px; max-height: 300px; overflow-y: auto; }
+.cmd { display: flex; align-items: baseline; gap: 10px; padding: 8px 10px; border: 0; border-radius: var(--r-inner); background: transparent; font: 500 0.875rem/1.3 var(--font); text-align: left; color: var(--ink); cursor: pointer; }
+.cmd.on { background: var(--indigo-wash); }
+.cmd-name { flex: none; min-width: 84px; font: var(--w-strong) 0.8125rem/1.3 var(--mono); color: var(--indigo); }
+.cmd-hint { color: var(--ink-3); font-size: 0.8125rem; }
+.jump { position: absolute; left: 50%; bottom: 168px; z-index: 5; margin-left: -48px; display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 14px; border-radius: var(--r-pill); font: var(--w-strong) 0.8125rem/1 var(--font); color: var(--ink); cursor: pointer; }
+
+/* Steps: counts as badges, and a fold for the older ones. */
+.diffstat { flex: none; display: inline-flex; gap: 6px; font: var(--w-strong) 0.75rem/1 var(--mono); }
+.diffstat .add { color: var(--add); }
+.diffstat .del { color: var(--danger); }
+.step-fold summary { display: flex; align-items: center; gap: 6px; padding: 4px 6px; border-radius: var(--r-inner); color: var(--ink-3); font-size: 0.8125rem; cursor: pointer; list-style: none; }
+.step-fold summary::-webkit-details-marker { display: none; }
+.step-fold summary:hover { background: var(--sheet-2); }
+.step-fold details[open] .step-chev-start { transform: rotate(90deg); }
+.step-chev-start { transition: transform var(--d-short) var(--e-out); }
+.step-fold .steps { margin: 2px 0 4px 12px; padding-left: 8px; border-left: 2px solid var(--rule); }
+
+/* An empty chat: the greeting and the starters arrive one after another. */
+.hello h1, .hello > p, .hello .suggestion { animation: rise var(--d-medium) var(--e-out) both; }
+.hello > p { animation-delay: 60ms; }
+.hello .suggestion { animation-delay: calc(120ms + var(--i, 0) * 60ms); }
+
+/* What it is doing when nothing else says: a label with an ellipsis that fills in four steps. */
+@keyframes ellipsis { from { width: 0; } to { width: 1.15em; } }
+.typing-label { color: var(--ink-3); font-size: 0.875rem; }
+.typing-label:not(:empty)::after { content: '...'; display: inline-block; width: 1.15em; overflow: hidden; vertical-align: bottom; animation: ellipsis 1.2s steps(4) infinite; }
+
+/* How long a step has been running, once it is more than a few seconds. */
+.step-time { margin-left: 8px; font-size: 0.75rem; font-variant-numeric: tabular-nums; color: var(--ink-3); }
+
+/* A plan: what is done, what is being worked on, what is left. */
+.step-plan { list-style: none; margin: 6px 0 4px 26px; padding: 0; display: grid; gap: 3px; font-size: 0.875rem; }
+.step-plan li { display: flex; align-items: center; gap: 8px; color: var(--ink-2); }
+.step-plan li svg { flex: none; }
+.step-plan .completed { color: var(--ink-3); }
+.step-plan .completed svg { color: var(--indigo); }
+.step-plan .completed span { text-decoration: line-through; text-decoration-color: var(--ink-3); }
+.step-plan .in_progress { color: var(--ink); font-weight: var(--w-strong); }

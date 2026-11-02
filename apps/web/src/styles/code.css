@@ -1,22 +1,22 @@
 /* Code mode: what the agent did, listed inside the reply */
-.steps { list-style: none; margin: 0 0 10px; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 2px; font-size: 13.5px; }
+.steps { list-style: none; margin: 0 0 10px; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 2px; font-size: var(--t-small); }
 .step { min-width: 0; }
-.step summary, .step-row { display: flex; align-items: center; gap: 8px; padding: 4px 6px; border-radius: 10px; color: var(--text-2); cursor: default; }
+.step summary, .step-row { display: flex; align-items: center; gap: 8px; padding: 4px 6px; border-radius: var(--r-inner); color: var(--ink-2); cursor: default; }
 .step summary { cursor: pointer; list-style: none; }
 .step summary::-webkit-details-marker { display: none; }
-.step summary:hover { background: var(--accent-soft); }
-.step svg { flex: none; color: var(--text-3); }
+.step summary:hover { background: var(--sheet-2); }
+.step svg { flex: none; color: var(--ink-3); }
 .step-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.step-chev { margin-left: auto; transition: transform var(--t-quick) var(--ease); }
+.step-chev { margin-left: auto; transition: transform var(--d-short) var(--e-out); }
 .step details[open] .step-chev { transform: rotate(90deg); }
 .step.running svg { color: var(--indigo); }
-.step.failed svg { color: var(--error); }
-.step.declined .step-title, .step.stopped .step-title { color: var(--text-3); }
-.step-text { margin: 4px 6px 4px 28px; color: var(--text-3); }
-.step-pre { margin: 4px 0 6px 28px; padding: 10px 12px; max-height: 280px; overflow: auto; border-radius: 12px; font: 12.5px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre; color: var(--ink); background: var(--fill); }
-.step-pre .add { color: var(--success); background: rgba(23, 119, 63, 0.1); }
-.step-pre .del { color: var(--error); background: rgba(196, 36, 63, 0.08); }
+.step.failed svg { color: var(--danger); }
+.step.declined .step-title, .step.stopped .step-title { color: var(--ink-3); }
+.step-text { margin: 4px 6px 4px 28px; color: var(--ink-3); }
+.step-pre { margin: 4px 0 6px 28px; padding: 10px 12px; max-height: 280px; overflow: auto; border-radius: var(--r-card); font: var(--t-meta)/1.5 var(--mono); white-space: pre; color: var(--ink); background: var(--sheet-2); }
+.step-pre .add { color: var(--add); background: var(--diff-add-bg); }
+.step-pre .del { color: var(--danger); background: var(--diff-del-bg); }
 .undo-chip { margin: 0 0 10px 6px; }
 
-.menu-note { margin: 4px 14px 10px; font-size: 12.5px; color: var(--text-3); max-width: 28ch; }
-.chip.empty { color: var(--text-3); }
+.menu-note { margin: 4px 14px 10px; font-size: var(--t-meta); color: var(--ink-3); max-width: 28ch; }
+.chip.empty { color: var(--ink-3); }

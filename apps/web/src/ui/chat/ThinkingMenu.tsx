@@ -40,7 +40,7 @@ export function ThinkingMenu({ levels, value, onChange, disabled, local = false,
   return (
     <div className="ctx" ref={wrap}>
       <button type="button" className="chip press" aria-haspopup="menu" aria-expanded={open} disabled={disabled} onClick={() => setOpen(o => !o)} title={`Thinking: ${hintFor(value)}`}>
-        <Brain size={14} /> <span className="chip-name">{local ? (value === 'off' ? 'Think' : 'Thinking') : `Thinking · ${label(value)}`}</span> <ChevronDown size={13} />
+        <Brain size={14} /> <span className="chip-name">{local ? (value === 'off' ? 'Think' : 'Thinking') : <><span className="chip-prefix">Thinking: </span>{label(value)}</>}</span> <ChevronDown size={13} />
       </button>
       {open && (
         <div className="menu-up glass thick" role="menu">

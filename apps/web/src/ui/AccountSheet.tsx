@@ -198,7 +198,7 @@ function SignedIn({ account, onClose }: { account: Account; onClose: () => void 
       {account.sync && !pro && (
         <div className="plan-card current">
           <div className="plan-head"><Check size={18} /> <strong>Quo Sync</strong></div>
-          <p>Your chats stay in step on all your devices, end-to-end encrypted{account.subscription?.renewsAt ? ` · renews ${new Date(account.subscription.renewsAt).toLocaleDateString()}` : ''}.</p>
+          <p>Your chats stay in step on all your devices, end-to-end encrypted.{account.subscription?.renewsAt ? ` Renews on ${new Date(account.subscription.renewsAt).toLocaleDateString()}.` : ''}</p>
           <button className="btn btn-soft press" disabled={busy === 'portal'} onClick={() => void manage()}>Manage subscription</button>
         </div>
       )}
@@ -206,7 +206,7 @@ function SignedIn({ account, onClose }: { account: Account; onClose: () => void 
       {pro ? (
         <div className="plan-card current">
           <div className="plan-head"><Crown size={18} /> <strong>Quo Pro</strong></div>
-          <p>1,000 credits every month for every cloud model{account.subscription?.renewsAt ? ` · renews ${new Date(account.subscription.renewsAt).toLocaleDateString()}` : ''}.</p>
+          <p>1,000 credits every month for every cloud model.{account.subscription?.renewsAt ? ` Renews on ${new Date(account.subscription.renewsAt).toLocaleDateString()}.` : ''}</p>
           <button className="btn btn-soft press" disabled={busy === 'portal'} onClick={() => void manage()}>Manage subscription</button>
         </div>
       ) : (
@@ -248,7 +248,7 @@ function SignedIn({ account, onClose }: { account: Account; onClose: () => void 
             <>
               <p className="note">This deletes your account for good: your synced chats and memories in the cloud, your credits and your plan records. Chats on your devices stay. If you have a plan, cancel it first.</p>
               <div className="plan-actions">
-                <button className="btn btn-primary press" style={{ background: 'var(--error)' }} disabled={busy === 'delete'} onClick={() => void removeAccount()}>{busy === 'delete' ? 'Deleting…' : 'Yes, delete my account'}</button>
+                <button className="btn btn-danger press" disabled={busy === 'delete'} onClick={() => void removeAccount()}>{busy === 'delete' ? 'Deleting…' : 'Yes, delete my account'}</button>
                 <button className="btn btn-ghost press" disabled={busy === 'delete'} onClick={() => setConfirmDelete(false)}>Cancel</button>
               </div>
             </>

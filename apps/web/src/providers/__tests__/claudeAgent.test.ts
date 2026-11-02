@@ -109,7 +109,7 @@ describe('Claude Agent', () => {
     const opus = claudeThinking(OPUS_55);
     expect(opus.levels).toEqual(['low', 'medium', 'high', 'xhigh', 'max']);
     expect(opus.start).toBe('medium');
-    expect(opus.hints.medium).toBe('A balance of speed and depth · Claude Code’s default for this model');
+    expect(opus.hints.medium).toBe('A balance of speed and depth. Claude Code’s default for this model.');
     expect(opus.hints.max).toMatch(/uses up a plan fast/);
     // Opus 4.6 can stop thinking and has no extra high.
     expect(claudeThinking({ efforts: ['low', 'medium', 'high', 'max'], default: 'high', off: true })).toMatchObject({ levels: ['off', 'low', 'medium', 'high', 'max'], start: 'high' });

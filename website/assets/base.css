@@ -1,0 +1,165 @@
+/* The website's base: the apps' type scale, spacing, shape and motion (apps/web/src/styles); colours come from
+   tokens.css, which apps/web writes (`npm run tokens`). One family, Atkinson Hyperlegible Next, chosen for reading in any light (glare, a dark room, a small
+   phone, low vision), with its Mono for code and figures. Sizes are rem, so they follow the person's text size. */
+@font-face { font-family: "Atkinson Hyperlegible Next"; src: url("/assets/fonts/AtkinsonHyperlegibleNext.ttf") format("truetype"); font-weight: 200 800; font-style: normal; font-display: swap; }
+@font-face { font-family: "Atkinson Hyperlegible Next"; src: url("/assets/fonts/AtkinsonHyperlegibleNext-Italic.ttf") format("truetype"); font-weight: 200 800; font-style: italic; font-display: swap; }
+@font-face { font-family: "Atkinson Hyperlegible Mono"; src: url("/assets/fonts/AtkinsonHyperlegibleMono.ttf") format("truetype"); font-weight: 200 800; font-style: normal; font-display: swap; }
+
+:root {
+  --font: "Atkinson Hyperlegible Next", ui-sans-serif, system-ui, sans-serif;
+  --mono: "Atkinson Hyperlegible Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* Type. App sizes step by about 1.2; display sizes are fluid and appear only in Quo's own moments. */
+  --t-meta: 0.8125rem;   /* 13: timestamps, counts, helper text */
+  --t-small: 0.875rem;   /* 14: secondary lines, chips, menus */
+  --t-body: 1rem;        /* 16: interface text, phone answers */
+  --t-read: 1.0625rem;   /* 17: answers where there is room */
+  --t-lead: 1.25rem;     /* 20: sheet titles, the lede */
+  --t-title: 1.5rem;     /* 24: screen titles */
+  --t-head: 2rem;        /* 32: section heads in documents */
+  --t-display: clamp(2.5rem, 1.5rem + 3.4vw, 4.25rem);
+  --t-hero: clamp(3rem, 1rem + 7.2vw, 7.5rem);
+  --lh-tight: 1.04; --lh-snug: 1.28; --lh-body: 1.55;
+  --track-tight: -0.022em; --track-display: -0.035em;
+
+  /* Space: a 4px step. */
+  --s-1: 0.25rem; --s-2: 0.5rem; --s-3: 0.75rem; --s-4: 1rem; --s-5: 1.25rem; --s-6: 1.5rem; --s-8: 2rem;
+  --s-10: 2.5rem; --s-12: 3rem; --s-16: 4rem; --s-20: 5rem; --s-24: 6rem;
+
+  /* Shape: one radius per nesting level. Controls are pills, surfaces are soft rectangles. */
+  --r-pill: 999px; --r-surface: 1.375rem; --r-card: 0.875rem; --r-inner: 0.5rem;
+
+  /* Motion: state, never decoration. Two curves: things settle (out), things pulse (inout). */
+  --d-micro: 120ms; --d-short: 200ms; --d-medium: 320ms; --d-long: 560ms;
+  --e-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --e-inout: cubic-bezier(0.65, 0, 0.35, 1);
+
+  /* Size of things you touch: 40px drawn, 44px hit area; 48px on touch screens. */
+  --control: 2.5rem; --hit: 2.75rem;
+  --measure: 68ch;
+}
+@media (pointer: coarse) { :root { --control: 2.75rem; --hit: 3rem; } }
+
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { overflow-x: clip; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font: var(--w-body) var(--t-body) / var(--lh-body) var(--font);
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+h1, h2, h3, h4 { margin: 0; font-weight: var(--w-head); letter-spacing: var(--track-tight); line-height: var(--lh-snug); text-wrap: balance; overflow-wrap: break-word; min-width: 0; }
+p { margin: 0; text-wrap: pretty; }
+b, strong { font-weight: var(--w-strong); }
+a { color: var(--indigo); text-decoration-thickness: 1px; text-underline-offset: 0.18em; }
+a:hover { text-decoration-thickness: 2px; }
+code, kbd, samp, pre { font-family: var(--mono); font-size: 0.92em; }
+button, input, textarea, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+img, svg { display: block; max-width: 100%; }
+::selection { background: var(--indigo-wash); color: var(--ink); }
+:root { accent-color: var(--indigo); caret-color: var(--indigo); scrollbar-color: var(--rule-strong) transparent; }
+
+/* Focus: instant, never animated, the same ring everywhere. */
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+:focus:not(:focus-visible) { outline: none; }
+
+/* Icons: the sprite at the top of each page; stroke follows the environment (heavier in High contrast). */
+.i { width: 1.25rem; height: 1.25rem; flex: none; fill: none; stroke: currentColor; stroke-width: var(--stroke); stroke-linecap: round; stroke-linejoin: round; }
+.i-s { width: 1rem; height: 1rem; }
+.i-l { width: 1.5rem; height: 1.5rem; }
+
+.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.num { font-variant-numeric: tabular-nums; }
+.vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+@keyframes pulse { 50% { opacity: 0.3; transform: scale(0.75); } }
+
+/* Motion off: for people who ask, and on e-ink, where every frame is a flash. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 1ms !important; animation-iteration-count: 1 !important; transition-duration: 1ms !important; scroll-behavior: auto !important; }
+}
+:root[data-env="eink"] *, :root[data-env="eink"] *::before, :root[data-env="eink"] *::after { animation: none !important; transition: none !important; }
+
+/* Forced colours (Windows contrast themes): system colours take over; edges carry what fills used to. */
+@media (forced-colors: active) {
+  :root { --shadow: none; }
+  .i { stroke: CanvasText; }
+}
+
+/* ---------- Controls (as in the apps) ---------- */
+/* ---------- Buttons ---------- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--s-2);
+  min-height: var(--control); padding: 0 1.125rem; border-radius: var(--r-pill);
+  border: var(--bw) solid transparent; background: transparent; color: var(--ink);
+  font-weight: var(--w-strong); font-size: var(--t-body); line-height: 1; white-space: nowrap; text-decoration: none;
+  transition: background-color var(--d-micro) var(--e-out), border-color var(--d-micro) var(--e-out), color var(--d-micro) var(--e-out), transform var(--d-micro) var(--e-out);
+  -webkit-tap-highlight-color: transparent;
+}
+.btn:active:not(:disabled) { transform: translateY(1px) scale(0.985); }
+.btn:disabled, .btn[aria-disabled="true"] { cursor: default; }
+.btn.solid { background: var(--indigo-fill); color: var(--on-indigo); }
+.btn.solid:hover:not(:disabled) { background: color-mix(in oklab, var(--indigo-fill) 86%, var(--ink)); }
+.btn.solid:disabled { background: var(--sheet-2); color: var(--ink-off); }
+.btn.line { border-color: var(--rule-strong); }
+.btn.line:hover:not(:disabled), .btn.quiet:hover:not(:disabled) { background: var(--sheet-2); }
+.btn.line:disabled, .btn.quiet:disabled { color: var(--ink-off); border-color: var(--rule); }
+.btn.quiet { color: var(--ink-2); padding: 0 0.875rem; }
+.btn.danger { border-color: var(--danger); color: var(--danger); }
+.btn.danger:hover:not(:disabled) { background: var(--danger-wash); }
+.btn.on-field { background: var(--on-field); color: var(--field); }
+.btn.on-field.line { background: transparent; color: var(--on-field); border-color: var(--field-2); }
+.btn.big { min-height: 3.25rem; padding: 0 1.5rem; font-size: var(--t-lead); }
+.btn.small { min-height: 2rem; padding: 0 0.75rem; font-size: var(--t-small); }
+.btn[aria-busy="true"] { cursor: progress; }
+.btn .i { width: 1.125rem; height: 1.125rem; }
+
+.icon-btn {
+  display: inline-grid; place-items: center; width: var(--control); height: var(--control); padding: 0;
+  border: 0; border-radius: var(--r-pill); background: transparent; color: var(--ink-2);
+  transition: background-color var(--d-micro) var(--e-out), color var(--d-micro) var(--e-out), transform var(--d-micro) var(--e-out);
+}
+.icon-btn:hover:not(:disabled) { background: var(--sheet-2); color: var(--ink); }
+.icon-btn:active:not(:disabled) { transform: scale(0.94); }
+.icon-btn:disabled { color: var(--ink-off); cursor: default; }
+.icon-btn[aria-pressed="true"] { background: var(--indigo-wash); color: var(--indigo); }
+
+/* ---------- Chips, segmented, switch ---------- */
+.chip {
+  display: inline-flex; align-items: center; gap: var(--s-2); min-height: 2rem; padding: 0 0.75rem;
+  border: var(--bw) solid var(--rule); border-radius: var(--r-pill); background: var(--sheet); color: var(--ink-2);
+  font-size: var(--t-small); font-weight: var(--w-strong); white-space: nowrap;
+  transition: background-color var(--d-micro) var(--e-out), border-color var(--d-micro) var(--e-out), color var(--d-micro) var(--e-out);
+}
+.chip:hover { border-color: var(--rule-strong); color: var(--ink); }
+.chip[aria-pressed="true"], .chip[aria-checked="true"] { background: var(--indigo-wash); border-color: transparent; color: var(--indigo); }
+.chip .i { width: 1rem; height: 1rem; }
+
+.seg { display: inline-flex; padding: var(--s-1); gap: 2px; border-radius: var(--r-pill); background: var(--sheet-2); border: var(--bw) solid transparent; max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+.seg button {
+  display: inline-flex; align-items: center; gap: 0.4rem; min-height: 2rem; padding: 0 0.85rem; border: 0; border-radius: var(--r-pill);
+  background: transparent; color: var(--ink-2); font-size: var(--t-small); font-weight: var(--w-strong); white-space: nowrap;
+  transition: background-color var(--d-micro) var(--e-out), color var(--d-micro) var(--e-out);
+}
+.seg button:hover { color: var(--ink); }
+.seg button[aria-checked="true"] { background: var(--sheet); color: var(--ink); box-shadow: 0 0 0 var(--bw) var(--rule); }
+:root[data-env="contrast"] .seg, :root[data-env="eink"] .seg { border-color: var(--rule-strong); }
+
+/* ---------- Badges and where-it-runs ---------- */
+.badge { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.125rem 0.5rem; border-radius: var(--r-pill); font-size: var(--t-meta); font-weight: var(--w-strong); background: var(--sheet-2); color: var(--ink-2); white-space: nowrap; }
+.badge.device { background: var(--indigo-wash); color: var(--indigo); }
+.badge.cloud { background: var(--sky-wash); color: var(--sky); }
+.badge.caution { background: var(--caution-wash); color: var(--caution); }
+.badge.danger { background: var(--danger-wash); color: var(--danger); }
+.badge .i { width: 0.875rem; height: 0.875rem; }
+
+@media (forced-colors: active) {
+  .btn, .chip, .seg, .switch, .card, .sheet, .menu, .notice, .toast, .badge { border: 1px solid CanvasText; }
+  .btn.solid, .send, .switch[aria-checked="true"] { background: Highlight; color: HighlightText; forced-color-adjust: none; }
+}

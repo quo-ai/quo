@@ -1,91 +1,91 @@
-/* The approval window: Quo's own look (the app's tokens, copied: this window can't load the page's styles). */
+/* The approval window: Quo's own look. Its colours are copied from the web app's Light and Dark appearances
+   (apps/web/src/styles/appearances.ts), because this window can't load the page's styles. It follows Electron's mode;
+   its content policy allows no fonts, so it uses the system's. */
 :root {
-  --indigo: #3b2eff;
-  --ink: #0e0e1a;
-  --text-2: #4c4c62;
-  --text-3: #75758a;
-  --hairline: rgba(14, 14, 40, 0.1);
-  --card: #ffffff;
-  --soft: rgba(14, 14, 40, 0.045);
-  --add-bg: rgba(18, 140, 70, 0.12);
-  --add: #0c6b36;
-  --del-bg: rgba(196, 36, 63, 0.1);
-  --del: #a3182f;
-  --code-bg: #12121f;
-  --code: #e9e9ff;
-  --warn: #9a5b00;
-  --accent-ink: #3b2eff;
   color-scheme: light dark;
-  --dither-1: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='8'%20height='8'%20shape-rendering='crispEdges'%3E%3Cpath%20d='M0%200h2v2h-2zM4%204h2v2h-2z'/%3E%3C/svg%3E");
-  --dither-2: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='8'%20height='8'%20shape-rendering='crispEdges'%3E%3Cpath%20d='M0%200h2v2h-2zM4%200h2v2h-2zM2%202h2v2h-2zM0%204h2v2h-2zM4%204h2v2h-2z'/%3E%3C/svg%3E");
-  --dither-3: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='8'%20height='8'%20shape-rendering='crispEdges'%3E%3Cpath%20d='M0%200h2v2h-2zM4%200h2v2h-2zM2%202h2v2h-2zM6%202h2v2h-2zM0%204h2v2h-2zM4%204h2v2h-2zM2%206h2v2h-2zM6%206h2v2h-2z'/%3E%3C/svg%3E");
-  --dither-4: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='8'%20height='8'%20shape-rendering='crispEdges'%3E%3Cpath%20d='M0%200h8v2h-8zM2%202h2v2h-2zM6%202h2v2h-2zM0%204h2v2h-2zM4%204h4v2h-4zM2%206h2v2h-2zM6%206h2v2h-2z'/%3E%3C/svg%3E");
-  --dither-5: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='8'%20height='8'%20shape-rendering='crispEdges'%3E%3Cpath%20d='M0%200h8v2h-8zM0%202h4v2h-4zM6%202h2v2h-2zM0%204h8v2h-8zM2%206h6v2h-6z'/%3E%3C/svg%3E");
+  --ink: #131522;
+  --text-2: #494c5a;
+  --text-3: #616470;
+  --hairline: #dddfe8;
+  --edge: #7c808d;
+  --card: #fefeff;
+  --soft: #eaecf3;
+  --soft-hover: #dddfe8;
+  --code-bg: #f3f4f9;
+  --code: #1c1e2b;
+  --add: #137738;
+  --del: #be222d;
+  --warn: #955816;
+  --indigo: #3b2eff;
+  --fill: #3b2eff;
+  --on-fill: #fdfdff;
+  --accent-ink: #3b2eff;
+  --wash: #e5eaff;
+  --shadow: 0 1px 1px rgb(20 18 60 / 0.05), 0 18px 44px -18px rgb(20 18 60 / 0.35);
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --ink: #ededf0;
-    --text-2: #b4b4bd;
-    --text-3: #94949f;
-    --hairline: rgba(255, 255, 255, 0.12);
-    --card: #18181b;
-    --soft: rgba(255, 255, 255, 0.06);
-    --add-bg: rgba(60, 200, 120, 0.14);
-    --add: #6fe0a0;
-    --del-bg: rgba(255, 90, 110, 0.14);
-    --del: #ff93a1;
-    --code-bg: #0b0b0d;
-    --warn: #ffb454;
-    --accent-ink: #a49dff;
+    --ink: #ebedf2;
+    --text-2: #babdc7;
+    --text-3: #989ba6;
+    --hairline: #2a2c36;
+    --edge: #686b79;
+    --card: #151720;
+    --soft: #20222d;
+    --soft-hover: #2a2c36;
+    --code-bg: #07080d;
+    --code: #dbdee5;
+    --add: #75d291;
+    --del: #f68482;
+    --warn: #ebb761;
+    --indigo: #9ea4ff;
+    --fill: #444df6;
+    --on-fill: #fdfdff;
+    --accent-ink: #9ea4ff;
+    --wash: #202446;
+    --shadow: 0 0 0 1px #2a2c36;
   }
 }
 * { box-sizing: border-box; }
-html, body { margin: 0; background: transparent; overflow: hidden; font: 14px/1.45 system-ui, -apple-system, 'Segoe UI', Inter, Roboto, sans-serif; color: var(--ink); -webkit-font-smoothing: antialiased; user-select: text; }
+html, body { margin: 0; background: transparent; overflow: hidden; font: 14px/1.5 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; color: var(--ink); -webkit-font-smoothing: antialiased; user-select: text; }
 body { padding: 14px 18px 26px; }
-#card { display: flex; flex-direction: column; max-height: calc(100vh - 40px); background: var(--card); border-radius: 22px; border: 0.5px solid var(--hairline); box-shadow: 0 0 0 0.5px rgba(14, 14, 60, 0.08), 0 18px 50px -12px rgba(30, 20, 120, 0.38), 0 40px 90px -40px rgba(30, 20, 120, 0.3); overflow: hidden; -webkit-mask-size: 8px 8px; animation: dissolve 0.42s step-end both; }
-/* Appears the way everything in Quo does: dissolving in through an ordered dither, in five steps. */
-@keyframes dissolve {
-  0%   { -webkit-mask-image: var(--dither-1); }
-  20%  { -webkit-mask-image: var(--dither-2); }
-  40%  { -webkit-mask-image: var(--dither-3); }
-  60%  { -webkit-mask-image: var(--dither-4); }
-  80%  { -webkit-mask-image: var(--dither-5); }
-  100% { -webkit-mask-image: none; }
-}
+#card { display: flex; flex-direction: column; max-height: calc(100vh - 40px); background: var(--card); border-radius: 22px; border: 1px solid var(--hairline); box-shadow: var(--shadow); overflow: hidden; animation: arrive 0.24s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+@keyframes arrive { from { opacity: 0; transform: translateY(6px); } }
 @media (prefers-reduced-motion: reduce) { #card { animation: none; } }
 
 .head { display: flex; gap: 12px; align-items: center; padding: 18px 20px 12px; }
-.icon { flex: none; width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; background: linear-gradient(145deg, #5a4dff, #3b2eff); color: #fff; }
+.icon { flex: none; width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; background: var(--wash); color: var(--indigo); }
 .icon svg { width: 20px; height: 20px; }
 .titles { min-width: 0; }
-h1 { margin: 0; font-size: 16.5px; font-weight: 650; letter-spacing: -0.01em; overflow-wrap: anywhere; }
+h1 { margin: 0; font-size: 16.5px; font-weight: 700; letter-spacing: -0.01em; overflow-wrap: anywhere; }
 .sub { margin: 1px 0 0; font-size: 12.5px; color: var(--text-3); overflow-wrap: anywhere; }
 .body { padding: 2px 20px 6px; overflow: auto; min-height: 0; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 10px; }
 .chip { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 999px; background: var(--soft); font-size: 12px; color: var(--text-2); font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; max-width: 100%; overflow-wrap: anywhere; }
-.chip.add { background: var(--add-bg); color: var(--add); }
-.chip.del { background: var(--del-bg); color: var(--del); }
+.chip.add { background: color-mix(in oklab, var(--add) 14%, transparent); color: var(--add); }
+.chip.del { background: color-mix(in oklab, var(--del) 12%, transparent); color: var(--del); }
 .chip.warn { color: var(--warn); }
-pre { margin: 0 0 10px; padding: 11px 13px; border-radius: 14px; background: var(--code-bg); color: var(--code); font: 12.5px/1.5 ui-monospace, 'SF Mono', Menlo, Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 280px; overflow: auto; }
+pre { margin: 0 0 10px; padding: 11px 13px; border-radius: 12px; background: var(--code-bg); border: 1px solid var(--hairline); color: var(--code); font: 12.5px/1.5 ui-monospace, 'SF Mono', Menlo, Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 280px; overflow: auto; }
 pre.diff { padding: 8px 0; white-space: pre; overflow-wrap: normal; }
 pre.diff .line { display: block; padding: 0 13px; min-height: 1.5em; }
-pre.diff .add { background: rgba(60, 200, 120, 0.16); color: #9af0c0; }
-pre.diff .del { background: rgba(255, 90, 110, 0.16); color: #ffb0bb; }
-pre.diff .hunk { color: #8d8dd0; }
-pre.cmd .prompt { color: #8f87ff; user-select: none; }
-.files { margin: 0 0 10px; padding: 0; list-style: none; border-radius: 14px; background: var(--soft); max-height: 150px; overflow: auto; }
-.files li { padding: 5px 12px; font: 12.5px ui-monospace, 'SF Mono', Menlo, Consolas, monospace; overflow-wrap: anywhere; border-bottom: 0.5px solid var(--hairline); }
+pre.diff .add { background: color-mix(in oklab, var(--add) 14%, transparent); color: var(--add); }
+pre.diff .del { background: color-mix(in oklab, var(--del) 12%, transparent); color: var(--del); }
+pre.diff .hunk { color: var(--text-3); }
+pre.cmd .prompt { color: var(--indigo); user-select: none; }
+.files { margin: 0 0 10px; padding: 0; list-style: none; border-radius: 12px; background: var(--soft); max-height: 150px; overflow: auto; }
+.files li { padding: 5px 12px; font: 12.5px ui-monospace, 'SF Mono', Menlo, Consolas, monospace; overflow-wrap: anywhere; border-bottom: 1px solid var(--hairline); }
 .files li:last-child { border-bottom: 0; }
-.message { margin: 0 0 10px; padding: 11px 13px; border-radius: 14px; background: var(--soft); font: 13px/1.5 ui-monospace, 'SF Mono', Menlo, Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 190px; overflow: auto; }
+.message { margin: 0 0 10px; padding: 11px 13px; border-radius: 12px; background: var(--soft); font: 13px/1.5 ui-monospace, 'SF Mono', Menlo, Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 190px; overflow: auto; }
 .message .credit { color: var(--accent-ink); font-weight: 600; }
 .note { margin: 0 0 10px; font-size: 12.5px; color: var(--text-3); }
-.foot { display: flex; align-items: center; gap: 8px; padding: 12px 16px 16px; border-top: 0.5px solid var(--hairline); }
+.foot { display: flex; align-items: center; gap: 8px; padding: 12px 16px 16px; border-top: 1px solid var(--hairline); }
 .hint { margin-right: auto; font-size: 11.5px; color: var(--text-3); padding-left: 4px; white-space: nowrap; }
-button { white-space: nowrap; font: inherit; font-weight: 600; font-size: 13.5px; border: 0; border-radius: 12px; padding: 9px 15px; cursor: pointer; color: var(--ink); background: var(--soft); transition: transform 120ms, background 120ms; }
-button:hover { background: rgba(14, 14, 40, 0.09); }
-button:active { transform: scale(0.97); }
-button.primary { color: #fff; background: linear-gradient(145deg, #5a4dff, #3b2eff); box-shadow: 0 6px 16px -6px rgba(59, 46, 255, 0.6); }
-button.primary:hover { filter: brightness(1.06); }
+/* Buttons: an edge for the choices, the one solid indigo for the action asked about. */
+button { white-space: nowrap; font: inherit; font-weight: 650; font-size: 13.5px; border: 1px solid var(--edge); border-radius: 999px; padding: 8px 16px; cursor: pointer; color: var(--ink); background: transparent; transition: transform 120ms, background-color 120ms; }
+button:hover { background: var(--soft); }
+button:active { transform: translateY(1px) scale(0.985); }
+button.primary { color: var(--on-fill); background: var(--fill); border-color: var(--fill); }
+button.primary:hover { background: color-mix(in oklab, var(--fill) 86%, var(--ink)); }
 button:focus-visible { outline: 2px solid var(--indigo); outline-offset: 2px; }
 ::-webkit-scrollbar { width: 9px; height: 9px; }
-::-webkit-scrollbar-thumb { background: rgba(120, 120, 150, 0.35); border-radius: 9px; border: 2px solid transparent; background-clip: padding-box; }
+::-webkit-scrollbar-thumb { background: color-mix(in oklab, var(--edge) 55%, transparent); border-radius: 9px; border: 2px solid transparent; background-clip: padding-box; }
