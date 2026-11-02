@@ -1,9 +1,11 @@
+import cluster from 'node:cluster';
 import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import { extname, join, normalize, resolve } from 'node:path';
 import { sendWebResponse, setIsolationHeaders, toWebRequest } from './node.js';
 import { getDb } from './db.js';
+import { runReloadable } from './reload.js';
 import { handleApi } from './routes.js';
 import { cleanupSync } from './syncRetention.js';
 
@@ -13,7 +15,8 @@ import { cleanupSync } from './syncRetention.js';
  * proxy that terminates TLS and sets X-Forwarded-For.
  *
  *   PORT (default 3000), HOST (default: every interface; 127.0.0.1 when only the proxy on the same machine should reach
- *   it), plus the API's variables (see server/env.ts).
+ *   it), QUO_RELOAD_FILE and QUO_RELOAD_ACK (deploys that don't drop requests: server/reload.ts), plus the API's
+ *   variables (see server/env.ts).
  */
 
 const ROOT = resolve(process.env.QUO_WEB_DIR ?? 'dist');
@@ -43,38 +46,58 @@ async function fileFor(path: string): Promise<string | null> {
   }
 }
 
-createServer(async (req, res) => {
-  const path = (req.url ?? '/').split('?')[0];
-  try {
-    if (path.startsWith('/api/')) {
-      const request = await toWebRequest(req, res);
-      return await sendWebResponse(res, await handleApi(request, path.slice('/api/'.length)));
-    }
-    setIsolationHeaders(path, res);
-    res.setHeader('X-Content-Type-Options', 'nosniff');
-    // The app has one page (it changes only the query string). Any other path still opens it, so a mistyped link
-    // works, but answers 404, so search engines don't keep made-up addresses as pages.
-    const found = await fileFor(path === '/' ? '/index.html' : path);
-    const file = found ?? (await fileFor('/index.html'));
-    if (!file) {
-      res.statusCode = 404;
-      return void res.end('Not found');
-    }
-    if (!found) res.statusCode = 404;
-    res.setHeader('Content-Type', TYPES[extname(file)] ?? 'application/octet-stream');
-    res.setHeader('Cache-Control', path.startsWith('/assets/') ? 'public, max-age=31536000, immutable' : 'no-cache');
-    createReadStream(file).pipe(res);
-  } catch (error) {
-    console.error('[quo]', error);
-    if (!res.headersSent) res.statusCode = 500;
-    res.end();
-  }
-}).listen(PORT, HOST, () => console.log(`Quo Web on http://${HOST ?? 'localhost'}:${PORT}`));
+const RELOAD_FILE = process.env.QUO_RELOAD_FILE;
+if (RELOAD_FILE && cluster.isPrimary) runReloadable(RELOAD_FILE, process.env.QUO_RELOAD_ACK);
+else serve(Boolean(RELOAD_FILE));
 
-// There's no scheduler here, so run the daily Quo Sync clean-up (server/syncRetention.ts) on a timer.
-const runCleanup = () => getDb().then(db => cleanupSync(db)).then(
-  result => (result.deletedAccounts || result.warned || result.prunedMarkers || result.prunedTrialClaims) && console.log('[quo] daily clean-up', result),
-  error => console.error('[quo] sync clean-up failed', error),
-);
-setTimeout(runCleanup, 2 * 60_000).unref();
-setInterval(runCleanup, 24 * 60 * 60_000).unref();
+function serve(asWorker: boolean): void {
+  let draining = false;
+  const server = createServer(async (req, res) => {
+    const path = (req.url ?? '/').split('?')[0];
+    // While draining, each answer closes its connection, so the proxy's next request reaches the new worker.
+    if (draining) res.setHeader('Connection', 'close');
+    try {
+      if (path.startsWith('/api/')) {
+        const request = await toWebRequest(req, res);
+        return await sendWebResponse(res, await handleApi(request, path.slice('/api/'.length)));
+      }
+      setIsolationHeaders(path, res);
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      // The app has one page (it changes only the query string). Any other path still opens it, so a mistyped link
+      // works, but answers 404, so search engines don't keep made-up addresses as pages.
+      const found = await fileFor(path === '/' ? '/index.html' : path);
+      const file = found ?? (await fileFor('/index.html'));
+      if (!file) {
+        res.statusCode = 404;
+        return void res.end('Not found');
+      }
+      if (!found) res.statusCode = 404;
+      res.setHeader('Content-Type', TYPES[extname(file)] ?? 'application/octet-stream');
+      res.setHeader('Cache-Control', path.startsWith('/assets/') ? 'public, max-age=31536000, immutable' : 'no-cache');
+      createReadStream(file).pipe(res);
+    } catch (error) {
+      console.error('[quo]', error);
+      if (!res.headersSent) res.statusCode = 500;
+      res.end();
+    }
+  }).listen(PORT, HOST, () => console.log(`Quo Web on http://${HOST ?? 'localhost'}:${PORT}`));
+
+  if (asWorker) {
+    // Ctrl+C (the service stopping) reaches every process; the supervisor decides when a worker goes.
+    process.on('SIGINT', () => {});
+    process.on('message', message => {
+      if (message !== 'drain' || draining) return;
+      draining = true;
+      server.close(() => process.exit(0));
+      server.closeIdleConnections();
+    });
+  }
+
+  // There's no scheduler here, so run the daily Quo Sync clean-up (server/syncRetention.ts) on a timer.
+  const runCleanup = () => getDb().then(db => cleanupSync(db)).then(
+    result => (result.deletedAccounts || result.warned || result.prunedMarkers || result.prunedTrialClaims) && console.log('[quo] daily clean-up', result),
+    error => console.error('[quo] sync clean-up failed', error),
+  );
+  setTimeout(runCleanup, 2 * 60_000).unref();
+  setInterval(runCleanup, 24 * 60 * 60_000).unref();
+}
