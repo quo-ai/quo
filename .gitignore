@@ -41,6 +41,11 @@ secrets.y*ml
 *.tfstate.*
 *.log
 
+# Quo's own hosting and deploy scripts (ops/README.md): kept on the maintainer's computer, never committed.
+/ops/
+# Design drafts, kept out of the repository.
+/design/
+
 # Editors, OS and local tooling
 .DS_Store
 .vscode/

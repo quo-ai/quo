@@ -1,6 +1,5 @@
 // Prints the figures that show whether Quo's prices and free limits work (server/stats.ts), for the last N days.
 // On the server, where the database settings are:  node --env-file=C:\quo\config\quo.env --import tsx scripts/stats.ts [days]
-// From this repo:  bash scripts/stats-server.sh [days]
 import { getDb } from '../server/db.js';
 import { collectStats } from '../server/stats.js';
 

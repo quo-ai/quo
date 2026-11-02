@@ -46,7 +46,7 @@ The app is static (`dist/`) and must be served with cross-origin isolation heade
 
 The server reports what's switched on in `/api/me` (`features`). Services that aren't set up yet **stay visible** in the app and answer `503 setup_required` with a plain message when used (sign-in, paid models, purchases, Quo Sync), so the app shows "coming soon" instead of hiding them; set the variables and they just work. The database schema is created automatically on first use.
 
-**Vercel (the old address):** project `quoai-app` in London (`lhr1`), with the Neon integration providing `DATABASE_URL`. It keeps running for apps that have `quoai-app.vercel.app` built in (desktop 1.5.0, the Android app). Deploy with `bash scripts/deploy.sh` (it uploads a copy from outside git; Vercel builds it). Vercel won't give back variables marked sensitive, so the server's settings can't be pulled from it.
+**Vercel (the old address):** project `quoai-app` in London (`lhr1`), with the Neon integration providing `DATABASE_URL`. It keeps running for apps that have `quoai-app.vercel.app` built in (desktop 1.5.0, the Android app). Vercel won't give back variables marked sensitive, so another host's settings can't be pulled from it.
 
 **Moving to your own host and domain:**
 1. Run `npm run build && npm start` behind a reverse proxy with TLS. The server counts free use by the first `X-Forwarded-For` address, so the proxy must set that header itself and drop the visitor's.
@@ -54,11 +54,11 @@ The server reports what's switched on in `/api/me` (`features`). Services that a
 3. Set the variables above, with `APP_URL` on the new domain.
 4. Point the clients at the new address: `WEB_APP_URL` in `src/platform.ts`, `API_ORIGIN` in `apps/desktop/src/protocol.js`, and `LINKS.webapp` in `website/assets/site.js`.
 
-**Quo's own server** (Windows, with Apache already serving other sites; scripts in `scripts/server/`):
-- `app.quo.computer` (Quo Web and the API) and `quo.computer` (the website) are Apache vhosts in `scripts/server/apache.conf`, behind Cloudflare. Apache takes the visitor's address from `CF-Connecting-IP` only when the connection comes from Cloudflare's ranges, and sets `X-Forwarded-For` from it. Cloudflare closes a request that is silent for 100 s, so chat streams send a keep-alive comment every 20 s and both image attempts fit in 90 s.
-- The app runs as the `QuoWeb` Windows service (WinSW, as LOCAL SERVICE) on `127.0.0.1:3000`, with its settings in `C:\quo\config\quo.env` (readable only by the service and administrators; never in the repo). Logs are in `C:\quo\logs`.
-- Figures: `bash scripts/stats-server.sh [days]` prints the free tier's cost per person a day, paid use, sales, how much of Pro's allowance and the trial is used, and accounts (`server/stats.ts`, from the daily totals in `server/costs.ts` and the account tables; nothing names a person).
-- Once: `setup.ps1` (folders and their access, the service, a stand-in certificate, one `IncludeOptional` line in `httpd.conf`). When the domain points at the server, the Let's Encrypt certificate (win-acme in `C:\quo\win-acme`, which renews it daily as needed and then reloads Apache gracefully): `wacs.exe --source manual --host quo.computer,www.quo.computer,app.quo.computer --friendlyname quo.computer --validation filesystem --webroot C:\quo\acme --store pemfiles --pemfilespath C:\quo\tls --pemfilesname quo.computer --installation script --script <Apache>\bin\httpd.exe --scriptparameters "-k restart -n Apache2.4" --accepttos`. Then deploy with `bash scripts/deploy-server.sh` (SSH host `QUO_SERVER`, default `quo-server`): it copies the working tree, the server installs packages only when the lockfile changed, builds into `dist-next` and swaps it in, mirrors the website, and reloads Apache only when it accepts the new config.
+**Quo's own server** is a Windows machine with Apache, behind Cloudflare; the scripts that set it up and deploy to it are kept outside the repository. What the code does for any host behind a proxy:
+- `server/serve.ts` serves the app and the API on `HOST`:`PORT`. Set `HOST=127.0.0.1` when only a proxy on the same machine should reach it. Paths the app doesn't have answer 404 (the app still opens there).
+- The free tier counts the first `X-Forwarded-For` address, so the proxy must set it and drop the visitor's own (behind Cloudflare: take it from `CF-Connecting-IP`, trusting Cloudflare's addresses only).
+- Proxies close silent requests (Cloudflare at 100 s), so chat streams send a keep-alive comment every 20 s and both image attempts fit in 90 s.
+- Figures: `node --env-file=<settings> --import tsx scripts/stats.ts [days]` prints the free tier's cost per person a day, paid use, sales, how much of Pro's allowance and the trial is used, and accounts (`server/stats.ts`, from the daily totals in `server/costs.ts` and the account tables; nothing names a person).
 
 ## Local models
 

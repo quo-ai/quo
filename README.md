@@ -1,6 +1,9 @@
 <div align="center">
 
-<img src="website/assets/brand/quo-mark-indigo.svg" width="96" alt="Quo">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="website/assets/brand/quo-mark-white.svg">
+  <img src="website/assets/brand/quo-mark-indigo.svg" width="96" alt="Quo">
+</picture>
 
 # Quo
 
@@ -10,9 +13,9 @@ A free, open-source AI assistant that runs on your own device: in your browser, 
 No account, no internet needed, and nothing you type leaves your device.<br>
 **11,000+ installs on Android.**
 
-[**Try Quo in your browser →**](https://quoai-app.vercel.app/)
+[**Try Quo in your browser →**](https://app.quo.computer/)
 
-[Website](https://quoai.vercel.app) · [Download for desktop](https://github.com/quo-ai/quo/releases/latest) · [Google Play](https://play.google.com/store/apps/details?id=com.quo.app) · iPhone coming soon
+[Website](https://quo.computer) · [Download for desktop](https://github.com/quo-ai/quo/releases/latest) · [Google Play](https://play.google.com/store/apps/details?id=com.quo.app) · iPhone coming soon
 
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-3b2eff)](LICENSE)
 [![CI](https://github.com/quo-ai/quo/actions/workflows/ci.yml/badge.svg)](https://github.com/quo-ai/quo/actions/workflows/ci.yml)
@@ -20,7 +23,10 @@ No account, no internet needed, and nothing you type leaves your device.<br>
 
 <br>
 
-<img src="website/assets/shots/web-chat.webp" width="860" alt="Quo running in the browser, answering on the computer itself">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="website/assets/shots/hero-dark.webp">
+  <img src="website/assets/shots/hero-light.webp" width="860" alt="Quo running with Wi-Fi off, answering on the computer itself">
+</picture>
 
 </div>
 
@@ -34,17 +40,35 @@ Quo runs the model on your device instead:
 - **Private by design.** Chats, files, photos and voice are processed on your device. No account, no server copy.
 - **Open source.** “Private” is something you can check, not just a promise.
 - **Free.** Offline models are free and unlimited.
+- **The cloud only when you choose it.** Cloud models are clearly marked and used only when you pick one. Each reply shows where it ran.
 
 ## Get Quo
 
 | | How it runs | Get it |
 |---|---|---|
-| **Web** | [wllama](https://github.com/ngxson/wllama) (llama.cpp in WebAssembly), on the graphics card in Chrome and Edge | [quoai-app.vercel.app](https://quoai-app.vercel.app/) |
-| **Desktop** | llama.cpp on the graphics card, in an app for macOS, Windows and Linux | [macOS](https://github.com/quo-ai/quo/releases/latest/download/Quo-mac-universal.dmg) · [Windows](https://github.com/quo-ai/quo/releases/latest/download/Quo-windows-x64-setup.exe) · [Linux](https://github.com/quo-ai/quo/releases/latest/download/Quo-linux-x86_64.AppImage) |
+| **Web** | [wllama](https://github.com/ngxson/wllama) (llama.cpp in WebAssembly), on the graphics card in Chrome and Edge | [app.quo.computer](https://app.quo.computer/) |
+| **Desktop** | llama.cpp on the graphics card (an optional CUDA engine for NVIDIA cards), in an app for macOS, Windows and Linux (x64 and ARM) | [macOS](https://github.com/quo-ai/quo/releases/latest/download/Quo-mac-universal.dmg) · [Windows](https://github.com/quo-ai/quo/releases/latest/download/Quo-windows-x64-setup.exe) · [Linux](https://github.com/quo-ai/quo/releases/latest/download/Quo-linux-x86_64.AppImage) · [all downloads](https://github.com/quo-ai/quo/releases/latest) |
 | **Android** | [llama.rn](https://github.com/mybigday/llama.rn), with a model built in | [Google Play](https://play.google.com/store/apps/details?id=com.quo.app) |
 | **iPhone and iPad** | llama.rn on Metal | Coming soon |
 
 In a browser, use Chrome or Edge on a computer: Firefox and Safari run on the processor, which is slower, and phone browsers don't have the memory (use the app).
+
+<table>
+  <tr>
+    <td colspan="4">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="website/assets/shots/code-dark.webp">
+        <img src="website/assets/shots/code-light.webp" alt="Code mode in the desktop app: the steps it took, a test run, and the changed files beside the chat">
+      </picture>
+    </td>
+  </tr>
+  <tr>
+    <td width="25%"><picture><source media="(prefers-color-scheme: dark)" srcset="website/assets/shots/phone-offline-dark.webp"><img src="website/assets/shots/phone-offline-light.webp" alt="Quo answering on a phone with no internet connection"></picture></td>
+    <td width="25%"><picture><source media="(prefers-color-scheme: dark)" srcset="website/assets/shots/phone-document-dark.webp"><img src="website/assets/shots/phone-document-light.webp" alt="Quo summarising a hotel booking PDF"></picture></td>
+    <td width="25%"><picture><source media="(prefers-color-scheme: dark)" srcset="website/assets/shots/phone-vision-dark.webp"><img src="website/assets/shots/phone-vision-light.webp" alt="Quo saying a photo shows an apple on a tree"></picture></td>
+    <td width="25%"><picture><source media="(prefers-color-scheme: dark)" srcset="website/assets/shots/phone-thinking-dark.webp"><img src="website/assets/shots/phone-thinking-light.webp" alt="Quo working out an arrival time step by step"></picture></td>
+  </tr>
+</table>
 
 ## Features
 
@@ -53,13 +77,19 @@ In a browser, use Chrome or Edge on a computer: Firefox and Safari run on the pr
 | Offline models, working with no internet | ✓ | ✓ | ✓ |
 | Thinking you can read | ✓ | ✓ | ✓ † |
 | Ask about documents | ✓ | ✓ | ✓ |
-| Understand photos | | ✓ | ✓ |
+| Understand photos | ✓ ‡ | ✓ | ✓ |
 | Voice input and read aloud | ✓ | ✓ | ✓ † |
+| Memories, kept on your device | ✓ | ✓ | ✓ |
 | A free cloud model, and your own API keys (OpenRouter, Anthropic, OpenAI, Ollama…) | ✓ | ✓ | |
 | Web search with sources, when the model needs it | ✓ | ✓ | |
+| Make images (in the cloud; a few free a day) | ✓ | ✓ | |
+| Quo Sync: your chats and memories on every device, end-to-end encrypted | ✓ § | ✓ § | ✓ § |
+| Any model from Hugging Face | | ✓ | |
 | Code mode: a coding agent that asks before every change, commit and push | | ✓ | |
 
-† Part of the optional one-time Premium upgrade on the phone.
+† Part of the optional one-time Premium upgrade on the phone.<br>
+‡ With cloud models or your own API key; the offline models in the browser read text.<br>
+§ Opens soon, with Quo Pro or a Quo Sync plan.
 
 ## Models
 
@@ -79,11 +109,15 @@ Open models, downloaded once and kept on your device. Quo checks your hardware a
 | Gemma 4 26B A4B (vision, thinking) | 15.4 GB | 24 GB computers | desktop | Gemma terms |
 | Qwen3.8 27B (vision, thinking) | 17.4 GB | 32 GB computers | desktop | Apache 2.0 |
 
-Full lists: [`apps/mobile/constants/models.ts`](apps/mobile/constants/models.ts) (phone) and [`apps/web/src/catalog.ts`](apps/web/src/catalog.ts) (web and desktop).
+The desktop app can also search Hugging Face and run almost any GGUF model. Full lists: [`apps/mobile/constants/models.ts`](apps/mobile/constants/models.ts) (phone) and [`apps/web/src/catalog.ts`](apps/web/src/catalog.ts) (web and desktop).
 
 ## Pricing
 
-Quo Web and the desktop app are free, including a free cloud model (20 messages a day). The phone app is free with three models; a one-time **Premium** upgrade (from $9.99) unlocks every model, thinking, voice, and unlimited chats and memories.
+Everything on your device is free: every offline model, with no account and no limits. In the cloud, one model is free every day (GPT-6 Luna, 20 messages).
+
+The most powerful cloud models use credits, from **Quo Pro** ($12 a month or $99 a year, with 1,000 credits a month and Quo Sync) or a **credit pack** (from $12). **Quo Sync** on its own is $24 a year. These open soon.
+
+On the phone, a one-time **Premium** upgrade (from $9.99) unlocks every model, thinking, voice, and unlimited chats and memories. Full details: [quo.computer/pricing](https://quo.computer/pricing/).
 
 ## Build from source
 
@@ -99,7 +133,9 @@ npm run dev        # http://localhost:5173
 
 ```bash
 cd apps/web && npm install && npm run build
-cd ../desktop && npm install && npm run dev
+cd ../desktop && npm install
+npm run fetch:engine   # the pinned llama.cpp build for this computer
+npm run dev
 ```
 
 **Phone apps** (Expo SDK 57 / React Native, New Architecture)
@@ -110,7 +146,7 @@ npm install
 npm run android    # or: npm run ios (macOS)
 ```
 
-Each app has its own checks (`npm run typecheck`, `npm test`, and `npm run lint` for the phone app). [`CLAUDE.md`](CLAUDE.md) covers the architecture and the rules that keep it safe; [`apps/web/README.md`](apps/web/README.md) and [`apps/desktop/README.md`](apps/desktop/README.md) go deeper.
+Each app has its own checks (`npm run typecheck`, `npm test`, and `npm run lint` for the phone app). [`CLAUDE.md`](CLAUDE.md) covers the architecture and the rules that keep it safe; [`apps/web/README.md`](apps/web/README.md) (including hosting your own server) and [`apps/desktop/README.md`](apps/desktop/README.md) go deeper.
 
 ## Repository
 
@@ -118,7 +154,8 @@ Each app has its own checks (`npm run typecheck`, `npm test`, and `npm run lint`
 apps/mobile/    Phone app: Expo / React Native, llama.rn
 apps/web/       Quo Web (Vite + React, wllama) and its API (server/)
 apps/desktop/   Desktop app: Electron and llama.cpp, serving a Quo Web build
-website/        quoai.vercel.app (static)
+website/        quo.computer (static)
+scripts/        Checks that run in CI: secrets, file size, shared sync code
 ```
 
 ## Contributing
@@ -127,4 +164,4 @@ Issues and pull requests are welcome: see [CONTRIBUTING.md](.github/CONTRIBUTING
 
 ## License
 
-[Apache 2.0](LICENSE). The licence doesn't cover the Quo name, logo or icons, so forks need their own ([TRADEMARKS.md](TRADEMARKS.md)). Brand assets: [quoai.vercel.app/brand](https://quoai.vercel.app/brand/).
+[Apache 2.0](LICENSE). The licence doesn't cover the Quo name, logo or icons, so forks need their own ([TRADEMARKS.md](TRADEMARKS.md)). Brand assets: [quo.computer/brand](https://quo.computer/brand/).
