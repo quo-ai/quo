@@ -24,8 +24,8 @@ export async function askOwnAgentModel(
   const system = options.system ?? agentSystemPrompt(project, platform, options.tools, parseNotes(options.instructions), 'cloud', options.role, options.environment ?? null);
   const reply = await chatWithProvider(
     provider,
-    { model: model.apiModel, maxTokens: AGENT_MAX_TOKENS, signal: options.signal, tools: toolDefinitions(options.tools), messages: [{ role: 'system', content: system }, ...messages] },
+    { model: model.apiModel, maxTokens: AGENT_MAX_TOKENS, signal: options.signal, tools: toolDefinitions(options.tools), messages: [{ role: 'system', content: system }, ...messages], ...(options.role === 'summarize' ? { oneOff: true } : {}) },
     partial => options.onText(partial.content),
   );
-  return { content: reply.content, toolCalls: reply.toolCalls, finish: reply.finish, charged: 0, balance: null, usage: reply.usage };
+  return { content: reply.content, toolCalls: reply.toolCalls, finish: reply.finish, charged: 0, balance: null, usage: reply.usage, ...(reply.model ? { model: reply.model } : {}) };
 }

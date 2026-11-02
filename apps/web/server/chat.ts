@@ -11,6 +11,7 @@ import { FREE_CODE_CHARS, FREE_CODE_STEPS, WEB_TOOLS, isFolderless } from '../sh
 import { validOffset, type Environment } from '../shared/environment.js';
 import { agentSystemPrompt, AGENT_TOOL_NAMES, parseNotes, READ_ONLY_TOOLS, toolDefinitions, type Platform } from '../shared/agentTools.js';
 import { streamChat, UpstreamError, type ChatMessage, type ToolCall } from './openrouter.js';
+import { IMAGE_DATA_URL, IMAGE_TOKENS, imagesOf, MAX_IMAGE_CHARS, MAX_REMOTE_IMAGES, textOfContent, type ContentPart } from '../shared/content.js';
 import { FREE_SEARCHES_PER_REPLY, PAID_SEARCHES_PER_REPLY, SEARCH_FEE_USD, SEARCH_INPUT_TOKENS } from './webSearch.js';
 
 /**
@@ -57,7 +58,8 @@ const MAX_AGENT_MESSAGES = 600;
 const MAX_AGENT_CHARS = 1_200_000;
 const MAX_TOOL_RESULT_CHARS = 80_000;
 const MAX_TOOL_ARGS_CHARS = 60_000;
-const MAX_REQUEST_BYTES = 2_000_000;
+// Room for the images a chat message can carry (shared/content.ts), under the host's 4.5 MB limit on a request.
+const MAX_REQUEST_BYTES = 3_500_000;
 const ID_PATTERN = /^[A-Za-z0-9_.:-]{1,80}$/;
 const NAME_PATTERN = /^[A-Za-z0-9_-]{1,64}$/;
 
@@ -74,7 +76,7 @@ export async function handleChat(request: Request): Promise<Response> {
   if (!model) throw new HttpError(400, 'unknown_model', 'That model isn’t available.');
   if (!isFreeModel(model) && !features.accounts) throw new HttpError(503, 'setup_required', SETUP_MESSAGES.paidModels);
   const agent = body.agent ? parseAgent(body.agent, model) : null;
-  const history = agent ? validateAgentMessages(body.messages) : validateMessages(body.messages);
+  const history = agent ? validateAgentMessages(body.messages) : validateMessages(body.messages, model);
   // Code mode: the server's own instructions go first; the app can't supply or drop them.
   const messages: ChatMessage[] = agent ? [{ role: 'system', content: agent.prompt }, ...history] : history;
   // Thinking: the level asked for, as far as this model has it (the app only offers real ones, and the server checks). Code
@@ -102,7 +104,8 @@ export async function handleChat(request: Request): Promise<Response> {
   }
   const codeKeys = { subject: `code:${freeKeys.subject}`, ip: `code:${freeKeys.ip}` };
   const codeLimits = { perSubject: config.freeDailyCodeSteps, perIp: config.freeDailyCodeStepsPerIp };
-  let inputTokens = Math.ceil((messages.reduce((sum, m) => sum + charsOf(m), 0) + (agent?.toolChars ?? 0)) / 3.5) + 8 * messages.length;
+  const images = messages.reduce((sum, m) => sum + imagesOf(m.content).length, 0);
+  let inputTokens = Math.ceil((messages.reduce((sum, m) => sum + charsOf(m), 0) + (agent?.toolChars ?? 0)) / 3.5) + 8 * messages.length + images * IMAGE_TOKENS;
 
   // Decide how this request is paid for.
   let mode: 'free' | 'credits';
@@ -246,15 +249,35 @@ export async function handleChat(request: Request): Promise<Response> {
 }
 
 const charsOf = (message: ChatMessage) =>
-  message.content.length + (message.role === 'assistant' ? (message.tool_calls ?? []).reduce((sum, call) => sum + call.function.arguments.length + call.function.name.length, 0) : 0);
+  textOfContent(message.content).length + (message.role === 'assistant' ? (message.tool_calls ?? []).reduce((sum, call) => sum + call.function.arguments.length + call.function.name.length, 0) : 0);
 
-function validateMessages(input: unknown): ChatMessage[] {
+/**
+ * A chat's messages, checked. A user message can carry images (shared/content.ts): data addresses of images only, a few
+ * per request, to a model that reads them. Everything is copied field by field.
+ */
+function validateMessages(input: unknown, model: NonNullable<ReturnType<typeof getCloudModel>>): ChatMessage[] {
   if (!Array.isArray(input) || input.length === 0 || input.length > MAX_MESSAGES) {
     throw new HttpError(400, 'bad_messages', 'Send between 1 and 100 messages.');
   }
   let chars = 0;
+  let images = 0;
   const messages = input.map((raw): ChatMessage => {
     const message = raw as { role?: string; content?: unknown };
+    if (message.role === 'user' && Array.isArray(message.content)) {
+      if (message.content.length === 0 || message.content.length > 20) throw new HttpError(400, 'bad_messages', 'A message has too many parts.');
+      const parts = message.content.map((part): ContentPart => {
+        const value = part as { type?: unknown; text?: unknown; image_url?: { url?: unknown } };
+        if (value?.type === 'text' && typeof value.text === 'string') {
+          chars += value.text.length;
+          return { type: 'text', text: value.text };
+        }
+        const url = value?.type === 'image_url' ? value.image_url?.url : undefined;
+        if (typeof url !== 'string' || url.length > MAX_IMAGE_CHARS || !IMAGE_DATA_URL.test(url)) throw new HttpError(400, 'bad_messages', 'An attached image isn’t valid.');
+        images++;
+        return { type: 'image_url', image_url: { url } };
+      });
+      return { role: 'user', content: parts };
+    }
     if (!['system', 'user', 'assistant'].includes(message.role ?? '') || typeof message.content !== 'string') {
       throw new HttpError(400, 'bad_messages', 'Each message needs a role and text.');
     }
@@ -262,6 +285,8 @@ function validateMessages(input: unknown): ChatMessage[] {
     return { role: message.role as 'system' | 'user' | 'assistant', content: message.content };
   });
   if (chars > MAX_CHARS) throw new HttpError(413, 'too_long', 'This conversation is too long. Start a new chat.');
+  if (images > MAX_REMOTE_IMAGES) throw new HttpError(413, 'too_many_images', `Send up to ${MAX_REMOTE_IMAGES} images at a time.`);
+  if (images && !model.vision) throw new HttpError(400, 'no_images', `${model.name} can’t read images. Choose a model that can, or send the text on its own.`);
   return messages;
 }
 

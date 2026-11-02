@@ -1,4 +1,4 @@
-import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState, type ReactNode } from 'react';
 import { ArrowDown } from 'lucide-react';
 import { titleFrom } from '../chat/store';
 import { newId, type Attachment, type Conversation, type Message } from '../chat/types';
@@ -6,7 +6,7 @@ import { AGENT_CONTEXT } from '../agent/local';
 import { codePanel } from '../agent/codePanel';
 import { agentRating } from '../agent/capability';
 import { usesFolderLoop } from '../agent/route';
-import type { ThinkLevel } from '../../shared/thinking';
+import { isLevel, type ThinkChoice } from '../../shared/thinking';
 import { defaultThinking, LEVEL_LABEL, nextLevel, thinkingLevels } from '../chat/thinking';
 import { chatProject, rememberChatProject } from '../agent/session';
 import { codeSettings } from '../codeSettings';
@@ -43,6 +43,8 @@ export interface ChatHandle {
 }
 
 interface ChatProps {
+  /** The model menu, shown in the message box's row of controls. */
+  modelPicker?: ReactNode;
   choice: ModelChoice | null;
   account: Account | null;
   /** True when an offline model is installed and could take over. */
@@ -58,10 +60,10 @@ interface ChatProps {
 
 /** The chat screen: the conversation, the message box, and the turn that connects them to a model. */
 export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
-  { choice, account, offlineReady, conversation, onChange, onAction, onFailure },
+  { modelPicker, choice, account, offlineReady, conversation, onChange, onAction, onFailure },
   ref,
 ) {
-  const [thinking, setThinking] = useState<ThinkLevel>('auto');
+  const [thinking, setThinking] = useState<ThinkChoice>('auto');
   const [status, setStatus] = useState<ChatStatus>('idle');
   const [failure, setFailure] = useState<Failure | null>(null);
   const [undo, setUndo] = useState<Undoable | null>(null);
@@ -80,6 +82,10 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
   const startLevel = defaultThinking(choice);
   // A model has its own levels and its own starting point; a choice made for another model doesn't carry over.
   useEffect(() => setThinking(startLevel), [choice?.model.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  // The model's levels can change under it (Claude Agent learns them from Claude Code): a choice it no longer has goes back to the start.
+  useEffect(() => {
+    if (levels.length && !levels.includes(thinking)) setThinking(startLevel);
+  }, [levels.join(), thinking, startLevel]); // eslint-disable-line react-hooks/exhaustive-deps
   const web = useWebMode(choice, Boolean(code));
   // How full the model's memory is: counted live while it works, estimated from the messages otherwise.
   const [live, setLive] = useState<{ tokens: number; exact: boolean } | null>(null);
@@ -202,13 +208,13 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
         }
       } else if (choice.kind === 'cloud') {
         // The server offers the model its search tool, also when a message skipped the tool loop (photos, a thinking level).
-        const searched = await replyInCloud(choice, thinking, target, { web: web.on });
+        const searched = await replyInCloud(choice, isLevel(thinking) ? thinking : 'auto', target, { web: web.on });
         if (searched === 'limit' && !searchLimitShown) {
           searchLimitShown = true;
           toast('Today’s free web searches are used up, so replies won’t search until tomorrow.');
         }
       } else if (choice.kind === 'own') {
-        await replyOwn(choice, target, { web: web.on });
+        await replyOwn(choice, target, { web: web.on, thinking });
       } else {
         await replyOffline(choice, thinking === 'deep', target);
       }
@@ -365,11 +371,11 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
       )}
       <Composer
         ref={composer}
+        modelPicker={modelPicker}
         choice={choice}
         status={status}
         conversationId={conversation?.id}
         codeMode={codeMode}
-        web={web}
         commands={commands}
         lastUserText={[...messages].reverse().find(m => m.role === 'user')?.content ?? ''}
         context={{ usage, canSummarize: Boolean(conversation) && modelMessages(messages).length >= 2, onSummarize: () => conversation && void summarizeConversation(conversation, false), onNewChat: () => onAction('new-chat') }}

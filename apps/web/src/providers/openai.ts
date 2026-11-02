@@ -11,6 +11,7 @@ interface Chunk {
   choices?: { delta?: { content?: unknown; reasoning_content?: unknown; reasoning?: unknown; reasoning_details?: unknown; annotations?: unknown; tool_calls?: { index?: number; id?: string; function?: { name?: string; arguments?: unknown } }[] }; finish_reason?: string | null }[];
   usage?: { prompt_tokens?: number; completion_tokens?: number } | null;
   error?: { message?: unknown } | string;
+  model?: unknown;
 }
 
 export const openai: Adapter = {
@@ -49,6 +50,7 @@ export const openai: Adapter = {
         throw new ProviderError(502, 'provider_failed', `The provider stopped the reply: ${typeof message === 'string' ? message.slice(0, 200) : 'unknown error'}`, '');
       }
       if (chunk.usage) reply.usage = { input: chunk.usage.prompt_tokens ?? 0, output: chunk.usage.completion_tokens ?? 0 };
+      if (typeof chunk.model === 'string' && chunk.model) reply.model = chunk.model;
       const choice = chunk.choices?.[0];
       if (!choice) continue;
       const delta = choice.delta ?? {};

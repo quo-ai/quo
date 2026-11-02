@@ -1,3 +1,6 @@
+import type { ThinkChoice } from '../shared/thinking';
+import type { ChatReply } from './providers/wire';
+
 /**
  * The desktop app's native engine, as seen from the web app. The preload
  * script (apps/desktop/src/preload.js) adds `engine` and `models` to
@@ -256,6 +259,7 @@ declare global {
       appearance?: { set: (mode: 'system' | 'light' | 'dark', dark: 'black' | 'midnight') => Promise<unknown> };
       agent?: DesktopAgent;
       providers?: DesktopProviders;
+      claude?: DesktopClaude;
       web?: DesktopWeb;
       engine?: NativeBridge['engine'];
       models?: NativeBridge['models'];
@@ -312,6 +316,57 @@ export interface DesktopProviders {
 
 /** The provider bridge, or null in the browser and in desktop builds from before it. */
 export const providersBridge = (): DesktopProviders | null => (typeof window === 'undefined' ? null : window.quoDesktop?.providers ?? null);
+
+/**
+ * Claude Agent (apps/desktop/src/claude): Claude through the person's own Claude Code login. The page sends a
+ * conversation and gets the reply back as events; it never sees the login and can't choose the program or its settings.
+ */
+export interface ClaudeStatus {
+  installed: boolean;
+  version?: string | null;
+  /** Something to fix first (too old, didn't start). */
+  problem?: string | null;
+  signedIn?: boolean;
+  /** How Claude Code is signed in: a Claude plan, an API key or a cloud provider. */
+  kind?: 'subscription' | 'api_key' | 'cloud' | null;
+  /** The Claude plan's name, when it says. */
+  plan?: string | null;
+  /**
+   * Claude Code's own rows (short names that always mean the newest), then specific versions (`pinned`). `thinking`: how
+   * it thinks under Claude Code. `contextTokens`: its window, once checked.
+   */
+  models?: ClaudeModel[];
+  /** The specific versions are still being checked; `models()` gives the full list when that is done. */
+  checking?: boolean;
+}
+
+export interface ClaudeModel {
+  id: string;
+  name: string;
+  description: string;
+  pinned?: boolean;
+  /** The efforts it takes, Claude Code's default effort for it, and whether thinking can be turned off. */
+  thinking?: { efforts: string[]; default: string | null; off: boolean };
+  contextTokens?: number;
+  /** For a short name: the exact model it stands for now ("claude-sonnet-5-5" for "sonnet"). */
+  resolved?: string;
+}
+
+export type ClaudeEvent =
+  | { id: string; type: 'update'; content: string; reasoning: string }
+  | { id: string; type: 'done'; reply: ChatReply }
+  | { id: string; type: 'error'; code: string; message: string };
+
+export interface DesktopClaude {
+  status: (options: { check: boolean }) => Promise<NativeResult<ClaudeStatus>>;
+  models: () => Promise<NativeResult<ClaudeModel[] | null>>;
+  request: (request: { id: string; model: string; messages: unknown[]; tools?: unknown[]; effort?: ThinkChoice; oneOff?: boolean }) => Promise<NativeResult<unknown>>;
+  abort: (id: string) => Promise<NativeResult<unknown>>;
+  onEvent: (callback: (event: ClaudeEvent) => void) => () => void;
+}
+
+/** The Claude Agent bridge, or null in the browser and in desktop builds from before it. */
+export const claudeBridge = (): DesktopClaude | null => (typeof window === 'undefined' ? null : window.quoDesktop?.claude ?? null);
 
 /** Web search and page reading (apps/desktop/src/web). A search key can be saved or cleared but never read back. */
 export interface WebBackendState {

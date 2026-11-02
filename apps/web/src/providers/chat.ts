@@ -1,4 +1,5 @@
 import { anthropic } from './anthropic';
+import { chatWithClaudeAgent } from './claudeAgent';
 import { errorFor, ProviderError } from './errors';
 import { openai } from './openai';
 import type { ProviderInfo } from './registry';
@@ -34,6 +35,7 @@ export async function chatWithProvider(
   onUpdate: (partial: Streamed) => void = () => {},
   transport: Transport = defaultTransport(),
 ): Promise<ChatReply> {
+  if (provider.protocol === 'claude-agent') return chatWithClaudeAgent(request, onUpdate);
   const adapter = adapterFor(provider);
   const response = await transport.send(provider, { method: 'POST', path: adapter.path, body: adapter.body(request, provider.usage), signal: request.signal });
   if (!response.ok) throw errorFor(provider, response.status, await readText(response.body));

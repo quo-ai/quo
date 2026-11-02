@@ -12,6 +12,10 @@
  */
 
 export type ThinkLevel = 'off' | 'quick' | 'auto' | 'deep';
+/** Claude Code's own efforts, as it names them (its /effort), offered as they are for Claude Agent models. */
+export type ClaudeEffort = 'low' | 'medium' | 'high' | 'xhigh' | 'max';
+/** What the person chooses in the app: a level, or for a Claude Agent model one of its efforts. The server only takes levels (isLevel). */
+export type ThinkChoice = ThinkLevel | ClaudeEffort;
 export type Effort = 'minimal' | 'low' | 'medium' | 'high' | 'xhigh' | 'max';
 
 export interface ThinkingSpec {

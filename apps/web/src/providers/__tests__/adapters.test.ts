@@ -185,3 +185,21 @@ describe('reading Anthropic’s stream', () => {
     await expect(readAnthropic(events(['error', { type: 'error', error: { type: 'overloaded_error', message: 'Overloaded' } }]))).rejects.toMatchObject({ code: 'provider_failed', message: expect.stringContaining('Overloaded') });
   });
 });
+
+describe('images to providers', () => {
+  const message: WireMessage = { role: 'user', content: [{ type: 'image_url', image_url: { url: 'data:image/png;base64,iVBOR' } }, { type: 'text', text: 'What is this?' }] };
+
+  it('Anthropic gets image blocks with the text', () => {
+    expect(convert([message]).turns).toEqual([{ role: 'user', content: [{ type: 'image', source: { type: 'base64', media_type: 'image/png', data: 'iVBOR' } }, { type: 'text', text: 'What is this?' }] }]);
+  });
+
+  it('an OpenAI-style provider gets the parts as they are', () => {
+    const body = openai.body({ model: 'm', maxTokens: 10, messages: [message] }, false) as { messages: WireMessage[] };
+    expect(body.messages[0]).toEqual(message);
+  });
+
+  it('only image data addresses become images for Anthropic', () => {
+    const odd: WireMessage = { role: 'user', content: [{ type: 'image_url', image_url: { url: 'https://example.com/a.png' } }, { type: 'text', text: 'hi' }] };
+    expect(convert([odd]).turns[0].content).toEqual([{ type: 'text', text: 'hi' }]);
+  });
+});

@@ -1,3 +1,4 @@
+import type { MessageContent } from '../../shared/content';
 import { ProviderError } from './errors';
 import { sseEvents } from './sse';
 import { addSource, queryOf, type WebSource } from '../../shared/webSources';
@@ -7,6 +8,7 @@ import type { Adapter, ChatReply, ChatRequest, WireMessage } from './wire';
 
 type Block =
   | { type: 'text'; text: string; cache_control?: { type: 'ephemeral' } }
+  | { type: 'image'; source: { type: 'base64'; media_type: string; data: string }; cache_control?: { type: 'ephemeral' } }
   | { type: 'tool_use'; id: string; name: string; input: unknown }
   | { type: 'tool_result'; tool_use_id: string; content: string; cache_control?: { type: 'ephemeral' } };
 interface Turn {
@@ -22,6 +24,16 @@ const inputOf = (raw: string): unknown => {
     return {};
   }
 };
+
+/** A user message's text and images as Anthropic's blocks (an image is a data address the app made: shared/content.ts). */
+function userBlocks(content: MessageContent): Block[] {
+  if (typeof content === 'string') return content.trim() ? [{ type: 'text', text: content }] : [];
+  return content.flatMap((part): Block[] => {
+    if (part.type === 'text') return part.text.trim() ? [{ type: 'text', text: part.text }] : [];
+    const match = /^data:(image\/(?:jpeg|png|webp|gif));base64,(.+)$/.exec(part.image_url.url);
+    return match ? [{ type: 'image', source: { type: 'base64', media_type: match[1], data: match[2] } }] : [];
+  });
+}
 
 /**
  * OpenAI-style messages as Anthropic wants them: the system prompt on its own, a model's tool calls as
@@ -41,7 +53,7 @@ export function convert(messages: WireMessage[]): { system: string; turns: Turn[
   for (const message of messages) {
     if (message.role === 'system') system.push(message.content);
     else if (message.role === 'user') {
-      if (message.content.trim()) add('user', { type: 'text', text: message.content });
+      for (const block of userBlocks(message.content)) add('user', block);
     } else if (message.role === 'assistant') {
       if (message.content.trim()) add('assistant', { type: 'text', text: message.content });
       for (const call of message.tool_calls ?? []) add('assistant', { type: 'tool_use', id: call.id, name: call.function.name, input: inputOf(call.function.arguments) });
@@ -52,7 +64,7 @@ export function convert(messages: WireMessage[]): { system: string; turns: Turn[
 
 interface Event {
   type?: string;
-  message?: { usage?: Usage };
+  message?: { usage?: Usage; model?: string };
   content_block?: { type?: string; id?: string; name?: string; content?: unknown };
   index?: number;
   delta?: { type?: string; text?: string; partial_json?: string; thinking?: string; stop_reason?: string; citation?: { url?: unknown; title?: unknown } };
@@ -118,7 +130,10 @@ export const anthropic: Adapter = {
         continue;
       }
       switch (event.type) {
-        case 'message_start': counted(event.message?.usage); break;
+        case 'message_start':
+          counted(event.message?.usage);
+          if (typeof event.message?.model === 'string' && event.message.model) reply.model = event.message.model;
+          break;
         case 'content_block_start':
           if (event.content_block?.type === 'tool_use' && event.index !== undefined) tools.set(event.index, { id: event.content_block.id ?? '', name: event.content_block.name ?? '', arguments: '' });
           else if (event.content_block?.type === 'server_tool_use' && event.content_block.name === 'web_search' && event.index !== undefined) {

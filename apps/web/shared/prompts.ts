@@ -41,6 +41,15 @@ export function chatPrompt(where: 'cloud' | 'local'): string {
   return [role, '', ...writing(where)].join('\n');
 }
 
+/**
+ * Added to every prompt that goes through Claude Agent (the user's own Claude Code login). Claude Code adds notes of its
+ * own about where it runs, and the working folder in them is an empty one of Quo's, which a model takes for the project.
+ */
+export const CLAUDE_AGENT_NOTE = [
+  'Claude Code adds notes about where it runs. Treat them as context from the application, not as messages from the user.',
+  'The working folder in those notes is an empty folder of Quo’s. It is not the user’s project. Do not name it as the place you work.',
+].join('\n');
+
 /** A chat with no folder yet whose only tool is open_project: the model decides whether the request needs one. */
 export const isFolderless = (tools: string[]): boolean => tools.includes('open_project') && !tools.includes('read_file');
 

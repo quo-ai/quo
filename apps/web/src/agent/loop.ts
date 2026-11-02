@@ -53,6 +53,8 @@ export interface AgentOutcome {
   balance: number | null;
   /** Tokens used over the whole turn, when the provider says (the user's own key). */
   usage: { input: number; output: number } | null;
+  /** The exact model that answered last, when the provider says. */
+  model?: string;
   stopped: boolean;
   /** Hit the step limit before the model was done. */
   limited: boolean;
@@ -195,6 +197,7 @@ export async function runAgent(history: AgentMessage[], deps: AgentDeps): Promis
     outcome.balance = reply.balance ?? outcome.balance;
     if (reply.usage?.input) deps.onContext?.(reply.usage.input + reply.usage.output, true);
     if (reply.usage) outcome.usage = { input: (outcome.usage?.input ?? 0) + reply.usage.input, output: (outcome.usage?.output ?? 0) + reply.usage.output };
+    if (reply.model) outcome.model = reply.model;
     if (deps.signal.aborted) return { ...outcome, stopped: true, text: reply.content };
 
     if (reply.toolCalls.length === 0) {

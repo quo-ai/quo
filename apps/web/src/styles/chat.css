@@ -67,7 +67,6 @@
 .send.stop { color: var(--bg); background: var(--ink); box-shadow: 0 8px 18px -8px rgba(14, 14, 40, 0.6); }
 .send svg { animation: icon-pop var(--t-spring) var(--jelly); }
 @keyframes icon-pop { from { transform: scale(0.4) rotate(-30deg); opacity: 0; } }
-.composer-hint { text-align: center; font-size: 11.5px; color: var(--text-3); margin-top: 8px; }
 .composer .error { padding: 0 4px 6px; margin: 0; }
 
 /* ---------- Welcome ---------- */

@@ -17,7 +17,7 @@ import { useOnline } from './net/status';
 import { isAppInstalled } from './install';
 import { choiceKey, rememberChoice, resolveChoice, storedChoiceKey } from './models';
 import { refreshProviders, useProviders } from './providers/accounts';
-import { getOwnModel, useOwnModels } from './providers/ownModels';
+import { getOwnModel, ownModels as currentOwnModels, useOwnModels } from './providers/ownModels';
 import { cancelDownload, initDownloads, startDownload, subscribeDownloads, type DownloadState } from './storage/downloads';
 import { isPersisted } from './storage/persistence';
 import { initSync, onSyncedChats } from './sync';
@@ -270,7 +270,8 @@ export function App() {
       openModels();
       return;
     }
-    if (key.startsWith('own:') && !resolveChoice(key, installed, catalog, ownModels, providers.accounts)) {
+    // The current list, not this render's: a model can be added and chosen in one click (the Claude Agent menu).
+    if (key.startsWith('own:') && !resolveChoice(key, installed, catalog, currentOwnModels(), providers.accounts)) {
       // A model whose key was removed: go to where it can be added back.
       openModels('keys');
       return;
@@ -407,20 +408,6 @@ export function App() {
                 </button>
               </div>
             )}
-            {!showWelcome && (
-              <ModelPicker
-                choice={choice}
-                catalog={catalog}
-                account={account}
-                downloads={downloads}
-                onChoose={choose}
-                onManage={() => openModels()}
-                onOpenKeys={() => openModels('keys')}
-                own={ownModels}
-                providers={providers.accounts}
-                onOpenAccount={() => setAccountOpen(true)}
-              />
-            )}
             <span className="spacer" />
             {hasProject && (
               <button type="button" className="icon-btn round press toolbar-files" onClick={() => codePanel.toggle()} aria-label="Project files" aria-pressed={panel.open} title={`Project files (${MOD_KEY}+Shift+E)`}>
@@ -444,6 +431,20 @@ export function App() {
             : (
               <Chat
                 ref={chatRef}
+                modelPicker={
+                  <ModelPicker
+                    choice={choice}
+                    catalog={catalog}
+                    account={account}
+                    downloads={downloads}
+                    onChoose={choose}
+                    onManage={() => openModels()}
+                    onOpenKeys={() => openModels('keys')}
+                    own={ownModels}
+                    providers={providers.accounts}
+                    onOpenAccount={() => setAccountOpen(true)}
+                  />
+                }
                 choice={choice}
                 account={account}
                 offlineReady={installed.length > 0}

@@ -19,7 +19,9 @@ import { runsMainBuild } from './wasm';
  * through the same interface; `localEngine` at the bottom is whichever applies.
  */
 
-export type ContentPart = { type: 'text'; text: string } | { type: 'image_url'; image_url: { url: string } };
+import type { ContentPart } from '../../shared/content';
+
+export type { ContentPart };
 
 export interface ChatTurn {
   role: 'system' | 'user' | 'assistant';

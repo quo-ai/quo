@@ -44,7 +44,7 @@ export async function summarize(choice: ModelChoice, messages: Message[], option
   const turns: ChatTurn[] = [{ role: 'system', content: PROMPT }, { role: 'user', content: transcript(modelMessages(messages)) }];
   const ignore = () => {};
   let text = '';
-  if (choice.kind === 'own') text = (await generateOwn(choice.provider, choice.model, turns, ignore)).content;
+  if (choice.kind === 'own') text = (await generateOwn(choice.provider, choice.model, turns, ignore, { oneOff: true })).content;
   else if (choice.kind === 'cloud') {
     const result = await generateCloud(choice.model.id, turns, { thinking: false, onUpdate: ignore });
     applyUsage(result);

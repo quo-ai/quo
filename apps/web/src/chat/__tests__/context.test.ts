@@ -103,3 +103,20 @@ describe('attachments', () => {
     expect(estimateTokens(text)).toBeLessThanOrEqual(4096 - 1024);
   });
 });
+
+describe('images for models in the cloud', () => {
+  const photo = (id: string): Attachment => ({ id, kind: 'image', name: `${id}.jpg`, dataUrl: `data:image/jpeg;base64,${id}` });
+  const user = (content: string, images: string[]) => ({ role: 'user' as const, content, attachments: images.map(photo) });
+
+  it('sends the newest images up to the limit, and leaves a note where an older one was', () => {
+    const turns = buildContext('System', [user('first', ['a', 'b']), { role: 'assistant' as const, content: 'ok' }, user('second', ['c'])], 100_000, 1000, 2);
+    const images = turns.flatMap(turn => (Array.isArray(turn.content) ? turn.content.filter(part => part.type === 'image_url').map(part => part.image_url.url.split(',')[1]) : []));
+    expect(images).toEqual(['b', 'c']);
+    expect(textOf(turns[1].content)).toContain('[An image was attached here; it was left out of this request.]');
+  });
+
+  it('sends none to a model that can’t read images, keeping the text', () => {
+    const turns = buildContext('System', [user('what is this', ['a'])], 100_000, 1000, 0);
+    expect(turns[1].content).toBe('[An image was attached here; it was left out of this request.]\nwhat is this');
+  });
+});

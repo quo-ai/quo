@@ -16,7 +16,7 @@ function subscribe(channel, callback) {
 }
 
 // Contract with the web app (apps/web/src/platform.ts): `platform`, `version` and
-// `agent` (Code mode) and `providers` (the user's own API keys) always exist; `engine` and `models` exist only when this
+// `agent` (Code mode), `providers` (the user's own API keys) and `claude` (Claude Agent) always exist; `engine` and `models` exist only when this
 // build includes the native llama.cpp engine, and the web app falls back to its
 // in-browser engine without them. Every call resolves to { ok } or { error: { code, message } }.
 contextBridge.exposeInMainWorld('quoDesktop', {
@@ -57,6 +57,15 @@ contextBridge.exposeInMainWorld('quoDesktop', {
     request: request => invoke('providers:request', request),
     abort: id => invoke('providers:abort', { id }),
     onEvent: callback => subscribe('providers:event', callback),
+  },
+  // Claude Agent: Claude through the person's own Claude Code login. The page sends a conversation and gets the reply;
+  // it never sees the login and can't choose the program or its settings.
+  claude: {
+    status: options => invoke('claude:status', { check: options?.check === true }),
+    models: () => invoke('claude:models'),
+    request: request => invoke('claude:request', request),
+    abort: id => invoke('claude:abort', { id }),
+    onEvent: callback => subscribe('claude:event', callback),
   },
   // Web search and page reading. A search key can be saved or cleared but never read back.
   web: {

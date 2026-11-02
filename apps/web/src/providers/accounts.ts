@@ -1,5 +1,7 @@
 import { useSyncExternalStore } from 'react';
-import { providersBridge, unwrap } from '../native';
+import { claudeBridge, providersBridge, unwrap } from '../native';
+import { CLAUDE_AGENT, claudeStatus } from './claudeAgent';
+import { refreshClaudeModelsIfOld } from './claudeCatalog';
 import { browserEndpoints, browserKeys, type CustomEndpoint } from './browserKeys';
 import { cleanBaseUrl, PROVIDERS, type ProviderInfo, type Protocol } from './registry';
 
@@ -48,7 +50,14 @@ export async function refreshProviders(): Promise<void> {
     }
   }
   const infos = [...PROVIDERS, ...custom.map(customInfo)];
-  snapshot = { accounts: infos.map(info => ({ info, configured: configured.has(info.id), last4: configured.get(info.id) ?? null })), storage, ready: true };
+  const accounts = infos.map(info => ({ info, configured: configured.has(info.id), last4: configured.get(info.id) ?? null }));
+  // Claude Agent (desktop app): ready when Claude Code is on this computer; whether it's signed in shows when it's used.
+  if (claudeBridge()) {
+    const installed = (await claudeStatus(false).catch(() => ({ installed: false }))).installed;
+    accounts.unshift({ info: CLAUDE_AGENT, configured: installed, last4: null });
+    if (installed) refreshClaudeModelsIfOld();
+  }
+  snapshot = { accounts, storage, ready: true };
   emit();
 }
 

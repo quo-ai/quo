@@ -40,4 +40,6 @@ export interface StepReply {
   balance: number | null;
   /** Tokens used, when the provider says (models reached with the user's own key). */
   usage?: { input: number; output: number } | null;
+  /** The exact model that answered, when the provider says. */
+  model?: string;
 }

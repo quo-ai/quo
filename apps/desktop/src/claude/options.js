@@ -1,0 +1,92 @@
+'use strict';
+
+const crypto = require('node:crypto');
+const { PREFIX } = require('./tools');
+
+/**
+ * How Claude Code is started for Quo. The page has no say in any of it: it sends only the conversation, the model's
+ * name and the tool list. Claude Code runs with none of its own tools, settings, hooks, skills, memory or MCP servers,
+ * so the only thing it can do is answer, and ask for one of Quo's tools; Quo's own loop then runs that tool with its
+ * usual approvals (apps/desktop/README.md → Claude Agent).
+ */
+
+// Claude Code features that Quo has its own version of, or that Quo couldn't show or control.
+const TURNED_OFF = {
+  CLAUDE_CODE_DISABLE_CLAUDE_MDS: '1',
+  CLAUDE_CODE_DISABLE_AUTO_MEMORY: '1',
+  CLAUDE_CODE_ENABLE_AWAY_SUMMARY: '0',
+  // All of Quo's tools reach Claude as MCP tools, and tool search would hide every one of them.
+  ENABLE_TOOL_SEARCH: 'false',
+  CLAUDE_CODE_DISABLE_ADVISOR_TOOL: '1',
+  // Quo's own limits on tool output apply instead.
+  MAX_MCP_OUTPUT_TOKENS: '200000',
+};
+
+// Set in a person's shell, these would get in the way: the first skips the Claude login, the second caps every tool
+// call, and approvals can take as long as the person likes.
+const CLEARED = ['CLAUDE_CODE_SIMPLE', 'CLAUDE_CODE_EFFORT_LEVEL', 'MCP_TOOL_TIMEOUT'];
+
+/** The environment Claude Code starts with: the person's own (it holds their login settings and proxy), less Electron's, plus the switches above. */
+function childEnv(env, version) {
+  const kept = {};
+  for (const [name, value] of Object.entries(env)) {
+    if (typeof value !== 'string' || /^(ELECTRON_|CHROME_)/.test(name) || name === 'NODE_OPTIONS' || CLEARED.includes(name)) continue;
+    kept[name] = value;
+  }
+  // Says honestly which app is asking (Anthropic's SDK puts this in the request's User-Agent).
+  return { ...kept, CLAUDE_AGENT_SDK_CLIENT_APP: `quo-desktop/${version || 'dev'}`, ...TURNED_OFF };
+}
+
+/** What every Claude Code process Quo starts has, including the sign-in check. */
+function baseOptions({ executable, env, cwd }) {
+  return {
+    pathToClaudeCodeExecutable: executable,
+    cwd,
+    env,
+    settingSources: [],
+    settings: { disableAllHooks: true },
+    strictMcpConfig: true,
+    skills: [],
+    tools: [],
+    permissionMode: 'dontAsk',
+    allowedTools: [`${PREFIX}*`],
+    // Messages go to the model exactly as written: no /commands, @files or added context.
+    verbatimPrompts: true,
+    persistSession: false,
+  };
+}
+
+/**
+ * A conversation's process: Quo's own system prompt (the same one every model gets), and Quo's tools as the only ones.
+ * A conversation's transcript is saved in Claude Code's folder for Quo's working folder, so it can be picked up again
+ * after the process stops; sessions.js deletes it once Quo is done with it. Side calls (summaries) save nothing.
+ */
+function sessionOptions({ base, model, system, server, hooks, effort, persist, resume }) {
+  return {
+    ...base,
+    model,
+    systemPrompt: system,
+    // Thinking summaries, so the reply shows what the model was thinking.
+    thinking: { type: 'adaptive', display: 'summarized' },
+    ...(effort ? { effort } : {}),
+    includePartialMessages: true,
+    hooks,
+    mcpServers: server ? { quo: server } : {},
+    persistSession: persist,
+    ...(resume ? { resume } : persist ? { sessionId: crypto.randomUUID() } : {}),
+  };
+}
+
+/**
+ * The person's Thinking choice as Claude Code's effort: one of its own efforts as it is (when the model takes it), Quick
+ * the lowest the model has, Deep the highest short of `max` (which would use up a plan fast), and Auto (or anything the
+ * model doesn't take) Claude Code's default.
+ */
+function effortFor(level, supported = []) {
+  if (['low', 'medium', 'high', 'xhigh', 'max'].includes(level)) return supported.includes(level) ? level : null;
+  if (level === 'quick') return supported.includes('low') ? 'low' : supported[0] ?? null;
+  if (level === 'deep') return ['xhigh', 'high'].find(effort => supported.includes(effort)) ?? null;
+  return null;
+}
+
+module.exports = { childEnv, baseOptions, sessionOptions, effortFor, TURNED_OFF, CLEARED };

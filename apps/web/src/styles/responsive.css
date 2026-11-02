@@ -9,7 +9,7 @@
   .messages { padding-left: 16px; padding-right: 16px; }
   .suggestions { grid-template-columns: 1fr; }
   .welcome-card { padding: 30px 22px 26px; }
-  .composer-hint, .engine-note { display: none; }
+  .engine-note { display: none; }
   .popover { width: min(340px, calc(100vw - 24px)); }
 }
 

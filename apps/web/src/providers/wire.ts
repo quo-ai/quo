@@ -1,3 +1,5 @@
+import type { MessageContent } from '../../shared/content';
+import type { ThinkChoice } from '../../shared/thinking';
 import type { WebSource } from '../../shared/webSources';
 
 /** What every provider adapter takes and gives, in one shape (OpenAI's, which the agent loop already uses). */
@@ -10,7 +12,7 @@ export interface WireToolCall {
 
 export type WireMessage =
   | { role: 'system'; content: string }
-  | { role: 'user'; content: string }
+  | { role: 'user'; content: MessageContent }
   | { role: 'assistant'; content: string; tool_calls?: WireToolCall[] }
   | { role: 'tool'; tool_call_id: string; content: string };
 
@@ -32,6 +34,10 @@ export interface ChatRequest {
   webSearch?: boolean;
   /** Tools the provider runs itself (OpenRouter's search tool), offered next to any of ours; OpenAI format only. */
   serverTools?: Record<string, unknown>[];
+  /** The person's Thinking choice, for a provider that can take it (Claude Agent); the others leave it out. */
+  effort?: ThinkChoice;
+  /** A side call (notes on a long chat): Claude Agent answers it in a process of its own that stops after. */
+  oneOff?: boolean;
 }
 
 export interface ChatReply {
@@ -43,6 +49,20 @@ export interface ChatReply {
   usage: { input: number; output: number } | null;
   /** Pages the provider's own web search drew on (OpenRouter's search tool, Anthropic's). */
   sources?: WebSource[];
+  /** Something to tell the person about their account, such as a plan limit coming up (Claude Agent). */
+  notice?: string;
+  /** The exact model that answered, as the provider reported it ("claude-sonnet-5-5" for Claude Code's "sonnet"). */
+  model?: string;
+  /** How much of the person's plan is used, when the provider says (Claude Agent on a Claude plan). */
+  plan?: PlanUsage;
+}
+
+/** A Claude plan's usage windows ("five_hour", "seven_day", per-model weekly ones): share used, and when each resets. */
+export interface PlanUsage {
+  status: string | null;
+  windows: { id: string; used: number; resetsAt: number | null }[];
+  /** Extra usage beyond the plan: off, available, or being used now. */
+  extra: 'off' | 'available' | 'in_use' | null;
 }
 
 export interface Streamed {

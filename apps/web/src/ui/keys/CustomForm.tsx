@@ -16,7 +16,7 @@ interface CustomFormProps {
 export function CustomForm({ existing, onSaved, onRemoved, onCancel }: CustomFormProps) {
   const [name, setName] = useState(existing?.name ?? '');
   const [baseUrl, setBaseUrl] = useState(existing?.baseUrl ?? '');
-  const [protocol, setProtocol] = useState<Protocol>(existing?.protocol ?? 'openai');
+  const [protocol, setProtocol] = useState<Protocol>(existing?.protocol === 'anthropic' ? 'anthropic' : 'openai');
   const [key, setKey] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);

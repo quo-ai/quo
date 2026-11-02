@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { ChevronRight, Plus } from 'lucide-react';
 import { useProviders } from '../../providers/accounts';
+import { isClaudeAgent } from '../../providers/claudeAgent';
 import { useOwnModels } from '../../providers/ownModels';
+import { ClaudeAgentDetail } from './ClaudeAgentDetail';
 import { CustomForm } from './CustomForm';
 import { ProviderDetail } from './ProviderDetail';
 
@@ -21,6 +23,7 @@ export function KeysTab({ selectedKey, onChoose }: { selectedKey: string | null;
   const back = () => setView({ page: 'list' });
   const open = view.page === 'provider' ? accounts.find(account => account.info.id === view.id) : undefined;
 
+  if (open && isClaudeAgent(open.info)) return <ClaudeAgentDetail selectedKey={selectedKey} onBack={back} onUse={onChoose} />;
   if (open) return <ProviderDetail key={open.info.id} account={open} selectedKey={selectedKey} onBack={back} onUse={onChoose} />;
   if (view.page === 'new') {
     return (
@@ -33,7 +36,8 @@ export function KeysTab({ selectedKey, onChoose }: { selectedKey: string | null;
 
   const row = (account: (typeof accounts)[number]) => {
     const count = models.filter(model => model.provider === account.info.id).length;
-    const status = account.configured ? `Connected · •••• ${account.last4}` : account.info.custom ? account.info.baseUrl : 'Not connected';
+    const status = isClaudeAgent(account.info) ? (account.configured ? 'Your Claude Code login' : 'Needs Claude Code on this computer')
+      : account.configured ? `Connected · •••• ${account.last4}` : account.info.custom ? account.info.baseUrl : 'Not connected';
     return (
       <button key={account.info.id} className="menu-item press" onClick={() => setView({ page: 'provider', id: account.info.id })}>
         <span className="grow">

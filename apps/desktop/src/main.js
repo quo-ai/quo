@@ -6,6 +6,7 @@ const path = require('node:path');
 const { app, BrowserWindow, nativeTheme, session, shell, systemPreferences } = require('electron');
 const { APP_HOST, APP_URL, API_ORIGIN, registerScheme, handleAppProtocol, setEngineTarget } = require('./protocol');
 const { setupAgent } = require('./agent/ipc');
+const { setupClaude } = require('./claude/ipc');
 const { setupProviders } = require('./providers/ipc');
 const { setupWeb } = require('./web/ipc');
 const { engineAvailable, setupEngine } = require('./engine/ipc');
@@ -166,6 +167,7 @@ function start() {
   nativeTheme.on('updated', matchWindow);
   const { keys } = setupProviders();
   setupAgent({ web: setupWeb({ keys }) });
+  setupClaude();
   hasEngine = engineAvailable();
   if (hasEngine) {
     const { engine } = setupEngine();

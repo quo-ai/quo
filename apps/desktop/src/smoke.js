@@ -23,6 +23,12 @@ const probe = wasmPath => `(async () => {
     sab: typeof SharedArrayBuffer,
   };
   try {
+    // Only looks for Claude Code: starts nothing and sends nothing.
+    result.claude = window.quoDesktop?.claude ? await window.quoDesktop.claude.status({ check: false }) : null;
+  } catch (error) {
+    result.claudeError = String(error);
+  }
+  try {
     result.engine = window.quoDesktop?.engine ? await window.quoDesktop.engine.info() : null;
   } catch (error) {
     result.engineError = String(error);

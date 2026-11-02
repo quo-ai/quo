@@ -42,9 +42,15 @@
 .toolbar-cluster { display: flex; align-items: center; gap: 2px; padding: 4px; border-radius: 999px; }
 .picker-anchor { position: relative; }
 
-.model-pill { display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 14px 0 14px; border: 0; border-radius: 999px; font-weight: 600; font-size: 14.5px; color: var(--ink); }
-.model-pill .chev { color: var(--text-3); transition: transform var(--t-spring) var(--jelly); }
-.model-pill[aria-expanded="true"] .chev { transform: rotate(180deg); }
 .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); box-shadow: 0 0 0 3px rgba(23, 119, 63, 0.16); }
 .status-dot.off { background: #b9b9c8; box-shadow: 0 0 0 3px var(--fill-strong); }
 .net-pill { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 999px; font-size: 13px; font-weight: 600; color: var(--text-2); }
+/* The model menu in the message box: a chip like Thinking, showing the exact model, opening upwards. */
+.model-chip { max-width: min(300px, 46vw); }
+.model-chip .chip-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.model-chip .chev { flex-shrink: 0; color: var(--text-3); transition: transform var(--t-spring) var(--jelly); }
+.model-chip[aria-expanded="true"] .chev { transform: rotate(180deg); }
+.popover.up { top: auto; bottom: calc(100% + 10px); transform-origin: 32px 100%; }
+.popover.wide.up { max-height: min(620px, calc(100vh - 160px)); }
+.plan-window { display: grid; gap: 4px; }
+.plan-usage { display: grid; gap: 10px; }

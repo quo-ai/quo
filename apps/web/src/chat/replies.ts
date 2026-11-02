@@ -4,7 +4,8 @@ import { agentContextChars, askLocalAgentModel, prepareLocalAgent } from '../age
 import { askOwnAgentModel } from '../agent/own';
 import { codeSettings } from '../codeSettings';
 import { askAgentModel } from '../agent/stream';
-import type { ThinkLevel } from '../../shared/thinking';
+import { MAX_REMOTE_IMAGES } from '../../shared/content';
+import type { ThinkChoice, ThinkLevel } from '../../shared/thinking';
 import { wireThinking } from './thinking';
 import { openProjectTool, type FolderOpener } from '../agent/folder';
 import { runSubagent, TASK_TOOL } from '../agent/subagent';
@@ -141,7 +142,7 @@ export async function replyWithAgent(choice: CloudChoice | OwnChoice | LocalChoi
     steps: outcome.steps,
     sources: outcome.sources.length ? outcome.sources : undefined,
     stopped: outcome.stopped || undefined,
-    ...(choice.kind === 'cloud' ? { charged: Math.round((outcome.charged + helperCost) * 100) / 100 } : choice.kind === 'own' ? { usage: outcome.usage ?? undefined } : {}),
+    ...(choice.kind === 'cloud' ? { charged: Math.round((outcome.charged + helperCost) * 100) / 100 } : choice.kind === 'own' ? { usage: outcome.usage ?? undefined, served: outcome.model } : {}),
   }, true);
   return countChanges(outcome.steps);
 }
@@ -174,13 +175,13 @@ export async function replyWithWeb(choice: OwnChoice | LocalChoice, sessionId: s
     onUpdate: ({ steps, text }) => update({ content: text, steps }, false),
     onContext,
   });
-  update({ content: outcome.text, steps: outcome.steps, sources: outcome.sources.length ? outcome.sources : undefined, stopped: outcome.stopped || undefined, ...(choice.kind === 'own' ? { usage: outcome.usage ?? undefined } : {}) }, true);
+  update({ content: outcome.text, steps: outcome.steps, sources: outcome.sources.length ? outcome.sources : undefined, stopped: outcome.stopped || undefined, ...(choice.kind === 'own' ? { usage: outcome.usage ?? undefined, served: outcome.model } : {}) }, true);
 }
 
 /** Whether the web search that was asked for ran (see CloudResult.web). */
 export async function replyInCloud(choice: CloudChoice, thinking: ThinkLevel, { prior, update, setStatus }: ReplyTarget, options: { web?: boolean } = {}): Promise<CloudResult['web']> {
   setStatus('generating');
-  const history = buildContext(CLOUD_PROMPT + noteFor(choice), prior, CLOUD_CONTEXT.contextSize, CLOUD_CONTEXT.maxTokens);
+  const history = buildContext(CLOUD_PROMPT + noteFor(choice), prior, CLOUD_CONTEXT.contextSize, CLOUD_CONTEXT.maxTokens, choice.model.vision ? MAX_REMOTE_IMAGES : 0);
   const searches = new SearchSteps();
   let text = 0;
   const result = await generateCloud(choice.model.id, history, {
@@ -200,9 +201,9 @@ export async function replyInCloud(choice: CloudChoice, thinking: ThinkLevel, { 
 }
 
 /** A model at a provider the user reached with their own key: straight from this computer to the provider, nothing through Quo. */
-export async function replyOwn(choice: OwnChoice, { prior, update, setStatus }: ReplyTarget, options: { web?: boolean } = {}): Promise<void> {
+export async function replyOwn(choice: OwnChoice, { prior, update, setStatus }: ReplyTarget, options: { web?: boolean; thinking?: ThinkChoice } = {}): Promise<void> {
   setStatus('generating');
-  const history = buildContext(CLOUD_PROMPT + noteFor(choice), prior, Math.min(choice.model.contextTokens ?? CLOUD_CONTEXT.contextSize, 64_000), CLOUD_CONTEXT.maxTokens);
+  const history = buildContext(CLOUD_PROMPT + noteFor(choice), prior, Math.min(choice.model.contextTokens ?? CLOUD_CONTEXT.contextSize, 64_000), CLOUD_CONTEXT.maxTokens, MAX_REMOTE_IMAGES);
   const searches = new SearchSteps();
   let started = 0;
   const result = await generateOwn(choice.provider, choice.model, history, ({ content, reasoning, searches: words = [] }) => {
@@ -213,7 +214,7 @@ export async function replyOwn(choice: OwnChoice, { prior, update, setStatus }: 
     update({ content, reasoning, ...(settled ?? named ? { steps: settled ?? named! } : {}) }, false);
   }, options);
   const steps = searches.finish(false, result.stopped);
-  update({ content: result.content, reasoning: result.reasoning || undefined, stopped: result.stopped || undefined, usage: result.usage ?? undefined, steps, sources: result.sources.length ? result.sources : undefined }, true);
+  update({ content: result.content, reasoning: result.reasoning || undefined, stopped: result.stopped || undefined, usage: result.usage ?? undefined, served: result.model, steps, sources: result.sources.length ? result.sources : undefined }, true);
 }
 
 export async function replyOffline(choice: LocalChoice, thinking: boolean, { prior, update, setStatus }: ReplyTarget): Promise<void> {

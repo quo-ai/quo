@@ -1,3 +1,4 @@
+import { textOfContent, type MessageContent } from '../shared/content.js';
 import { config } from './env.js';
 import type { CloudModel } from './cloudModels.js';
 import { addAnnotations, serverSearches, type WebSource } from '../shared/webSources.js';
@@ -16,7 +17,8 @@ export interface ToolCall {
 }
 
 export type ChatMessage =
-  | { role: 'system' | 'user'; content: string }
+  | { role: 'system'; content: string }
+  | { role: 'user'; content: MessageContent }
   | { role: 'assistant'; content: string; tool_calls?: ToolCall[] }
   | { role: 'tool'; tool_call_id: string; content: string };
 
@@ -174,14 +176,15 @@ export async function streamChat(
 /** Sandbox stand-in: streams a test reply so the whole flow works offline. */
 async function standIn(model: CloudModel, messages: ChatMessage[], options: StreamOptions): Promise<StreamUsage> {
   if (options.tools?.length) return standInAgent(model, messages, options);
-  const question = [...messages].reverse().find(m => m.role === 'user')?.content ?? '';
+  const asked = [...messages].reverse().find(m => m.role === 'user')?.content;
+  const question = asked === undefined ? '' : textOfContent(asked);
   // Like a real model, the stand-in searches only when the question is about something current.
   const searches = options.web && /\b(today|latest|news|current|now|this week|price|weather|score)\b/i.test(question) ? 1 : 0;
   if (searches) options.onSearch?.(question.slice(0, 60));
   const reply = `This is a **sandbox test reply** from the stand-in for ${model.name}. Add an OpenRouter API key to get real answers.${searches ? ' (It searched the web.)' : ''}\n\nYou asked: “${question.slice(0, 120)}”`;
   if (options.reasoning && options.reasoning.effort !== 'none' && options.reasoning.enabled !== false) options.onDelta({ reasoning: 'Thinking about the question (sandbox stand-in).' });
   await streamWords(reply, options);
-  const promptChars = messages.reduce((sum, m) => sum + m.content.length, 0);
+  const promptChars = messages.reduce((sum, m) => sum + textOfContent(m.content).length, 0);
   return { promptTokens: Math.ceil(promptChars / 3.5), completionTokens: reply.split(/(?<= )/).length, costUsd: null, toolCalls: [], finishReason: 'stop', searches, sources: searches ? [{ url: 'https://example.com/sandbox-source', title: 'Sandbox source' }] : [] };
 }
 
@@ -202,9 +205,9 @@ async function streamWords(text: string, options: StreamOptions): Promise<void> 
 async function standInAgent(model: CloudModel, messages: ChatMessage[], options: StreamOptions): Promise<StreamUsage> {
   const lastUser = [...messages].reverse().findIndex(m => m.role === 'user');
   const turn = lastUser === -1 ? messages : messages.slice(messages.length - 1 - lastUser);
-  const task = turn[0]?.role === 'user' ? turn[0].content : '';
+  const task = turn[0]?.role === 'user' ? textOfContent(turn[0].content) : '';
   const results = turn.filter(m => m.role === 'tool').length;
-  const promptTokens = Math.ceil(messages.reduce((sum, m) => sum + m.content.length, 0) / 3.5);
+  const promptTokens = Math.ceil(messages.reduce((sum, m) => sum + textOfContent(m.content).length, 0) / 3.5);
   const call = (name: string, args: unknown): ToolCall => ({ id: `call_${results + 1}`, type: 'function', function: { name, arguments: JSON.stringify(args) } });
   const say = async (text: string, toolCalls: ToolCall[] = []): Promise<StreamUsage> => {
     await streamWords(text, options);

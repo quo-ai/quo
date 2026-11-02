@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import { Check, Code2, Plus, X } from 'lucide-react';
 import { agentBridge } from '../../native';
 import type { ListedModel } from '../../providers/listing';
@@ -71,14 +71,17 @@ export function ProviderModels({ provider, listed, loading, problem, selectedKey
         <>
           <span className="field-wrap keys-search"><input className="field" value={query} onChange={e => setQuery(e.target.value)} placeholder={`Search ${listed.length} models`} aria-label="Search models" /></span>
           <div className="own-list">
-            {matches.slice(0, SHOWN).map(model => (
-              <button key={model.id} type="button" className="menu-item press" onClick={() => addOwnModel(provider, model.id, { name: model.name, contextTokens: model.contextTokens, agent: model.tools })}>
-                <span className="grow">
-                  <span className="title">{model.name}</span>
-                  {model.name !== model.id && <span className="sub">{model.id}</span>}
-                </span>
-                <Plus size={16} color="var(--text-3)" />
-              </button>
+            {matches.slice(0, SHOWN).map((model, index, shown) => (
+              <Fragment key={model.id}>
+                {model.group && model.group !== shown[index - 1]?.group && <div className="popover-section">{model.group}</div>}
+                <button type="button" className="menu-item press" onClick={() => addOwnModel(provider, model.id, { name: model.name, contextTokens: model.contextTokens, agent: model.tools, thinking: model.thinking, thinkingHints: model.thinkingHints, thinkingDefault: model.thinkingDefault })}>
+                  <span className="grow">
+                    <span className="title">{model.name}</span>
+                    {(model.description || model.name !== model.id) && <span className="sub">{[model.description, model.name !== model.id ? model.id : ''].filter(Boolean).join(' · ')}</span>}
+                  </span>
+                  <Plus size={16} color="var(--text-3)" />
+                </button>
+              </Fragment>
             ))}
             {matches.length === 0 && <p className="note">{listed.length === 0 ? 'The provider didn’t list any models. Type a name above.' : have.size && !query ? <><Check size={13} /> That’s everything.</> : 'No match.'}</p>}
             {matches.length > SHOWN && <p className="note">Showing {SHOWN} of {matches.length}. Search to narrow it down.</p>}

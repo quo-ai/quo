@@ -20,6 +20,8 @@ export interface CloudModel {
   supportsThinking: boolean;
   /** Credits for a typical message. */
   creditsPerMessage: number;
+  /** Reads images; absent from a server from before images could be sent to the cloud. */
+  vision?: boolean;
 }
 
 export interface CloudCatalog {

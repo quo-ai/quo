@@ -1,4 +1,4 @@
-import { textOf, type ChatTurn } from '../engine/localEngine';
+import { textOf, type ChatTurn, type ContentPart } from '../engine/localEngine';
 import type { Message } from './types';
 
 /**
@@ -70,11 +70,16 @@ function toTurn(message: ChatMessage, documentChars?: number): ChatTurn {
 
 const costOf = (turn: ChatTurn) => estimateTokens(textOf(turn.content)) + (Array.isArray(turn.content) ? turn.content.filter(part => part.type === 'image_url').length * IMAGE_TOKENS : 0);
 
+/**
+ * `maxImages`: how many images may go with the request, newest first; older ones are left out and a short note says
+ * one was there (models in the cloud take a few at a time: shared/content.ts; 0 for a model that can't read images).
+ */
 export function buildContext(
   systemPrompt: string,
   messages: ChatMessage[],
   contextSize: number,
   maxTokens: number,
+  maxImages = Infinity,
 ): ChatTurn[] {
   let budget = contextSize - maxTokens - SAFETY_MARGIN - estimateTokens(systemPrompt);
   const kept: ChatTurn[] = [];
@@ -124,5 +129,29 @@ export function buildContext(
   }
   // A chat should open with a user turn; drop a leading orphaned reply.
   while (kept.length > 1 && kept[0].role === 'assistant') kept.shift();
-  return [{ role: 'system', content: systemPrompt }, ...kept];
+  return [{ role: 'system', content: systemPrompt }, ...withImages(kept, maxImages)];
+}
+
+const IMAGE_LEFT_OUT = '[An image was attached here; it was left out of this request.]';
+
+/** The turns with at most `limit` images, the newest kept. A turn whose images all go keeps its text and a note. */
+function withImages(turns: ChatTurn[], limit: number): ChatTurn[] {
+  let room = limit;
+  const out: ChatTurn[] = [];
+  for (let i = turns.length - 1; i >= 0; i--) {
+    const turn = turns[i];
+    if (typeof turn.content === 'string') {
+      out.unshift(turn);
+      continue;
+    }
+    const parts = [...turn.content].reverse().map((part): ContentPart => {
+      if (part.type !== 'image_url' || room > 0) {
+        if (part.type === 'image_url') room--;
+        return part;
+      }
+      return { type: 'text', text: IMAGE_LEFT_OUT };
+    }).reverse();
+    out.unshift(parts.some(part => part.type === 'image_url') ? { role: turn.role, content: parts } : { role: turn.role, content: textOf(parts) });
+  }
+  return out;
 }

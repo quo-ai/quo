@@ -7,8 +7,11 @@ import type { CloudCatalog, CloudModel } from '../cloud/catalog';
 import { groupModels } from '../cloud/groups';
 import type { ModelChoice } from '../models';
 import type { ProviderAccount } from '../providers/accounts';
+import { CLAUDE_AGENT } from '../providers/claudeAgent';
+import { exactModel, useClaudeModels } from '../providers/claudeCatalog';
 import type { OwnModel } from '../providers/ownModels';
 import type { DownloadState } from '../storage/downloads';
+import { ClaudeAgentModels } from './ClaudeAgentModels';
 import { CloudModelRow } from './CloudModelRow';
 import { formatBytes, percent } from './format';
 
@@ -29,12 +32,14 @@ interface ModelPickerProps {
 }
 
 /**
- * Toolbar pill: the current model; opens a menu to switch, download or buy credits.
+ * The current model, in the message box's row of controls (the exact model, where its name doesn't say it); opens a
+ * menu upwards to switch, download or buy credits.
  * Every cloud model is listed, the most capable ones included. The ones this
  * person can't use yet are locked, and choosing one opens the paywall (App.choose).
  */
 export function ModelPicker({ choice, catalog, account, downloads, onChoose, onManage, onOpenKeys, own, providers, onOpenAccount }: ModelPickerProps) {
   const [open, setOpen] = useState(false);
+  const claudeOffered = useClaudeModels();
   const anchor = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -58,6 +63,8 @@ export function ModelPicker({ choice, catalog, account, downloads, onChoose, onM
     setOpen(false);
   };
   const selected = choice ? `${choice.kind}:${choice.model.id}` : null;
+  // The exact model, where the name doesn't say it: "claude-sonnet-5-5" for Claude Agent's "Sonnet".
+  const exact = choice?.kind === 'own' ? exactModel(choice.model, choice.provider.id === CLAUDE_AGENT.id ? claudeOffered : []) : null;
   useCustomModels();
   const models = allLocalModels();
   const installed = models.filter(m => downloads[m.id]?.status === 'installed');
@@ -66,9 +73,12 @@ export function ModelPicker({ choice, catalog, account, downloads, onChoose, onM
   const credits = account?.user ? Math.floor(account.credits ?? 0) : 0;
   // A provider's models are listed while its key is saved (a server of the user's own may not need one).
   const ownGroups = providers
-    .filter(p => p.configured || p.info.custom)
+    .filter(p => (p.configured || p.info.custom) && p.info.id !== CLAUDE_AGENT.id)
     .map(p => ({ provider: p.info, models: own.filter(m => m.provider === p.info.id) }))
     .filter(group => group.models.length > 0);
+  // Claude Agent lists everything Claude Code offers once it is known (ClaudeAgentModels), not only what was added.
+  const claudeOwn = own.filter(m => m.provider === CLAUDE_AGENT.id);
+  const showClaude = providers.some(p => p.info.id === CLAUDE_AGENT.id && p.configured) && (claudeOwn.length > 0 || claudeOffered.length > 0);
   const connected = providers.filter(p => p.configured).length;
   const cloudRow = (model: CloudModel) => (
     <CloudModelRow key={model.id} model={model} account={account} selected={selected === `cloud:${model.id}`} onPick={() => pick(`cloud:${model.id}`)} menu />
@@ -76,14 +86,14 @@ export function ModelPicker({ choice, catalog, account, downloads, onChoose, onM
 
   return (
     <div className="picker-anchor" ref={anchor}>
-      <button className="model-pill glass press" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(o => !o)}>
-        {choice?.kind === 'cloud' ? <Cloud size={16} color="var(--indigo)" /> : choice?.kind === 'own' ? <KeyRound size={15} color="var(--indigo)" /> : <span className={`status-dot${choice ? '' : ' off'}`} />}
-        {choice ? choice.model.name : 'Choose a model'}
-        <ChevronDown className="chev" size={16} />
+      <button type="button" className="chip press model-chip" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(o => !o)} title={exact ? `${choice?.model.name} (${exact})` : undefined}>
+        {choice?.kind === 'cloud' ? <Cloud size={14} color="var(--indigo)" /> : choice?.kind === 'own' ? <KeyRound size={13} color="var(--indigo)" /> : <span className={`status-dot${choice ? '' : ' off'}`} />}
+        <span className="chip-name">{exact ?? (choice ? choice.model.name : 'Choose a model')}</span>
+        <ChevronDown className="chev" size={13} />
       </button>
 
       {open && (
-        <div className="popover glass thick wide" role="menu">
+        <div className="popover glass thick wide up" role="menu">
           <div className="popover-scroll">
             <div className="popover-section"><HardDrive size={13} /> On this device · private · offline</div>
             {installed.map(model => {
@@ -111,6 +121,7 @@ export function ModelPicker({ choice, catalog, account, downloads, onChoose, onM
                 </button>
               );
             })}
+            {showClaude && <ClaudeAgentModels own={claudeOwn} selected={selected} onPick={pick} />}
             {ownGroups.map(({ provider, models }) => (
               <Fragment key={provider.id}>
                 <div className="popover-section"><KeyRound size={13} /> {provider.name} <span className="section-note">your key</span></div>

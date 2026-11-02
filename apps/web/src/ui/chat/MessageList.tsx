@@ -3,6 +3,7 @@ import { Brain, Check, Copy, Layers, RotateCcw, Undo2, Volume2, VolumeX } from '
 import type { CodeSession } from '../../agent/session';
 import type { Message } from '../../chat/types';
 import type { ModelChoice } from '../../models';
+import { isClaudeAgent } from '../../providers/claudeAgent';
 import { reliabilityNote } from '../../chat/reliability';
 import { greeting, pickStarters, type StarterMode } from '../../chat/starters';
 import { workingLabel } from '../../chat/working';
@@ -44,7 +45,8 @@ function replyMeta(message: Message): string {
   if (message.own) {
     const steps = message.steps?.length ? ` · ${message.steps.length} step${message.steps.length === 1 ? '' : 's'}` : '';
     const tokens = message.usage ? ` · ${formatTokens(message.usage.input + message.usage.output)} tokens` : '';
-    return `${message.modelName ?? 'Model'}${steps} · your ${message.own} key${tokens}`;
+    const exact = message.served && message.served !== message.modelName ? ` · ${message.served}` : '';
+    return `${message.modelName ?? 'Model'}${exact}${steps}${tokens}`;
   }
   if (message.cloud) {
     const cost = message.charged ? `${message.charged} credit${message.charged === 1 ? '' : 's'}` : 'Free';
@@ -66,6 +68,7 @@ function intro(choice: ModelChoice | null, code: CodeSession | null): string {
     return `Working in ${code.project.name}${git}.${notes}${privacy} Ask about the code, or ask for a change. ${code.plan ? 'Plan mode is on: nothing is changed or run.' : 'Nothing is changed or run without your OK.'}`;
   }
   if (choice.kind === 'own') {
+    if (isClaudeAgent(choice.provider)) return `${choice.model.name} runs through your Claude Code login, on your Claude plan. Your messages go from this computer to Anthropic, not through Quo.`;
     const where = choice.provider.custom ? `on ${choice.provider.name}, a server of your own` : `on your ${choice.provider.name} account`;
     return `${choice.model.name} runs ${where}. Your messages go straight from this computer to ${choice.provider.name}, not through Quo.`;
   }

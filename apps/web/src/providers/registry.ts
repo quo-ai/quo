@@ -14,7 +14,8 @@ export type Protocol = 'openai' | 'anthropic';
 export interface ProviderInfo {
   id: string;
   name: string;
-  protocol: Protocol;
+  /** How requests reach it: one of the two wire formats, or Claude Code on this computer (claudeAgent.ts). */
+  protocol: Protocol | 'claude-agent';
   baseUrl: string;
   /** Where a person gets a key. Built-in providers only. */
   keyUrl?: string;

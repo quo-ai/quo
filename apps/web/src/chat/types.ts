@@ -51,6 +51,8 @@ export interface Message {
   sources?: WebSource[];
   /** Tokens that reply used, when the provider said. Kept on this device; not synced. */
   usage?: { input: number; output: number };
+  /** The exact model that answered (own keys, Claude Agent), as the provider reported it. Kept on this device; not synced. */
+  served?: string;
 }
 
 export interface Conversation {

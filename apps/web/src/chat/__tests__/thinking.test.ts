@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { defaultLevel, levelsFor, reasoningParam, type ThinkingSpec } from '../../../shared/thinking';
-import { defaultThinking, nextLevel, thinkingLevels, wireThinking } from '../thinking';
+import { defaultThinking, LEVEL_LABEL, nextLevel, thinkingLevels, wireThinking } from '../thinking';
 
 // Real shapes, from OpenRouter's description of these models (19 Oct 2026).
 const CLAUDE: ThinkingSpec = { mandatory: true, efforts: ['low', 'medium', 'high', 'xhigh', 'max'], off: false, defaultOn: true, default: 'high' };
@@ -87,6 +87,15 @@ describe('the choices in the app', () => {
     expect(thinkingLevels(local(false))).toEqual([]);
     expect(thinkingLevels({ kind: 'own', model: {}, provider: {} } as never)).toEqual([]);
     expect(thinkingLevels(null)).toEqual([]);
+  });
+
+  it('offers a Claude Agent model Claude Code’s efforts for it, starting on its default', () => {
+    const claude = { kind: 'own', model: { thinking: ['low', 'medium', 'high', 'xhigh', 'max'], thinkingDefault: 'medium' }, provider: { id: 'claude-agent' } } as never;
+    expect(thinkingLevels(claude)).toEqual(['low', 'medium', 'high', 'xhigh', 'max']);
+    expect(defaultThinking(claude)).toBe('medium');
+    expect(LEVEL_LABEL.xhigh).toBe('Extra high');
+    expect(defaultThinking({ kind: 'own', model: { thinking: ['auto', 'low', 'high'] }, provider: {} } as never)).toBe('auto');
+    expect(defaultThinking({ kind: 'own', model: {}, provider: {} } as never)).toBe('off');
   });
 
   it('copes with a server that only knew yes or no, and never sends it a word it would read as yes', () => {

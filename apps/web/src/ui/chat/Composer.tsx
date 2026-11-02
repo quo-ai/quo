@@ -1,23 +1,24 @@
-import { forwardRef, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react';
-import { AlertTriangle, ArrowUp, Cloud, HardDrive, KeyRound, Loader2, Mic, Paperclip, Square } from 'lucide-react';
+import { forwardRef, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { AlertTriangle, ArrowUp, Cloud, HardDrive, Loader2, Mic, Paperclip, Square } from 'lucide-react';
 import { ACCEPT_DOCUMENTS, ACCEPT_IMAGES } from '../../attachments';
 import type { Attachment } from '../../chat/types';
 import { localEngine } from '../../engine/localEngine';
+import { isClaudeAgent } from '../../providers/claudeAgent';
 import type { ModelChoice } from '../../models';
 import { AttachmentChips } from '../Attachments';
 import { CodeChip } from '../CodeChip';
-import type { ThinkLevel } from '../../../shared/thinking';
+import type { ThinkChoice } from '../../../shared/thinking';
 import { ThinkingMenu } from './ThinkingMenu';
 import type { ContextUsage } from '../../context/usage';
 import { matchCommands, type Command } from '../../chat/commands';
 import { CommandList } from './CommandList';
 import { ContextMeter } from './ContextMeter';
+import { PlanUsage } from './PlanUsage';
 import { MentionList } from './MentionList';
 import { useMentions } from './useMentions';
 import { useVoiceInput } from '../useVoiceInput';
 import type { ChatStatus } from './types';
 import type { CodeMode } from './useCodeMode';
-import type { WebMode } from './useWebMode';
 import { useAttachments } from './useAttachments';
 
 export interface ComposerHandle {
@@ -25,20 +26,21 @@ export interface ComposerHandle {
 }
 
 interface ComposerProps {
+  /** The model menu, first in the row of controls. */
+  modelPicker?: ReactNode;
   choice: ModelChoice | null;
   status: ChatStatus;
   conversationId: string | undefined;
   codeMode: CodeMode;
-  web: WebMode;
   /** How full the model's memory is, with what can be done about it. */
   /** The slash commands that apply now, and the last thing the user wrote (an arrow up in an empty box brings it back). */
   commands: Command[];
   lastUserText: string;
   context: { usage: ContextUsage | null; canSummarize: boolean; onSummarize: () => void; onNewChat: () => void };
-  thinking: ThinkLevel;
+  thinking: ThinkChoice;
   /** What this model really offers; nothing to show when it is fewer than two. */
-  thinkingLevels: ThinkLevel[];
-  onThinking: (level: ThinkLevel) => void;
+  thinkingLevels: ThinkChoice[];
+  onThinking: (level: ThinkChoice) => void;
   /** Free cloud messages left today, when the model is the free one. */
   freeLeft: number | null;
   onSend: (text: string, attachments: Attachment[]) => void;
@@ -47,7 +49,7 @@ interface ComposerProps {
 
 /** The message box and the row of controls under it. */
 export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Composer(
-  { choice, status, conversationId, codeMode, web, context, commands, lastUserText, thinking, thinkingLevels, onThinking, freeLeft, onSend, onStop },
+  { modelPicker, choice, status, conversationId, codeMode, context, commands, lastUserText, thinking, thinkingLevels, onThinking, freeLeft, onSend, onStop },
   ref,
 ) {
   const [input, setInput] = useState('');
@@ -55,11 +57,13 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const busy = status !== 'idle';
   const cloud = choice?.kind === 'cloud';
-  /** Quo's own search for its chat models (the server runs it), as opposed to tools or the provider's own. */
   const remote = choice !== null && choice.kind !== 'local';
-  const vision = choice?.kind === 'local' && Boolean(choice.model.vision);
-  // Files stay on this device: attachments only go to offline models.
-  const files = useAttachments({ enabled: Boolean(choice) && !remote, vision, resetKey: conversationId });
+  // Images go to a model that reads them: an offline one marked so, a cloud one the server marks so, and models reached
+  // with the person's own key (Claude Agent always; another provider says so itself if its model can't). Documents go
+  // to every model, as text in the message. To any model but an offline one, they leave this computer with the message.
+  const vision = choice?.kind === 'local' ? Boolean(choice.model.vision) : choice?.kind === 'cloud' ? Boolean(choice.model.vision) : choice?.kind === 'own';
+  const files = useAttachments({ enabled: Boolean(choice), vision, resetKey: conversationId });
+  const destination = choice?.kind === 'own' ? (isClaudeAgent(choice.provider) ? 'Anthropic' : choice.provider.name) : choice?.kind === 'cloud' ? `${choice.model.provider}, through OpenRouter` : '';
   const { code } = codeMode;
   // Code mode: the desktop app, with a model that can do it (see agent/support.ts).
   const codeAvailable = codeMode.available;
@@ -184,10 +188,10 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
           <button
             type="button"
             className="icon-btn round press attach-btn"
-            disabled={!choice || remote || busy}
+            disabled={!choice || busy}
             onClick={() => fileInput.current?.click()}
             aria-label="Attach files"
-            title={remote ? 'Files stay on your device, so they only work with offline models' : vision ? 'Attach photos, PDFs and text files' : 'Attach PDFs and text files'}
+            title={`${vision ? 'Attach photos, PDFs and text files' : 'Attach PDFs and text files'}${remote ? `. They are sent to ${destination} with your message.` : ''}`}
           >
             <Paperclip size={18} />
           </button>
@@ -204,6 +208,7 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
               {voice.state === 'transcribing' ? <Loader2 size={18} className="spin" /> : voice.state === 'recording' ? <Square size={13} fill="currentColor" /> : <Mic size={18} />}
             </button>
           )}
+          {modelPicker}
           {(codeAvailable || codeMode.unavailableReason) && (
             <CodeChip
               unavailable={codeAvailable ? null : codeMode.unavailableReason}
@@ -217,16 +222,17 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
               onRemove={codeMode.end}
             />
           )}
-          {thinkingLevels.length > 1 && !code && <ThinkingMenu levels={thinkingLevels} value={thinking} onChange={onThinking} disabled={busy} local={choice?.kind === 'local'} />}
+          {thinkingLevels.length > 1 && !code && <ThinkingMenu levels={thinkingLevels} value={thinking} onChange={onThinking} disabled={busy} local={choice?.kind === 'local'} hints={choice?.kind === 'own' ? choice.model.thinkingHints : undefined} />}
           <span className="engine-note">
             {voice.state === 'recording' ? `Listening… ${Math.floor(voice.seconds / 60)}:${String(voice.seconds % 60).padStart(2, '0')}`
               : voice.state === 'transcribing' ? (voice.download !== null ? `Getting the speech model… ${Math.round(voice.download * 100)}%` : 'Turning speech into text…')
               : status === 'loading' ? 'Loading model…'
               : cloud ? <><Cloud size={13} /> Cloud{freeLeft !== null ? ` · ${freeLeft} free today` : ''}</>
-                : choice?.kind === 'own' ? <><KeyRound size={13} /> Your {choice.provider.name} key</>
+                : choice?.kind === 'own' ? ''
                 : choice ? <><HardDrive size={13} /> <span title={info?.gpuMissing ? 'Your computer has a graphics card, but this model is running on the processor, which is much slower. A graphics driver may be missing.' : info?.device ?? undefined}>{info?.gpu ? 'On your GPU' : info?.gpuMissing ? 'On your processor' : 'On this device'}</span> · private</> : ''}
           </span>
           <span className="spacer" />
+          {choice?.kind === 'own' && isClaudeAgent(choice.provider) && <PlanUsage />}
           {context.usage && <ContextMeter usage={context.usage} busy={busy} canSummarize={context.canSummarize} onSummarize={context.onSummarize} onNewChat={context.onNewChat} />}
           {busy ? (
             <button key="stop" type="button" className="send stop" onClick={onStop} aria-label="Stop (Esc)" title="Stop (Esc)">
@@ -239,9 +245,6 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
           )}
         </div>
       </form>
-      <div className="composer-hint">
-        {web.on ? `${code ? 'Code mode' : choice?.kind === 'local' ? 'On this computer' : cloud ? 'Cloud replies via OpenRouter' : `Straight to ${choice?.kind === 'own' ? choice.provider.name : 'the provider'}`} · searches the web when it needs to${choice?.kind === 'local' ? ' · searches leave this computer' : ''}` : code ? `${codeMode.plan ? 'Plan mode · nothing is changed or run' : 'Code mode · edits and commands need your OK'} · ${choice?.kind === 'local' ? 'everything stays on this computer' : `files Quo reads are sent to ${choice?.kind === 'own' ? choice.provider.name : 'the model’s provider'}`}` : choice?.kind === 'own' ? `Straight to ${choice.provider.name} with your key · not through Quo` : cloud ? 'Cloud replies via OpenRouter · Quo doesn’t store your messages' : 'Runs privately on this device'} · Enter to send · Shift+Enter for a new line · / for commands
-      </div>
     </div>
   );
 });

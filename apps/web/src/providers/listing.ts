@@ -1,3 +1,5 @@
+import type { ThinkChoice } from '../../shared/thinking';
+import { listClaudeModels } from './claudeAgent';
 import { errorFor } from './errors';
 import type { ProviderInfo } from './registry';
 import { defaultTransport, type Transport } from './transport';
@@ -9,6 +11,13 @@ export interface ListedModel {
   contextTokens?: number;
   /** The provider says the model can call tools. Undefined when it doesn't say. */
   tools?: boolean;
+  /** The Thinking levels the person can choose for it, and what each means for it, when the provider says (Claude Agent). */
+  thinking?: ThinkChoice[];
+  thinkingHints?: Partial<Record<ThinkChoice, string>>;
+  thinkingDefault?: ThinkChoice | null;
+  /** A line about it, and the heading it is listed under, when the provider gives them (Claude Agent). */
+  description?: string;
+  group?: string;
 }
 
 // Models that don't chat: embeddings, speech, images, moderation, and a few retired families.
@@ -24,6 +33,7 @@ interface Entry {
 
 /** The chat models a provider offers to this key. */
 export async function listProviderModels(provider: ProviderInfo, transport: Transport = defaultTransport()): Promise<ListedModel[]> {
+  if (provider.protocol === 'claude-agent') return listClaudeModels();
   const path = provider.protocol === 'anthropic' ? '/models?limit=1000' : '/models';
   const response = await transport.send(provider, { method: 'GET', path });
   const text = await new Response(response.body).text();
