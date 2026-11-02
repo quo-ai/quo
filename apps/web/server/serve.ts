@@ -12,11 +12,13 @@ import { cleanupSync } from './syncRetention.js';
  * in one Node process. `npm run build && npm start`; put it behind a reverse
  * proxy that terminates TLS and sets X-Forwarded-For.
  *
- *   PORT (default 3000), plus the API's variables (see server/env.ts).
+ *   PORT (default 3000), HOST (default: every interface; 127.0.0.1 when only the proxy on the same machine should reach
+ *   it), plus the API's variables (see server/env.ts).
  */
 
 const ROOT = resolve(process.env.QUO_WEB_DIR ?? 'dist');
 const PORT = Number(process.env.PORT ?? 3000);
+const HOST = process.env.HOST || undefined;
 
 const TYPES: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',
@@ -50,12 +52,15 @@ createServer(async (req, res) => {
     }
     setIsolationHeaders(path, res);
     res.setHeader('X-Content-Type-Options', 'nosniff');
-    // Unknown paths fall back to the app (single page).
-    const file = (await fileFor(path === '/' ? '/index.html' : path)) ?? (await fileFor('/index.html'));
+    // The app has one page (it changes only the query string). Any other path still opens it, so a mistyped link
+    // works, but answers 404, so search engines don't keep made-up addresses as pages.
+    const found = await fileFor(path === '/' ? '/index.html' : path);
+    const file = found ?? (await fileFor('/index.html'));
     if (!file) {
       res.statusCode = 404;
       return void res.end('Not found');
     }
+    if (!found) res.statusCode = 404;
     res.setHeader('Content-Type', TYPES[extname(file)] ?? 'application/octet-stream');
     res.setHeader('Cache-Control', path.startsWith('/assets/') ? 'public, max-age=31536000, immutable' : 'no-cache');
     createReadStream(file).pipe(res);
@@ -64,11 +69,11 @@ createServer(async (req, res) => {
     if (!res.headersSent) res.statusCode = 500;
     res.end();
   }
-}).listen(PORT, () => console.log(`Quo Web on http://localhost:${PORT}`));
+}).listen(PORT, HOST, () => console.log(`Quo Web on http://${HOST ?? 'localhost'}:${PORT}`));
 
 // There's no scheduler here, so run the daily Quo Sync clean-up (server/syncRetention.ts) on a timer.
 const runCleanup = () => getDb().then(db => cleanupSync(db)).then(
-  result => (result.deletedAccounts || result.warned || result.prunedMarkers) && console.log('[quo] sync clean-up', result),
+  result => (result.deletedAccounts || result.warned || result.prunedMarkers || result.prunedTrialClaims) && console.log('[quo] daily clean-up', result),
   error => console.error('[quo] sync clean-up failed', error),
 );
 setTimeout(runCleanup, 2 * 60_000).unref();

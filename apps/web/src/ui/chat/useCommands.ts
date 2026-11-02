@@ -45,6 +45,7 @@ export function buildCommands(state: CommandState, actions: CommandActions): Com
     state.codeOn && !state.busy && { name: 'folder', hint: 'Choose another project folder', run: actions.chooseFolder },
     state.canUndo && { name: 'undo', hint: 'Put back the files the last reply changed', run: actions.undo },
     state.canThink && { name: 'think', hint: `Change how much it thinks (now ${state.thinking})`, run: actions.toggleThinking },
+    { name: 'image', aliases: ['draw', 'img'], hint: 'Make an image: /image a fox in the snow at dawn', fills: '/image ', run: () => {} },
     { name: 'model', hint: 'Choose a model', run: actions.models },
     { name: 'keys', hint: 'Your API keys', run: actions.keys },
   ];

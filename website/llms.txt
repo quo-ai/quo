@@ -1,0 +1,16 @@
+# Quo AI
+
+> Quo is a free, open-source AI assistant that runs on your own device: in the browser, on Mac, Windows and Linux, and on Android. It works offline, needs no account, and nothing you type leaves the device unless you choose a cloud model. Made by Astra Labs Ltd in the United Kingdom. Not related to Quo, the business phone service formerly called OpenPhone.
+
+## Using Quo
+- [Home](https://quo.computer/): what Quo does, the models it runs, the desktop and phone apps, and common questions
+- [Quo Web](https://app.quo.computer/): Quo in the browser, with offline models and optional cloud models
+- [Download for desktop](https://github.com/quo-ai/quo/releases/latest): Mac, Windows and Linux
+- [Android app](https://play.google.com/store/apps/details?id=com.quo.app)
+- [Pricing](https://quo.computer/pricing/): free on the device; Quo Pro, Quo Sync and credit packs for cloud models
+
+## About
+- [Source code](https://github.com/quo-ai/quo): Apache 2.0
+- [Privacy Policy](https://quo.computer/privacy/): what stays on the device and what is sent when you choose a cloud model
+- [Terms](https://quo.computer/terms/), [Refunds](https://quo.computer/refunds/), [Support](https://quo.computer/support/), [Brand assets](https://quo.computer/brand/)
+- Contact: astralabsltd@gmail.com

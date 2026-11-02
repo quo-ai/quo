@@ -1,5 +1,6 @@
 import { timingSafeEqual } from 'node:crypto';
 import { getDb, type Db } from './db.js';
+import { pruneTrialClaims } from './credits.js';
 import { sendSyncLapseNotice } from './email.js';
 import { config } from './env.js';
 import { HttpError, json } from './http.js';
@@ -19,7 +20,8 @@ import { SYNC_PLANS } from './sync.js';
  *    the cloud, because only changed chats are uploaded.
  *
  * Runs once a day (Vercel Cron hits /api/cron/sync-cleanup; the standalone
- * server runs it on a timer). Safe to run as often as you like.
+ * server runs it on a timer). Safe to run as often as you like. It also removes
+ * free-trial claims older than a year (credits.ts: trial_claims).
  */
 
 export const RETENTION_DAYS = 180;
@@ -32,10 +34,11 @@ export interface CleanupResult {
   deletedAccounts: number;
   warned: number;
   prunedMarkers: number;
+  prunedTrialClaims: number;
 }
 
 export async function cleanupSync(db: Db, now = new Date()): Promise<CleanupResult> {
-  const result: CleanupResult = { deletedAccounts: 0, warned: 0, prunedMarkers: 0 };
+  const result: CleanupResult = { deletedAccounts: 0, warned: 0, prunedMarkers: 0, prunedTrialClaims: 0 };
 
   // Anyone who subscribed again is no longer on the clock.
   await db.query(
@@ -77,6 +80,7 @@ export async function cleanupSync(db: Db, now = new Date()): Promise<CleanupResu
     [new Date(now.getTime() - MARKER_DAYS * DAY_MS)],
   );
   result.prunedMarkers = pruned.length;
+  result.prunedTrialClaims = await pruneTrialClaims(db, now);
   return result;
 }
 

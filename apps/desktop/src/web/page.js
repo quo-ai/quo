@@ -28,7 +28,7 @@ function open(url, { allowPrivate, timeoutMs }) {
     const request = (url.protocol === 'https:' ? https : http).request(url, {
       method: 'GET',
       lookup: allowPrivate ? undefined : guardedLookup,
-      headers: { 'user-agent': 'Quo/1.3 (+https://quoai.vercel.app)', accept: 'text/html,application/xhtml+xml,text/plain,application/json;q=0.9,*/*;q=0.1', 'accept-encoding': 'gzip, deflate, br', 'accept-language': 'en' },
+      headers: { 'user-agent': 'Quo/1.3 (+https://quo.computer)', accept: 'text/html,application/xhtml+xml,text/plain,application/json;q=0.9,*/*;q=0.1', 'accept-encoding': 'gzip, deflate, br', 'accept-language': 'en' },
     }, resolve);
     const timer = setTimeout(() => request.destroy(new WebError('timeout', 'The site took too long to answer.')), timeoutMs);
     request.on('close', () => clearTimeout(timer));

@@ -38,33 +38,47 @@ async function pruneOldCounters(db: Db, now: Date): Promise<void> {
 
 class LimitReached extends Error {}
 
-export async function takeFreeMessage(db: Db, keys: FreeKeys, limits: FreeLimits, now = new Date()): Promise<boolean> {
+export interface FreeTake {
+  ok: boolean;
+  /** The subject's first use today (counted, as a total only, in the daily figures: costs.ts). */
+  firstToday: boolean;
+}
+
+/** Takes `uses` from the allowance (a change to an image counts as two), on every counter or none. */
+export async function takeFree(db: Db, keys: FreeKeys, limits: FreeLimits, { now = new Date(), uses = 1 } = {}): Promise<FreeTake> {
+  let firstToday = false;
   try {
     await db.tx(async t => {
-      for (const [key, limit] of [[subjectKey(keys), limits.perSubject], [ipKey(keys), limits.perIp]] as const) {
-        const rows = await t.query(
-          `insert into free_usage (key, day, count) values ($1, $2, 1)
-           on conflict (key, day) do update set count = free_usage.count + 1
-           where free_usage.count < $3
+      for (const [key, limit, isSubject] of [[subjectKey(keys), limits.perSubject, true], [ipKey(keys), limits.perIp, false]] as const) {
+        if (limit <= 0 || uses > limit) throw new LimitReached();
+        const rows = await t.query<{ count: number }>(
+          `insert into free_usage (key, day, count) values ($1, $2, $4)
+           on conflict (key, day) do update set count = free_usage.count + $4
+           where free_usage.count + $4 <= $3
            returning count`,
-          [key, day(now), limit],
+          [key, day(now), limit, uses],
         );
-        if (rows.length === 0 || limit <= 0) throw new LimitReached();
+        if (rows.length === 0) throw new LimitReached();
+        if (isSubject) firstToday = rows[0].count === uses;
       }
     });
     await pruneOldCounters(db, now);
-    return true;
+    return { ok: true, firstToday };
   } catch (error) {
-    if (error instanceof LimitReached) return false;
+    if (error instanceof LimitReached) return { ok: false, firstToday: false };
     throw error;
   }
 }
 
+export async function takeFreeMessage(db: Db, keys: FreeKeys, limits: FreeLimits, now = new Date(), uses = 1): Promise<boolean> {
+  return (await takeFree(db, keys, limits, { now, uses })).ok;
+}
+
 /** Gives back a free message (the request failed before any reply). */
-export async function refundFreeMessage(db: Db, keys: FreeKeys, now = new Date()): Promise<void> {
+export async function refundFreeMessage(db: Db, keys: FreeKeys, now = new Date(), uses = 1): Promise<void> {
   await db.query(
-    'update free_usage set count = greatest(count - 1, 0) where day = $1 and key = any($2)',
-    [day(now), [subjectKey(keys), ipKey(keys)]],
+    'update free_usage set count = greatest(count - $3, 0) where day = $1 and key = any($2)',
+    [day(now), [subjectKey(keys), ipKey(keys)], uses],
   );
 }
 

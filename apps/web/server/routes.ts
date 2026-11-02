@@ -2,6 +2,7 @@ import { handleAccountDelete, handleMe } from './account.js';
 import { handleAuthStart, handleAuthVerify, handleSignOut, handleSignOutEverywhere } from './auth.js';
 import { handleBillingConfig, handleCheckout, handleDevComplete, handlePaddleWebhook, handlePortal } from './billing.js';
 import { handleChat } from './chat.js';
+import { handleImage } from './images.js';
 import { publicCatalog } from './cloudModels.js';
 import { errorResponse, HttpError, json } from './http.js';
 import { handleCronSyncCleanup } from './syncRetention.js';
@@ -24,6 +25,7 @@ const ROUTES: Record<string, Handler> = {
   'POST auth/signout': handleSignOut,
   'POST auth/signout-all': handleSignOutEverywhere,
   'POST chat': handleChat,
+  'POST image': handleImage,
   'GET billing/config': handleBillingConfig,
   'POST billing/checkout': handleCheckout,
   'GET billing/dev-complete': handleDevComplete,

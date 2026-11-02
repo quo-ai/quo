@@ -5,7 +5,7 @@
  */
 
 /** The hosted Quo Web; the desktop app sends checkout and API calls here. */
-export const WEB_APP_URL = 'https://quoai-app.vercel.app';
+export const WEB_APP_URL = 'https://app.quo.computer';
 export const GITHUB_URL = 'https://github.com/quo-ai/quo';
 const RELEASES = `${GITHUB_URL}/releases/latest/download`;
 

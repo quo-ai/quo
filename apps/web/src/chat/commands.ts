@@ -9,6 +9,8 @@ export interface Command {
   aliases?: string[];
   hint: string;
   run: () => void;
+  /** Picking it writes this in the message box instead of running (a command that takes words after it). */
+  fills?: string;
 }
 
 const names = (command: Command): string[] => [command.name, ...(command.aliases ?? [])];

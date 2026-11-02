@@ -24,3 +24,9 @@ export const MAX_IMAGE_CHARS = 1_500_000;
 export const MAX_REMOTE_IMAGES = 4;
 /** What one image costs a model's context, roughly, for estimates and credit holds. */
 export const IMAGE_TOKENS = 1600;
+
+/** Shapes an image can be made in (OpenRouter's image API takes these). */
+export const IMAGE_ASPECTS = ['1:1', '4:3', '3:4', '3:2', '2:3', '16:9', '9:16'] as const;
+export type ImageAspect = (typeof IMAGE_ASPECTS)[number];
+/** Longest prompt sent to an image model. */
+export const MAX_IMAGE_PROMPT_CHARS = 4000;

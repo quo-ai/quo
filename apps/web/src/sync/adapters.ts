@@ -51,7 +51,7 @@ export function fromWire(wire: WireChat, local?: Conversation): Conversation {
     );
     // What the coding agent did, and which of the user's own keys answered, stay on the device they happened on.
     const here = mine.get(message.id);
-    return present({ ...message, attachments, steps: here?.steps, sources: here?.sources, own: here?.own, usage: here?.usage, served: here?.served, summary: here?.summary });
+    return present({ ...message, attachments, steps: here?.steps, sources: here?.sources, own: here?.own, usage: here?.usage, served: here?.served, images: here?.images, summary: here?.summary });
   });
   return present({ ...wire, messages });
 }

@@ -15,4 +15,4 @@ The Quo logo (the Q with an orbit) and the app icons are designed and owned by A
 - Publish a fork, app or website as “Quo” or “Quo AI”, or with the Quo logo or icons.
 - Present your project as official or endorsed by Astra Labs.
 
-If you publish a fork, give it a different name and icon, so people always know which app they're installing. For questions, open an issue or contact us through [the support page](https://quoai.vercel.app/support/).
+If you publish a fork, give it a different name and icon, so people always know which app they're installing. For questions, open an issue or contact us through [the support page](https://quo.computer/support/).

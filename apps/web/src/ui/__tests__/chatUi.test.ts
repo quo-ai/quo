@@ -40,14 +40,14 @@ describe('which commands apply', () => {
   const names = (patch: Partial<CommandState>) => buildCommands({ ...state, ...patch }, actions).map(c => c.name);
 
   it('always has the basics, and nothing that has nothing to act on', () => {
-    expect(names({})).toEqual(['new', 'model', 'keys']);
+    expect(names({})).toEqual(['new', 'image', 'model', 'keys']);
   });
 
   it('adds commands as they become possible', () => {
-    expect(names({ hasUserMessage: true, hasReply: true })).toEqual(['new', 'retry', 'copy', 'model', 'keys']);
+    expect(names({ hasUserMessage: true, hasReply: true })).toEqual(['new', 'retry', 'copy', 'image', 'model', 'keys']);
     expect(names({ canSummarize: true })).toContain('summarise');
     expect(names({ codeAvailable: true })).toContain('code');
-    expect(names({ codeAvailable: true, codeOn: true })).toEqual(['new', 'code', 'plan', 'folder', 'model', 'keys']);
+    expect(names({ codeAvailable: true, codeOn: true })).toEqual(['new', 'code', 'plan', 'folder', 'image', 'model', 'keys']);
     expect(names({ canUndo: true })).toContain('undo');
     expect(names({ canThink: true })).toContain('think');
   });

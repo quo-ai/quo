@@ -20,6 +20,7 @@ import type { OwnModel } from '../providers/ownModels';
 import { CLOUD_CONTEXT, type ModelChoice } from '../models';
 import { allowUserUrls, runWebTool } from '../web/run';
 import { buildContext } from './context';
+import { modelText } from '../images/tags';
 import { noteWebChange } from './webChange';
 import { environmentFor, noteFor } from './environment';
 import type { Message } from './types';
@@ -78,7 +79,7 @@ export async function replyWithAgent(choice: CloudChoice | OwnChoice | LocalChoi
   // Helpers (the task tool) are for models with room to spare: not offline ones, whose window is small, nor the free one.
   const toolsNow = () => (!session ? [FOLDER_TOOL, ...(webBefore ? WEB_TOOLS : [])] : choice.kind === 'local' || light ? session.tools : [...session.tools, TASK_TOOL]);
   // Web search turned on or off since this chat's last message: say so, or the model may repeat what it said before.
-  const conversation: AgentMessage[] = noteWebChange(prior.filter(m => m.content).map(m => ({ role: m.role, content: m.content })), chatId, toolsNow().includes('web_search'));
+  const conversation: AgentMessage[] = noteWebChange(prior.filter(m => modelText(m)).map(m => ({ role: m.role, content: modelText(m) })), chatId, toolsNow().includes('web_search'));
   const platform = session?.info.platform ?? (typeof window !== 'undefined' ? window.quoDesktop?.platform : undefined) ?? 'linux';
   // Each request carries a fresh environment note (the clock moves, plan mode can be switched) for the models the app prompts;
   // Quo's own cloud models get the same from the server.
@@ -164,7 +165,7 @@ export async function replyWithWeb(choice: OwnChoice | LocalChoice, sessionId: s
   // What the user asked Quo to remember goes to offline models only, as in a plain offline chat.
   if (choice.kind === 'local') system += memoryPrompt(await listMemories().catch(() => []), Math.min(1500, Math.floor(choice.model.contextSize * 0.35)));
   const options = (onText: (text: string) => void) => ({ tools: WEB_TOOLS, project: 'web', platform: 'linux', system, signal, onText });
-  const outcome = await runAgent(prior.filter(m => m.content).map((m): AgentMessage => ({ role: m.role, content: m.content })), {
+  const outcome = await runAgent(prior.filter(m => modelText(m)).map((m): AgentMessage => ({ role: m.role, content: modelText(m) })), {
     signal,
     maxSteps: 8,
     askModel: choice.kind === 'own'

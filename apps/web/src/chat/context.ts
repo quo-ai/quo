@@ -1,4 +1,5 @@
 import { textOf, type ChatTurn, type ContentPart } from '../engine/localEngine';
+import { modelText } from '../images/tags';
 import type { Message } from './types';
 
 /**
@@ -31,7 +32,7 @@ export function estimateTokens(text: string): number {
   return Math.ceil(text.length / CHARS_PER_TOKEN) + PER_MESSAGE_OVERHEAD;
 }
 
-type ChatMessage = Pick<Message, 'role' | 'content' | 'attachments'>;
+type ChatMessage = Pick<Message, 'role' | 'content' | 'attachments' | 'images'>;
 
 const imagesOf = (message: ChatMessage) => message.attachments?.filter(a => a.kind === 'image' && a.dataUrl) ?? [];
 const documentsOf = (message: ChatMessage) => message.attachments?.filter(a => a.kind === 'document' && a.text) ?? [];
@@ -55,7 +56,8 @@ export function userText(message: ChatMessage, documentChars = Infinity): string
 }
 
 function toTurn(message: ChatMessage, documentChars?: number): ChatTurn {
-  if (message.role !== 'user') return { role: message.role, content: message.content };
+  // A reply says what images it made, so the model knows them (and can change the last one).
+  if (message.role !== 'user') return { role: message.role, content: modelText(message) };
   const images = imagesOf(message);
   const text = userText(message, documentChars);
   if (!images.length) return { role: 'user', content: text };
@@ -87,7 +89,7 @@ export function buildContext(
   let trimmed = false;
   for (let i = messages.length - 1; i >= 0; i--) {
     const message = messages[i];
-    if (!message.content && !message.attachments?.length) continue;
+    if (!message.content && !message.attachments?.length && !message.images?.length) continue;
     let turn = toTurn(message);
     const cost = costOf(turn);
     // Always keep the newest message. If it alone is too long, shorten what

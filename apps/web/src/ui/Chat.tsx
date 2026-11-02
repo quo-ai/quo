@@ -14,6 +14,9 @@ import { modelMessages, summarize } from '../chat/summary';
 import { autoSummarize, MIN_MESSAGES, SUMMARIZE_AT } from '../context/settings';
 import { contextUsage, ratio, type ContextMode } from '../context/usage';
 import { replyInCloud, replyOffline, replyOwn, replyWithAgent, replyWithWeb, type ReplyTarget } from '../chat/replies';
+import { makeImages } from '../images/make';
+import { hasImagesToMake, replyWithImage, showingImages } from '../images/reply';
+import { asImageAsk } from '../images/tags';
 import { ApiError } from '../cloud/api';
 import type { Account } from '../cloud/account';
 import { stopCloud } from '../cloud/cloudEngine';
@@ -144,15 +147,19 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
     setUndo(null);
     stickToBottom.current = true;
     const now = Date.now();
+    // "/image …" asks for an image outright.
+    const imageAsk = asImageAsk(userText);
+    if (imageAsk) userText = imageAsk;
     const user: Message = { id: newId(), role: 'user', content: userText, ...(sent.length ? { attachments: sent } : {}) };
     const assistant: Message = { id: newId(), role: 'assistant', content: '', modelId: choice.model.id, modelName: choice.model.name, cloud, ...(choice.kind === 'own' ? { own: choice.provider.name } : {}) };
     let current: Conversation = base
       ? { ...base, updatedAt: now, messages: [...base.messages, user, assistant] }
       : { id: newId(), title: titleFrom(userText || sent[0]?.name || 'New chat'), createdAt: now, updatedAt: now, messages: [user, assistant] };
-    const update = (patch: Partial<Message>, persist: boolean) => {
+    // Image lines a model writes are taken out of what is shown, and become images to make (src/images/).
+    const update = showingImages((patch: Partial<Message>, persist: boolean) => {
       current = { ...current, messages: current.messages.map(m => (m.id === assistant.id ? { ...m, ...patch } : m)) };
       onChange(current, persist);
-    };
+    });
     onChange(current, true, created);
     if (code) rememberChatProject(current.id, code.project.id);
     const target: ReplyTarget = { prior: modelMessages(current.messages.filter(m => m.id !== assistant.id)), update, setStatus, onContext: (tokens, exact) => setLive({ tokens, exact }), chatId: current.id };
@@ -163,7 +170,11 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
       // Plain chats on the desktop go through the same loop when a folder could be wanted, so the model decides. Anything the loop
       // doesn't do (attachments, thinking, Quo's own web search) keeps its own route; the folder button is always there.
       const folderless = !code && usesFolderLoop({ choice, available: codeMode.available, autoStart: codeSettings().autoStart, gated: Boolean(choice.kind === 'local' && codeMode.gate && !codeMode.gate.allowed), localRated: choice.kind !== 'local' || agentRating(choice.model) === 'good', plainFeatures: sent.length > 0 || thinking !== startLevel || (web.on && web.how === 'native') });
-      if (code && (choice.kind === 'local' || choice.model.agent || (choice.kind === 'cloud' && choice.model.agentLight))) {
+      if (imageAsk && (choice.kind === 'local' || code)) {
+        // No image rules in this chat's prompt (small offline models, Code mode): the model writes just the prompt.
+        setStatus('generating');
+        await replyWithImage(choice, userText, target.prior as Message[], update, { contextSize: code && choice.kind === 'local' ? AGENT_CONTEXT : undefined });
+      } else if (code && (choice.kind === 'local' || choice.model.agent || (choice.kind === 'cloud' && choice.model.agentLight))) {
         setStatus('generating');
         const controller = new AbortController();
         agentRun.current = controller;
@@ -218,6 +229,17 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
       } else {
         await replyOffline(choice, thinking === 'deep', target);
       }
+      // Images the reply asked for, made one after another (Stop ends them too).
+      if (hasImagesToMake(current.messages.find(m => m.id === assistant.id))) {
+        setStatus('generating');
+        const controller = new AbortController();
+        agentRun.current = controller;
+        try {
+          await makeImages(current.messages, assistant.id, images => update({ images }, true), controller.signal);
+        } finally {
+          agentRun.current = null;
+        }
+      }
     } catch (err) {
       if (!(err instanceof ApiError)) console.error(err);
       const failed: Failure = err instanceof ApiError
@@ -229,7 +251,7 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
       if (failed.code === 'offline' || failed.code === 'provider_unreachable') reportNetworkFailure();
       // The chat may have been moved to the offline model: the message runs again there, once.
       runAgain.current = Boolean(onFailure?.(failed));
-      current = { ...current, messages: current.messages.filter(m => m.id !== assistant.id || m.content || m.steps?.length) };
+      current = { ...current, messages: current.messages.filter(m => m.id !== assistant.id || m.content || m.steps?.length || m.images?.length) };
       onChange(current, true);
     } finally {
       endGeneration();

@@ -24,7 +24,7 @@ const { checkHooks, hasHook, parseStatus } = require('./commit');
 
 const MAX_LISTED = 30;
 const PUSH_TIMEOUT_MS = 120_000;
-const QUO_URL = 'https://quoai.vercel.app';
+const QUO_URL = 'https://quo.computer';
 
 /** A remote's address for showing: any user name or password in it removed. */
 function displayUrl(url) {

@@ -3,7 +3,7 @@
 const { app, Menu, shell } = require('electron');
 
 const LINKS = {
-  website: 'https://quoai.vercel.app',
+  website: 'https://quo.computer',
   source: 'https://github.com/quo-ai/quo',
   issues: 'https://github.com/quo-ai/quo/issues/new/choose',
 };

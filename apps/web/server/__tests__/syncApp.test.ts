@@ -262,7 +262,7 @@ describe('the clean-up schedule endpoint', () => {
     expect((await call({ token: 'cron-secret-for-tests-but-wrong' }, 'GET', 'cron/sync-cleanup')).status).toBe(401);
     const ok = await call({ token: 'cron-secret-for-tests' }, 'GET', 'cron/sync-cleanup');
     expect(ok.status).toBe(200);
-    expect(await ok.json()).toEqual({ deletedAccounts: expect.any(Number), warned: expect.any(Number), prunedMarkers: expect.any(Number) });
+    expect(await ok.json()).toEqual({ deletedAccounts: expect.any(Number), warned: expect.any(Number), prunedMarkers: expect.any(Number), prunedTrialClaims: expect.any(Number) });
   });
 });
 

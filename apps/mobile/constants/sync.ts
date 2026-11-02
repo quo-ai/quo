@@ -3,4 +3,4 @@
  * API; it moves with it when Quo gets its own domain (also WEB_APP_URL in
  * apps/web/src/platform.ts and API_ORIGIN in apps/desktop/src/protocol.js).
  */
-export const SYNC_API_ORIGIN = 'https://quoai-app.vercel.app';
+export const SYNC_API_ORIGIN = 'https://app.quo.computer';

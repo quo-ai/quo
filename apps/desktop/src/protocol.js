@@ -10,7 +10,7 @@ const { protocol, net } = require('electron');
 const APP_SCHEME = 'app';
 const APP_HOST = 'quo';
 const APP_URL = `${APP_SCHEME}://${APP_HOST}/`;
-const API_ORIGIN = new URL(process.env.QUO_API_ORIGIN || 'https://quoai-app.vercel.app').origin;
+const API_ORIGIN = new URL(process.env.QUO_API_ORIGIN || 'https://app.quo.computer').origin;
 
 // Cross-origin isolation: enables SharedArrayBuffer (multithreaded wasm).
 const ISOLATION_HEADERS = {

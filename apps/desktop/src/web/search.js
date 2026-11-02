@@ -69,7 +69,7 @@ const run = {
     return shape((json(text, 'SearXNG').results ?? []).slice(0, count).map(r => ({ title: r.title, url: r.url, snippet: r.content })));
   },
   async duckduckgo({ query, count, fetchFn }) {
-    const html = await ask(fetchFn, 'DuckDuckGo', `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`, { headers: { 'user-agent': 'Mozilla/5.0 (compatible; Quo/1.3; +https://quoai.vercel.app)', accept: 'text/html' } });
+    const html = await ask(fetchFn, 'DuckDuckGo', `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`, { headers: { 'user-agent': 'Mozilla/5.0 (compatible; Quo/1.3; +https://quo.computer)', accept: 'text/html' } });
     return parseDuckDuckGo(html, count);
   },
 };

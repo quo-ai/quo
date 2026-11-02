@@ -41,7 +41,8 @@ async function open(): Promise<Db> {
 
 async function openPostgres(url: string): Promise<Db> {
   const { default: postgres } = await import('postgres');
-  const sql = postgres(url, { max: 5, idle_timeout: 20 });
+  // No notices: "create table if not exists" reports every table that already exists, on every start.
+  const sql = postgres(url, { max: 5, idle_timeout: 20, onnotice: () => {} });
   type Runner = { unsafe: (query: string, params?: never[]) => Promise<unknown> };
   const wrap = (runner: Runner, inTx: boolean): Db => ({
     query: async <T,>(query: string, params: unknown[] = []) => (await runner.unsafe(query, params as never[])) as T[],

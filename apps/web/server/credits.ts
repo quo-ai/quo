@@ -1,5 +1,6 @@
-import { randomUUID } from 'node:crypto';
+import { createHmac, randomUUID } from 'node:crypto';
 import type { Db } from './db.js';
+import { config } from './env.js';
 
 /**
  * Credit ledger. All amounts are integer millicredits (1 credit = 1000).
@@ -64,8 +65,48 @@ export async function grantCredits(
   return true;
 }
 
-export function grantTrial(db: Db, userId: string, now = new Date()): Promise<boolean> {
-  return grantCredits(db, userId, 'trial', TRIAL_CREDITS, new Date(now.getTime() + TRIAL_DAYS * 86_400_000), `trial:${userId}`);
+/**
+ * Takes back what is left of the grants whose ref starts with `prefix` (a refunded payment's packs or plan months), and
+ * records it in the ledger. Credits already spent stay spent. Returns the credits taken back.
+ */
+export async function revokeGrants(db: Db, prefix: string, reason: string): Promise<number> {
+  const taken = await db.query<{ user_id: string; remaining: number; ref: string }>(
+    `with old as (select id, user_id, remaining, ref from credit_grants where starts_with(ref, $1) and remaining > 0 for update)
+     update credit_grants g set remaining = 0 from old where g.id = old.id
+     returning old.user_id, old.remaining, old.ref`,
+    [prefix],
+  );
+  for (const row of taken) {
+    await db.query('insert into credit_ledger (user_id, delta, reason, ref) values ($1, $2, $3, $4)', [row.user_id, -row.remaining, reason, row.ref]);
+  }
+  return taken.reduce((sum, row) => sum + row.remaining, 0);
+}
+
+/**
+ * The free trial, once per email address: the first time, a keyed one-way hash of the address (a +tag dropped) is kept in
+ * trial_claims for TRIAL_CLAIM_DAYS, also after the account is deleted. The hash can't be turned back into the address.
+ * An account from before claims existed records its claim at its next sign-in (the grant itself is once per account).
+ */
+export async function grantTrial(db: Db, userId: string, email: string, now = new Date()): Promise<boolean> {
+  return db.tx(async t => {
+    const claimed = await t.query('insert into trial_claims (email_hash, claimed_at) values ($1, $2) on conflict do nothing returning email_hash', [trialClaimKey(email), now]);
+    if (claimed.length === 0) return false;
+    return grantCredits(t, userId, 'trial', TRIAL_CREDITS, new Date(now.getTime() + TRIAL_DAYS * 86_400_000), `trial:${userId}`);
+  });
+}
+
+export const TRIAL_CLAIM_DAYS = 365;
+
+/** The trial claim for an email address: name+tag@domain counts as name@domain. Keyed, so a list of addresses can't be checked against it. */
+export function trialClaimKey(email: string): string {
+  const [name, domain] = email.trim().toLowerCase().split('@');
+  return createHmac('sha256', config.sessionSecret).update(`trial-claim:${name.split('+')[0]}@${domain}`).digest('base64url');
+}
+
+/** Removes trial claims older than TRIAL_CLAIM_DAYS (the daily clean-up). */
+export async function pruneTrialClaims(db: Db, now = new Date()): Promise<number> {
+  const gone = await db.query('delete from trial_claims where claimed_at < $1 returning email_hash', [new Date(now.getTime() - TRIAL_CLAIM_DAYS * 86_400_000)]);
+  return gone.length;
 }
 
 export function grantPack(db: Db, userId: string, pack: PackId, transactionId: string, now = new Date()): Promise<boolean> {

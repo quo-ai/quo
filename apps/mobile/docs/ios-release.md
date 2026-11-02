@@ -7,7 +7,7 @@ Building requires **macOS with Xcode 16+** and CocoaPods (`brew install cocoapod
 ## Blockers — must be resolved before any build you intend to submit or test on-device
 
 1. **`GoogleService-Info.plist`** — the file at the repo root is currently a placeholder (`REPLACE_ME` values). `FirebaseApp.configure()` runs on every launch and **will crash the app immediately** with the placeholder. Get the real one from Firebase Console (see setup step 4) before building.
-2. **Privacy policy URL** — `constants/legal.ts` points to https://quoai.vercel.app/privacy/ (the website in `website/`), which App Store review and Play Console's data-safety declaration both need. Keep it live before submitting for review.
+2. **Privacy policy URL** — `constants/legal.ts` points to https://quo.computer/privacy/ (the website in `website/`), which App Store review and Play Console's data-safety declaration both need. Keep it live before submitting for review.
 3. **`APP_STORE_ID`** in `components/settings/AboutSection.tsx` — still `'0000000000'`. Harmless placeholder (the write-review deep link just won't resolve) until you've created the App Store Connect listing in step 2 below.
 
 ## One-time setup

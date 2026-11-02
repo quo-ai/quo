@@ -69,7 +69,7 @@ export async function handleAuthVerify(request: Request): Promise<Response> {
   await db.query('delete from login_codes where email = $1', [email]);
   await db.query('insert into users (id, email) values ($1, $2) on conflict (email) do nothing', [randomUUID(), email]);
   const [user] = await db.query<{ id: string }>('select id from users where email = $1', [email]);
-  await grantTrial(db, user.id);
+  await grantTrial(db, user.id, email);
 
   const summary = await accountSummary(db, { ...anonymous(request), userId: user.id });
   // The phone app has no cookie jar to rely on: it asks for the token itself and keeps it in secure storage.

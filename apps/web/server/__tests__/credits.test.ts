@@ -4,9 +4,9 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { createTestDb, type Db } from '../db.js';
 import {
   addMonths, ensureMonthlyGrant, getBalance, grantCredits, grantPack, grantTrial, MILLI, monthsBetween,
-  reserveCredits, settleCredits,
+  pruneTrialClaims, reserveCredits, settleCredits, TRIAL_CLAIM_DAYS,
 } from '../credits.js';
-import { freeRemaining, refundFreeMessage, takeFreeMessage } from '../freeTier.js';
+import { freeRemaining, refundFreeMessage, takeFree, takeFreeMessage } from '../freeTier.js';
 
 let db: Db;
 let userId: string;
@@ -30,8 +30,8 @@ describe('dates', () => {
 
 describe('grants', () => {
   it('are idempotent per ref', async () => {
-    expect(await grantTrial(db, userId, now)).toBe(true);
-    expect(await grantTrial(db, userId, now)).toBe(false);
+    expect(await grantTrial(db, userId, `${userId}@example.com`, now)).toBe(true);
+    expect(await grantTrial(db, userId, `${userId}@example.com`, now)).toBe(false);
     expect(await getBalance(db, userId, now)).toBe(25 * MILLI);
   });
 
@@ -64,9 +64,55 @@ describe('grants', () => {
   });
 });
 
+describe('free uses that count double, and the first of the day', () => {
+  it('takes two at once only when both fit, gives both back, and knows the first use of the day', async () => {
+    const keys = { subject: 'image:device:a', ip: 'image:203.0.113.9' };
+    const limits = { perSubject: 3, perIp: 10 };
+    expect(await takeFree(db, keys, limits, { now, uses: 2 })).toEqual({ ok: true, firstToday: true });
+    expect(await takeFree(db, keys, limits, { now, uses: 2 })).toEqual({ ok: false, firstToday: false });
+    expect(await takeFree(db, keys, limits, { now })).toEqual({ ok: true, firstToday: false });
+    await refundFreeMessage(db, keys, now, 2);
+    expect(await freeRemaining(db, keys, limits, now)).toBe(2);
+    expect((await takeFree(db, keys, { perSubject: 1, perIp: 10 }, { now: new Date(now.getTime() + 86_400_000), uses: 2 })).ok).toBe(false);
+  });
+});
+
+describe('the free trial', () => {
+  const newAccount = async (email: string) => {
+    const id = randomUUID();
+    await db.query('insert into users (id, email) values ($1, $2)', [id, `${id}@accounts.example`]);
+    return { id, email };
+  };
+
+  it('comes once per email address, even after the account is deleted and made again', async () => {
+    const first = await newAccount('ann@example.com');
+    expect(await grantTrial(db, first.id, first.email, now)).toBe(true);
+    // The account is deleted (its grants go with it); a new one with the same address gets nothing.
+    await db.query('delete from credit_grants where user_id = $1', [first.id]);
+    await db.query('delete from credit_ledger where user_id = $1', [first.id]);
+    await db.query('delete from users where id = $1', [first.id]);
+    const again = await newAccount('ann@example.com');
+    expect(await grantTrial(db, again.id, ' Ann@Example.com ', now)).toBe(false);
+    expect(await getBalance(db, again.id, now)).toBe(0);
+    // A +tag is the same address; another address is not.
+    expect(await grantTrial(db, (await newAccount('ann+quo@example.com')).id, 'ann+quo@example.com', now)).toBe(false);
+    expect(await grantTrial(db, (await newAccount('bob@example.com')).id, 'bob@example.com', now)).toBe(true);
+  });
+
+  it('keeps only a keyed hash of the address, for a year', async () => {
+    await grantTrial(db, userId, 'cara@example.com', now);
+    const rows = await db.query<{ email_hash: string }>('select email_hash from trial_claims');
+    expect(JSON.stringify(rows)).not.toMatch(/cara|example/);
+    expect(await pruneTrialClaims(db, new Date(now.getTime() + (TRIAL_CLAIM_DAYS - 1) * 86_400_000))).toBe(0);
+    expect(await pruneTrialClaims(db, new Date(now.getTime() + (TRIAL_CLAIM_DAYS + 1) * 86_400_000))).toBe(1);
+    // After that, the address can have the trial again.
+    expect(await grantTrial(db, (await newAccount('cara@example.com')).id, 'cara@example.com', new Date(now.getTime() + 400 * 86_400_000))).toBe(true);
+  });
+});
+
 describe('reserve and settle', () => {
   it('holds credit, charges the actual cost, releases the rest', async () => {
-    await grantTrial(db, userId, now);
+    await grantTrial(db, userId, `${userId}@example.com`, now);
     const hold = await reserveCredits(db, userId, 10 * MILLI, 1 * MILLI, now);
     expect(hold?.amount).toBe(10 * MILLI);
     expect(await getBalance(db, userId, now)).toBe(15 * MILLI);

@@ -3,7 +3,8 @@ import { costToMillicredits, CREDIT_USD, estimateCost, getCloudModel, isFreeMode
 import { MILLI, getBalance, reserveCredits, settleCredits } from './credits.js';
 import { getDb } from './db.js';
 import { config, features, SETUP_MESSAGES } from './env.js';
-import { freeRemaining, refundFreeMessage, takeFreeMessage } from './freeTier.js';
+import { noteCost } from './costs.js';
+import { freeRemaining, refundFreeMessage, takeFree, takeFreeMessage } from './freeTier.js';
 import { HttpError, readJson } from './http.js';
 import { freeSubject, identify } from './identity.js';
 import { defaultLevel, isLevel, levelFromLegacy, reasoningParam, type ThinkLevel } from '../shared/thinking.js';
@@ -64,6 +65,9 @@ const ID_PATTERN = /^[A-Za-z0-9_.:-]{1,80}$/;
 const NAME_PATTERN = /^[A-Za-z0-9_-]{1,64}$/;
 
 const sse = (event: string, data: unknown) => `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+// A comment line while the model thinks without streaming: proxies (Cloudflare: 100 s) close a silent connection. Readers skip it.
+const KEEP_ALIVE = ': keep-alive\n\n';
+const KEEP_ALIVE_MS = 20_000;
 const toCredits = (millicredits: number) => Math.round(millicredits / 100) / 10;
 // What one reply cost gets two decimals: the cheapest models cost a few hundredths of a credit, and "0.0" would read as free.
 const FREE_CODE_LIMIT_MESSAGE = 'You’ve used today’s free coding steps. They come back tomorrow; a stronger model with credits has no daily limit.';
@@ -113,8 +117,10 @@ export async function handleChat(request: Request): Promise<Response> {
   let holdId: string | null = null;
   let searchesAllowed = 0;
   let searchCost = 0;
-  if (isFreeModel(model) && (await takeFreeMessage(db, lightAgent ? codeKeys : freeKeys, lightAgent ? codeLimits : freeLimits))) {
+  const freeTake = isFreeModel(model) ? await takeFree(db, lightAgent ? codeKeys : freeKeys, lightAgent ? codeLimits : freeLimits) : null;
+  if (freeTake?.ok) {
     mode = 'free';
+    if (freeTake.firstToday && !lightAgent) void noteCost(db, 'people:free');
     if (wantsWeb && (await takeFreeMessage(db, webKeys, webLimits))) searchesAllowed = FREE_SEARCHES_PER_REPLY;
   } else {
     if (!identity.userId) {
@@ -149,16 +155,19 @@ export async function handleChat(request: Request): Promise<Response> {
   request.signal.addEventListener('abort', () => upstream.abort(), { once: true });
   const encoder = new TextEncoder();
   let outputChars = 0;
+  let keepAlive: ReturnType<typeof setInterval> | undefined;
 
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
-      const send = (event: string, data: unknown) => {
+      const write = (text: string) => {
         try {
-          controller.enqueue(encoder.encode(sse(event, data)));
+          controller.enqueue(encoder.encode(text));
         } catch {
           // Client went away; keep going so the request is settled.
         }
       };
+      const send = (event: string, data: unknown) => write(sse(event, data));
+      keepAlive = setInterval(() => write(KEEP_ALIVE), KEEP_ALIVE_MS);
       let usage = null as Awaited<ReturnType<typeof streamChat>> | null;
       let failure: { code: string; message: string } | null = null;
       try {
@@ -213,6 +222,11 @@ export async function handleChat(request: Request): Promise<Response> {
       } catch (error) {
         console.error('[chat] settle', error);
       }
+      // The day's totals: what this cost Quo (estimated when OpenRouter didn't say) and what it charged.
+      if (usage || outputChars > 0) {
+        const usd = usage?.costUsd ?? ((estimateCost(model, usage?.promptTokens || inputTokens, usage?.completionTokens || Math.ceil(outputChars / 3.5)) / MILLI) * CREDIT_USD + SEARCH_FEE_USD * (usage?.searches ?? 0));
+        await noteCost(db, mode === 'credits' ? 'chat:paid' : lightAgent ? 'code:free' : 'chat:free', { usd, charged });
+      }
 
       if (failure) send('error', { error: failure.code, message: failure.message });
       else {
@@ -227,6 +241,7 @@ export async function handleChat(request: Request): Promise<Response> {
           ...(usage?.sources?.length ? { sources: usage.sources } : {}),
         });
       }
+      clearInterval(keepAlive);
       try {
         controller.close();
       } catch {
@@ -234,6 +249,7 @@ export async function handleChat(request: Request): Promise<Response> {
       }
     },
     cancel() {
+      clearInterval(keepAlive);
       upstream.abort();
     },
   });

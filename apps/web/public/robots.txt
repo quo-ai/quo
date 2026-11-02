@@ -1,0 +1,4 @@
+# Quo Web, the app. The website, with every page about Quo, is https://quo.computer.
+User-agent: *
+Disallow: /api/
+Disallow: /checkout.html

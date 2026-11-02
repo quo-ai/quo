@@ -1,3 +1,4 @@
+import type { ImageAspect } from '../../shared/content';
 import type { AgentStep } from '../agent/types';
 import type { WebSource } from '../../shared/webSources';
 
@@ -53,6 +54,22 @@ export interface Message {
   usage?: { input: number; output: number };
   /** The exact model that answered (own keys, Claude Agent), as the provider reported it. Kept on this device; not synced. */
   served?: string;
+  /** Images the reply asked for (src/images/): being made, made, or failed. Kept on this device; not synced. */
+  images?: GeneratedImage[];
+}
+
+/** An image a reply asked for, made by an image model in Quo's cloud from the prompt the chat's model wrote. */
+export interface GeneratedImage {
+  id: string;
+  prompt: string;
+  aspect: ImageAspect;
+  /** A change to the last image made, which went with the prompt. */
+  edit?: boolean;
+  status: 'creating' | 'done' | 'failed';
+  dataUrl?: string;
+  /** The image model's name. */
+  model?: string;
+  error?: string;
 }
 
 export interface Conversation {

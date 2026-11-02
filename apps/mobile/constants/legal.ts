@@ -2,7 +2,7 @@ import { Platform } from 'react-native';
 
 // Hosted from web/ (Vercel project "quo"). Apple (paywall + App Store Connect
 // metadata) and Google (Play Console data-safety declaration) both link here.
-const SITE_URL = 'https://quoai.vercel.app';
+const SITE_URL = 'https://quo.computer';
 
 export const PRIVACY_POLICY_URL = `${SITE_URL}/privacy/`;
 

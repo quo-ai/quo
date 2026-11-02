@@ -1,5 +1,5 @@
 import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
-import { addMonths, grantPack, PACK_CREDITS, type PackId } from './credits.js';
+import { addMonths, grantPack, PACK_CREDITS, revokeGrants, type PackId } from './credits.js';
 import { getDb, type Db } from './db.js';
 import { config, features, SETUP_MESSAGES } from './env.js';
 import { HttpError, json, readJson } from './http.js';
@@ -136,6 +136,10 @@ interface PaddleEvent {
     started_at?: string | null;
     first_billed_at?: string | null;
     current_billing_period?: { ends_at?: string } | null;
+    /** Adjustments (refunds, chargebacks): what was done, to which payment. */
+    action?: string;
+    transaction_id?: string | null;
+    subscription_id?: string | null;
   };
 }
 
@@ -161,6 +165,7 @@ export async function handlePaddleWebhook(request: Request): Promise<Response> {
 
 export async function applyPaddleEvent(db: Db, event: PaddleEvent): Promise<void> {
   const { data } = event;
+  if (event.event_type === 'adjustment.created' || event.event_type === 'adjustment.updated') return applyAdjustment(db, data);
   const userId = data.custom_data?.user_id;
   if (!userId) return;
   const [user] = await db.query('select id from users where id = $1', [userId]);
@@ -187,4 +192,15 @@ export async function applyPaddleEvent(db: Db, event: PaddleEvent): Promise<void
       [data.id, userId, product, data.status ?? 'active', new Date(started), data.current_billing_period?.ends_at ? new Date(data.current_billing_period.ends_at) : null],
     );
   }
+}
+
+/**
+ * A refund or chargeback, once approved: the credits still unused from that payment go (its packs, and a refunded plan's
+ * months). Adjustments carry no custom data, so the grants are found by the payment they came from (their refs).
+ */
+async function applyAdjustment(db: Db, data: PaddleEvent['data']): Promise<void> {
+  if ((data.action !== 'refund' && data.action !== 'chargeback') || data.status !== 'approved') return;
+  const reason = `${data.action}:${data.id}`;
+  if (data.transaction_id) await revokeGrants(db, `txn:${data.transaction_id}:`, reason);
+  if (data.subscription_id) await revokeGrants(db, `sub:${data.subscription_id}:`, reason);
 }

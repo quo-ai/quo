@@ -7,6 +7,9 @@ import type { Db } from './db.js';
  * trial) with its own expiry; spending draws from the soonest-expiring
  * first. credit_holds: amounts reserved by in-flight cloud requests.
  * credit_ledger: append-only history of every change.
+ * trial_claims: keyed one-way hashes of the email addresses that had the free trial, kept a year (also after an account
+ * is deleted) so deleting and signing up again doesn't give a second one.
+ * daily_costs: totals per day of cloud requests, their cost and credits charged; nothing about who (costs.ts).
  */
 const STATEMENTS = [
   `create table if not exists users (
@@ -93,6 +96,16 @@ const STATEMENTS = [
   `create table if not exists processed_events (
     id text primary key,
     created_at timestamptz not null default now()
+  )`,  `create table if not exists trial_claims (
+    email_hash text primary key,
+    claimed_at timestamptz not null default now()
+  )`,  `create table if not exists daily_costs (
+    day date not null,
+    kind text not null,
+    requests integer not null default 0,
+    usd double precision not null default 0,
+    charged integer not null default 0,
+    primary key (day, kind)
   )`,
 ];
 
