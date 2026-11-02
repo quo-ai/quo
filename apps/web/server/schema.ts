@@ -10,6 +10,7 @@ import type { Db } from './db.js';
  * trial_claims: keyed one-way hashes of the email addresses that had the free trial, kept a year (also after an account
  * is deleted) so deleting and signing up again doesn't give a second one.
  * daily_costs: totals per day of cloud requests, their cost and credits charged; nothing about who (costs.ts).
+ * referral_codes, referrals: invite codes and who invited whom (referrals.ts), deleted with either account.
  */
 const STATEMENTS = [
   `create table if not exists users (
@@ -99,7 +100,19 @@ const STATEMENTS = [
   )`,  `create table if not exists trial_claims (
     email_hash text primary key,
     claimed_at timestamptz not null default now()
-  )`,  `create table if not exists daily_costs (
+  )`,  `create table if not exists referral_codes (
+    user_id uuid primary key references users(id),
+    code text unique not null,
+    created_at timestamptz not null default now()
+  )`,
+  `create table if not exists referrals (
+    referred_user_id uuid primary key references users(id),
+    referrer_user_id uuid not null references users(id),
+    created_at timestamptz not null default now(),
+    rewarded_at timestamptz
+  )`,
+  `create index if not exists referrals_referrer on referrals(referrer_user_id)`,
+  `create table if not exists daily_costs (
     day date not null,
     kind text not null,
     requests integer not null default 0,

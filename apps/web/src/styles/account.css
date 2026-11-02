@@ -65,3 +65,7 @@
 .after-download { margin: 0 0 10px; padding: 10px 14px; border-radius: var(--r-card); font-size: var(--t-meta); color: var(--ink-2); background: var(--indigo-wash); }
 .other-os { margin: 4px 0 0 4px; }
 .sheet-foot { margin: 18px 0 0; text-align: center; }
+
+/* Invite friends: the link, selectable, with its copy button. */
+.invite-link { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.invite-link code { flex: 1 1 220px; min-width: 0; padding: 8px 10px; border-radius: var(--r-inner); background: var(--sheet-2); color: var(--ink); font-size: var(--t-small); overflow-wrap: anywhere; user-select: all; }

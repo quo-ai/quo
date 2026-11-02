@@ -1,5 +1,6 @@
 import { createHash, randomInt, randomUUID, timingSafeEqual } from 'node:crypto';
 import { grantTrial } from './credits.js';
+import { claimReferral } from './referrals.js';
 import { getDb } from './db.js';
 import { sendLoginCode } from './email.js';
 import { config, features, SETUP_MESSAGES } from './env.js';
@@ -49,7 +50,7 @@ export async function handleAuthStart(request: Request): Promise<Response> {
 
 export async function handleAuthVerify(request: Request): Promise<Response> {
   if (!features.accounts) throw new HttpError(503, 'setup_required', SETUP_MESSAGES.accounts);
-  const body = await readJson<{ email?: string; code?: string; client?: string }>(request);
+  const body = await readJson<{ email?: string; code?: string; client?: string; ref?: string }>(request);
   const email = normalizeEmail(body.email);
   const code = String(body.code ?? '').replace(/\D/g, '');
   const db = await getDb();
@@ -67,9 +68,11 @@ export async function handleAuthVerify(request: Request): Promise<Response> {
   }
 
   await db.query('delete from login_codes where email = $1', [email]);
-  await db.query('insert into users (id, email) values ($1, $2) on conflict (email) do nothing', [randomUUID(), email]);
+  const created = await db.query('insert into users (id, email) values ($1, $2) on conflict (email) do nothing returning id', [randomUUID(), email]);
   const [user] = await db.query<{ id: string }>('select id from users where email = $1', [email]);
-  await grantTrial(db, user.id, email);
+  const trial = await grantTrial(db, user.id, email);
+  // An invite counts only for a new account whose address never had the trial: not for signing in again or coming back.
+  if (created.length > 0 && trial && body.ref) await claimReferral(db, user.id, body.ref).catch(error => console.error('[referral]', error));
 
   const summary = await accountSummary(db, { ...anonymous(request), userId: user.id });
   // The phone app has no cookie jar to rely on: it asks for the token itself and keeps it in secure storage.

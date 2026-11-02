@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Generates the website's document pages (privacy, terms, refunds, pricing,
-support, brand, delete account, 404) in website/.
+support, brand, delete account, models, changelog, 404) in website/.
 
 Header, footer and the icon sprite are taken from website/index.html so every
 page stays in sync with the home page. Edit the content below, then run:
@@ -12,8 +12,12 @@ data off the device (analytics events, a new SDK, a network feature), this
 policy and the Play Data safety / App Store privacy answers must change too.
 """
 import re
+import sys
 from datetime import datetime
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))  # data_pages.py, beside this script
+from data_pages import changelog_page, models_page  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent  # website/
 SITE = 'https://quo.computer'
@@ -107,7 +111,7 @@ privacy = f'''<h1>Privacy Policy</h1>
 <h2>Accounts and Quo Sync</h2>
 <p>You only need a Quo account to use Quo Sync, which keeps your chats and memories in step between your devices (Quo Web, the desktop app and the Android app), or to buy Quo Pro or a Quo Sync plan. Everything else works without one.</p>
 <h3>Your account</h3>
-<p>You sign in with your email address: we email you a six-digit code (through our email provider, Resend), which works for 10 minutes. We keep your email address, a one-way hash of the code until it is used or replaced, and records of your plan and credits. So the free trial can be given only once, we also keep a one-way keyed hash of your email address for a year after the trial, even if you delete your account; it can’t be turned back into your address. Staying signed in uses a secure cookie (Quo Web and the desktop app) or a token held in your phone’s secure storage; signing out removes it from that device, and “sign out of all devices” ends every sign-in at once.</p>
+<p>You sign in with your email address: we email you a six-digit code (through our email provider, Resend), which works for 10 minutes. We keep your email address, a one-way hash of the code until it is used or replaced, and records of your plan and credits. So the free trial can be given only once, we also keep a one-way keyed hash of your email address for a year after the trial, even if you delete your account; it can’t be turned back into your address. If you sign up with a friend’s invite link, we record that they invited you, to give the invite credits; we keep that until either of you deletes your account. Staying signed in uses a secure cookie (Quo Web and the desktop app) or a token held in your phone’s secure storage; signing out removes it from that device, and “sign out of all devices” ends every sign-in at once.</p>
 <h3>What Quo Sync stores</h3>
 <p>If you turn on Quo Sync, each chat and memory is encrypted on your device before it is uploaded, with a key made from a recovery key that you save and that we never receive. We store the encrypted data, a random identifier for each item, its size and when it last changed, and a small encrypted check value that lets a new device confirm your recovery key. The names of attached files are part of the encrypted data; the files, photos and models themselves are never synced.</p>
 <p>We can’t read, search or recover your synced chats and memories, and if you lose your recovery key nobody can open them. We can tell that your account uses Quo Sync, roughly how many items it holds, how big they are and when they changed, but not what they say.</p>
@@ -224,6 +228,7 @@ terms = f'''<h1>Terms of Use</h1>
 <li><strong>The trial.</strong> Each email address gets 25 free credits once, which last 90 days.</li>
 <li><strong>Quo Pro</strong> ($12 a month or $99 a year). It gives 1,000 credits each month, which last until the next month’s arrive, and includes Quo Sync.</li>
 <li><strong>Credit packs</strong> (1,000 credits for $12, 2,750 for $30 or 6,000 for $60). One-off purchases; their credits last 12 months.</li>
+<li><strong>Invites.</strong> A friend who signs up with your invite link gets 25 extra credits, if both the account and the email address are new. When they first buy credits or a plan, you get 50, for up to 20 friends; if that purchase is refunded, your 50 go too. Invite credits last 12 months. We may withhold them if invites are misused.</li>
 </ul>
 <p>Credits that expire first are used first. Credits have no cash value and can’t be transferred to another account.</p>
 <h3>Quo Sync</h3>
@@ -351,6 +356,7 @@ delete_account = f'''<h1>Delete your Quo account</h1>
 <li>Your email address and account</li>
 <li>Your synced chats and memories (the encrypted copy on our servers)</li>
 <li>Your credits, their history and your plan records</li>
+<li>Your invite link, and the record of who invited you and whom you invited</li>
 </ul>
 <p>It happens straight away. <strong>What stays:</strong> the chats and memories on your own devices, which are not touched; Paddle’s own records of any purchases you made, which it keeps as the law requires; and, for a year after your free trial, a one-way keyed hash of your email address, only so the trial can’t be claimed twice (it can’t be turned back into your address).</p>
 
@@ -400,6 +406,8 @@ PAGES = [
     ('support/index.html', '/support/', 'Support — Quo', 'Answers to common questions about Quo, the private AI assistant that works offline, and how to reach us.', support, 'doc'),
     ('brand/index.html', '/brand/', 'Brand assets — Quo', 'Quo logos, colours, screenshots and how to describe Quo. Free to use when writing about Quo.', brand, 'doc wide'),
     ('pricing/index.html', '/pricing/', 'Pricing — Quo', 'Quo is free on your device. Quo Pro, Quo Sync and credit packs for the cloud models.', PRICING, ''),
+    ('models/index.html', '/models/', 'Which AI model runs on my device? — Quo', 'Every open AI model in Quo for phone, browser and desktop: download size, memory it needs, photos, thinking, free or Premium.', models_page(ROOT / 'scripts' / 'models.json'), 'doc wide'),
+    ('changelog/index.html', '/changelog/', 'What’s new — Quo', 'Every release of Quo for desktop, web and phone, with what changed.', changelog_page(ROOT.parent / 'CHANGELOG.md', UPDATED), 'doc'),
     ('refunds/index.html', '/refunds/', 'Refund policy — Quo', 'How to get a refund for Quo Pro, Quo Sync and credit packs.', refunds, 'doc'),
     ('delete-account/index.html', '/delete-account/', 'Delete your Quo account — Quo', 'How to delete your Quo account and the data held for it.', delete_account, 'doc'),
     ('404.html', '/404', 'Page not found — Quo', 'This page doesn’t exist.', not_found, 'not-found'),
@@ -427,6 +435,8 @@ urls = ['/'] + [path for _, path, *_ in PAGES if path != '/404']
 - [Download for desktop](https://github.com/quo-ai/quo/releases/latest): Mac, Windows and Linux
 - [Android app](https://play.google.com/store/apps/details?id=com.quo.app)
 - [Pricing]({SITE}/pricing/): free on the device; Quo Pro, Quo Sync and credit packs for cloud models
+- [Models]({SITE}/models/): every model Quo runs on a computer, in a browser and on a phone, and what each needs
+- [What's new]({SITE}/changelog/): every release
 
 ## About
 - [Source code](https://github.com/quo-ai/quo): Apache 2.0

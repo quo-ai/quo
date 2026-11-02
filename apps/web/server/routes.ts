@@ -1,6 +1,7 @@
 import { handleAccountDelete, handleMe } from './account.js';
 import { handleAuthStart, handleAuthVerify, handleSignOut, handleSignOutEverywhere } from './auth.js';
 import { handleBillingConfig, handleCheckout, handleDevComplete, handlePaddleWebhook, handlePortal } from './billing.js';
+import { handleReferral } from './referrals.js';
 import { handleChat } from './chat.js';
 import { handleImage } from './images.js';
 import { publicCatalog } from './cloudModels.js';
@@ -31,6 +32,7 @@ const ROUTES: Record<string, Handler> = {
   'GET billing/dev-complete': handleDevComplete,
   'POST billing/portal': handlePortal,
   'POST paddle/webhook': handlePaddleWebhook,
+  'GET referral': handleReferral,
   'GET cron/sync-cleanup': handleCronSyncCleanup,
   'GET sync/status': handleSyncStatus,
   'POST sync/setup': handleSyncSetup,

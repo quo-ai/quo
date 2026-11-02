@@ -1,0 +1,212 @@
+{
+ "desktop": [
+  {
+   "name": "Qwen3.5 4B",
+   "description": "Strong all-rounder with careful reasoning. Reads images. Best on a computer with a graphics card.",
+   "downloadGB": 3.5,
+   "memoryGB": 8,
+   "photos": true,
+   "thinking": true,
+   "codeMode": false
+  },
+  {
+   "name": "Qwen3.5 9B",
+   "description": "A big step up in quality and reasoning. Reads images. Wants a graphics card with 8 GB or more, or 16 GB of memory.",
+   "downloadGB": 6.8,
+   "memoryGB": 12,
+   "photos": true,
+   "thinking": true,
+   "codeMode": true
+  },
+  {
+   "name": "Qwen3.8 27B",
+   "description": "The most capable model here. Reads images. For computers with 32 GB or more of memory, or a high-end graphics card.",
+   "downloadGB": 17.4,
+   "memoryGB": 32,
+   "photos": true,
+   "thinking": true,
+   "codeMode": true
+  },
+  {
+   "name": "Gemma 4 E2B",
+   "description": "Google’s small multilingual model. Reads images and speaks 140+ languages.",
+   "downloadGB": 3.6,
+   "memoryGB": 8,
+   "photos": true,
+   "thinking": true,
+   "codeMode": false
+  },
+  {
+   "name": "Gemma 4 12B",
+   "description": "Google’s mid-size model: clear writing in 140+ languages. Reads images. Wants a graphics card with 8 GB or more, or 16 GB of memory.",
+   "downloadGB": 6.9,
+   "memoryGB": 12,
+   "photos": true,
+   "thinking": true,
+   "codeMode": false
+  },
+  {
+   "name": "Gemma 4 26B A4B",
+   "description": "Google’s larger model, quick for its size: it uses only part of itself for each word. Reads images. For computers with 24 GB or more of memory.",
+   "downloadGB": 15.4,
+   "memoryGB": 24,
+   "photos": true,
+   "thinking": true,
+   "codeMode": false
+  },
+  {
+   "name": "Llama 3.2 3B",
+   "description": "Dependable all-rounder for writing and summarising.",
+   "downloadGB": 2,
+   "memoryGB": 8,
+   "photos": false,
+   "thinking": false,
+   "codeMode": false
+  },
+  {
+   "name": "Phi-4 Mini",
+   "description": "Microsoft’s compact reasoning model. Strong at maths, logic and structured answers.",
+   "downloadGB": 2.5,
+   "memoryGB": 8,
+   "photos": false,
+   "thinking": false,
+   "codeMode": false
+  }
+ ],
+ "browser": [
+  {
+   "name": "Qwen3.5 0.8B",
+   "description": "Fast and light. A quick first download that runs on almost any computer.",
+   "downloadGB": 0.5,
+   "memoryGB": 4,
+   "photos": false,
+   "thinking": true,
+   "codeMode": false
+  },
+  {
+   "name": "Qwen3.5 2B",
+   "description": "Balanced. Noticeably smarter, still quick on most laptops.",
+   "downloadGB": 1.3,
+   "memoryGB": 8,
+   "photos": false,
+   "thinking": true,
+   "codeMode": false
+  },
+  {
+   "name": "Llama 3.2 3B",
+   "description": "Dependable all-rounder for writing and summarising.",
+   "downloadGB": 2,
+   "memoryGB": 8,
+   "photos": false,
+   "thinking": false,
+   "codeMode": false
+  },
+  {
+   "name": "Gemma 4 E2B",
+   "description": "Google’s small model, at home in 140+ languages. Best with a graphics card.",
+   "downloadGB": 2.6,
+   "memoryGB": 8,
+   "photos": false,
+   "thinking": true,
+   "codeMode": false
+  }
+ ],
+ "phone": [
+  {
+   "name": "Nanbeige4 Thinking (3B)",
+   "description": "Deep thinker in a small package. Great writing, reasoning, and analysis.",
+   "downloadGB": 2.4,
+   "photos": false,
+   "thinking": true,
+   "free": false
+  },
+  {
+   "name": "SmolLM3 (3B)",
+   "description": "Strong compact text model with broad European language support. Good for writing, coding, and analysis.",
+   "downloadGB": 1.9,
+   "photos": false,
+   "thinking": true,
+   "free": false
+  },
+  {
+   "name": "Ministral (3B)",
+   "description": "Free vision model. Send a photo and ask anything about it.",
+   "downloadGB": 3,
+   "photos": true,
+   "thinking": false,
+   "free": true
+  },
+  {
+   "name": "Ministral Reasoning (3B)",
+   "description": "Vision + deep reasoning and vast knowledge. Analyse images, documents, and complex problems.",
+   "downloadGB": 3.3,
+   "photos": true,
+   "thinking": true,
+   "free": false
+  },
+  {
+   "name": "Qwen3.5 (0.8B)",
+   "description": "Recommended starter model. Ultra-light, fast, and best for quick offline setup on most phones.",
+   "downloadGB": 0.5,
+   "photos": false,
+   "thinking": true,
+   "free": true
+  },
+  {
+   "name": "Qwen3.5 (2B)",
+   "description": "Free balanced upgrade with stronger reasoning and coding while still staying compact.",
+   "downloadGB": 1.3,
+   "photos": false,
+   "thinking": true,
+   "free": true
+  },
+  {
+   "name": "Qwen3.5 (4B)",
+   "description": "High-end multimodal model. See and discuss images, deep reasoning, and broad multilingual knowledge on newer devices.",
+   "downloadGB": 3.4,
+   "photos": true,
+   "thinking": true,
+   "free": false
+  },
+  {
+   "name": "Gemma 4 (E2B)",
+   "description": "Google's latest small model. Sees images, uses tools, and speaks 140+ languages.",
+   "downloadGB": 4.1,
+   "photos": true,
+   "thinking": true,
+   "free": false
+  },
+  {
+   "name": "Gemma 3 (4B)",
+   "description": "Google multilingual all-rounder with vision. Strong quality across 140+ languages.",
+   "downloadGB": 3.3,
+   "photos": true,
+   "thinking": false,
+   "free": false
+  },
+  {
+   "name": "Gemma 3 (1B)",
+   "description": "Tiny, fast Google model for quick answers on any device.",
+   "downloadGB": 0.8,
+   "photos": false,
+   "thinking": false,
+   "free": false
+  },
+  {
+   "name": "Phi-4 Mini (3.8B)",
+   "description": "Microsoft compact reasoning specialist. Excellent at math, logic, and structured answers.",
+   "downloadGB": 2.5,
+   "photos": false,
+   "thinking": false,
+   "free": false
+  },
+  {
+   "name": "Llama 3.2 (3B)",
+   "description": "Meta dependable generalist for balanced chat, writing, and summarisation.",
+   "downloadGB": 2,
+   "photos": false,
+   "thinking": false,
+   "free": false
+  }
+ ]
+}

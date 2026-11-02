@@ -78,9 +78,10 @@ export async function handleAccountDelete(request: Request): Promise<Response> {
       `select 1 from subscriptions where user_id = $1 and status in ('active', 'trialing', 'past_due') limit 1`, [userId],
     );
     if (running.length > 0) throw new HttpError(409, 'plan_active', 'Cancel your plan first (Plan & credits → Manage), then delete your account.');
-    for (const table of ['sync_records', 'sync_accounts', 'credit_holds', 'credit_ledger', 'credit_grants', 'subscriptions']) {
+    for (const table of ['sync_records', 'sync_accounts', 'credit_holds', 'credit_ledger', 'credit_grants', 'subscriptions', 'referral_codes']) {
       await t.query(`delete from ${table} where user_id = $1`, [userId]);
     }
+    await t.query('delete from referrals where referred_user_id = $1 or referrer_user_id = $1', [userId]);
     await t.query('delete from login_codes where email = $1', [user.email]);
     await t.query('delete from users where id = $1', [userId]);
   });

@@ -1,5 +1,6 @@
 import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
 import { addMonths, grantPack, PACK_CREDITS, revokeGrants, type PackId } from './credits.js';
+import { rewardReferrer } from './referrals.js';
 import { getDb, type Db } from './db.js';
 import { config, features, SETUP_MESSAGES } from './env.js';
 import { HttpError, json, readJson } from './http.js';
@@ -177,6 +178,8 @@ export async function applyPaddleEvent(db: Db, event: PaddleEvent): Promise<void
       const product = productForPrice(item.price?.id ?? item.price_id);
       if (product && isPack(product)) await grantPack(db, userId, product, data.id);
     }
+    // The first payment (a pack or a plan) of an invited account rewards whoever invited it.
+    await rewardReferrer(db, userId, data.id);
     return;
   }
 

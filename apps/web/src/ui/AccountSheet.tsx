@@ -7,6 +7,7 @@ import { PRICES } from '../cloud/prices';
 import { ProPerks } from './ProPerks';
 import { disableSync } from '../sync';
 import { toast } from './Toasts';
+import { InviteFriends } from './InviteFriends';
 
 interface AccountSheetProps {
   account: Account | null;
@@ -232,6 +233,8 @@ function SignedIn({ account, onClose }: { account: Account; onClose: () => void 
         ))}
       </div>
       <p className="note">Credits from packs last 12 months. Monthly Pro credits reset each month.</p>
+
+      <InviteFriends />
 
       <div className="account-foot">
         <span className="note">{account.user?.email}</span>

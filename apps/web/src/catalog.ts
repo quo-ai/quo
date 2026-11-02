@@ -82,7 +82,7 @@ const KV = { qwenMid: 36_864, qwenLarge: 69_632, gemmaE2B: 8_192, gemma12b: 16_3
 // Google's advice for Gemma 4, the same with or without thinking (thinking is the chat template's enable_thinking).
 const GEMMA: Sampling = { temperature: 1.0, top_p: 0.95, top_k: 64, min_p: 0 };
 
-const WEB_MODELS: LocalModel[] = [
+export const WEB_MODELS: LocalModel[] = [
   {
     id: 'qwen35-0.8b',
     name: 'Qwen3.5 0.8B',

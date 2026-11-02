@@ -47,7 +47,7 @@ export function monthsBetween(start: Date, now: Date): number {
 export async function grantCredits(
   db: Db,
   userId: string,
-  kind: 'monthly' | 'pack' | 'trial' | 'adjustment',
+  kind: 'monthly' | 'pack' | 'trial' | 'adjustment' | 'referral',
   amount: number,
   expiresAt: Date,
   ref: string,

@@ -1,5 +1,6 @@
 import { isDesktopApp, openExternal, WEB_APP_URL } from '../platform';
 import { api, ApiError } from './api';
+import { forgetInvite, pendingInvite } from './invite';
 
 /** Account state (signed-in user, plan, credits, free allowance), shared app-wide. */
 
@@ -59,7 +60,9 @@ export async function startSignIn(email: string): Promise<{ devCode?: string }> 
 }
 
 export async function verifySignIn(email: string, code: string): Promise<void> {
-  set(await api<Account>('auth/verify', { body: { email, code } }));
+  const ref = pendingInvite();
+  set(await api<Account>('auth/verify', { body: { email, code, ...(ref ? { ref } : {}) } }));
+  forgetInvite();
 }
 
 /** Deletes the account and everything held for it (synced chats, credits, plan records). Refused while a plan is running. */
