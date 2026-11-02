@@ -374,6 +374,8 @@ export function App() {
   const slowBrowser = Boolean(device && !device.gpu && (device.browser === 'firefox' || device.browser === 'safari'));
   const answered = conversations.some(c => c.messages.some(m => m.role === 'assistant' && m.content));
   const showNudge = Boolean(device && !device.mobile) && answered && !getAppOpen && !isAppInstalled() && nudgeAllowed();
+  // In the sidebar above its footer; in the bottom-left corner when the sidebar is hidden.
+  const nudge = showNudge && <InstallNudge slowBrowser={slowBrowser} onMore={() => setGetAppOpen(true)} />;
 
   return (
     <>
@@ -392,6 +394,7 @@ export function App() {
           onOpenSettings={() => { setFromSettings(false); setSettingsOpen(true); }}
           onOpenPro={() => setProOpen(true)}
           onGetApp={() => setGetAppOpen(true)}
+          notice={collapsed ? null : nudge}
         />
         <div className="drawer-scrim" onClick={() => setSidebar(true)} />
 
@@ -453,9 +456,9 @@ export function App() {
                 onFailure={onFailure}
               />
             )}
+          {collapsed && nudge}
         </main>
         <FilePanel />
-        {showNudge && <InstallNudge slowBrowser={slowBrowser} onMore={() => setGetAppOpen(true)} />}
       </div>
 
       {modelsOpen && (

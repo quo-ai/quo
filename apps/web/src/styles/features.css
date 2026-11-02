@@ -1,15 +1,17 @@
 /* ---------- Install / desktop app nudge ----------
-   Sits over the bottom of the chat list, clear of the composer; when the
-   sidebar is hidden it drops to the bottom-left corner. */
+   In the sidebar, above its footer and inside its margins, so it never covers a chat or the footer (Sidebar's
+   `notice`). When the sidebar is hidden it sits in the chat's bottom-left corner, only where there is room beside the
+   message box; elsewhere it waits for the sidebar. */
 .install-nudge {
-  position: absolute; left: 24px; bottom: 178px; z-index: 7; width: 264px;
+  position: relative; flex: none;
   padding: 16px 16px 14px; border-radius: var(--r-surface); animation: nudge-in var(--d-medium) var(--e-out);
 }
-.app.sidebar-collapsed .install-nudge { bottom: 20px; left: 20px; }
+.main > .install-nudge { position: absolute; left: 20px; bottom: 20px; z-index: 7; width: 264px; }
+/* Room beside the message box: half of what the column leaves must hold the card and its margins (20 + 264 + 12). */
+@container main (max-width: 1351px) { .main > .install-nudge { display: none; } }
 .install-nudge.leaving { animation: nudge-out var(--d-short) var(--e-out) forwards; }
 @keyframes nudge-in { from { opacity: 0; transform: translateY(24px) scale(0.92); } }
 @keyframes nudge-out { to { opacity: 0; transform: translateY(12px) scale(0.96); } }
-.nudge-icon { display: grid; place-items: center; width: 44px; height: 44px; border-radius: var(--r-card); margin-bottom: 12px; color: var(--indigo); background: var(--indigo-wash); }
 .install-nudge h3 { margin: 0 0 4px; font-size: var(--t-body); letter-spacing: -0.015em; padding-right: 28px; }
 .install-nudge p { margin: 0 0 14px; font-size: var(--t-meta); color: var(--ink-2); line-height: 1.5; }
 .nudge-actions { display: flex; gap: 6px; }

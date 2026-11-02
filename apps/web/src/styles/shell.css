@@ -37,7 +37,7 @@
 .footer-btn .count.attention { color: var(--danger); font-weight: var(--w-strong); }
 
 /* ---------- Main ---------- */
-.main { position: relative; min-width: 0; min-height: 0; height: 100%; display: flex; flex-direction: column; overflow: hidden; }
+.main { position: relative; min-width: 0; min-height: 0; height: 100%; display: flex; flex-direction: column; overflow: hidden; container: main / inline-size; }
 .toolbar { position: absolute; top: 12px; left: 12px; right: 12px; z-index: 5; display: flex; align-items: center; gap: 8px; pointer-events: none; }
 .toolbar > * { pointer-events: auto; }
 .toolbar .spacer { flex: 1; pointer-events: none; }

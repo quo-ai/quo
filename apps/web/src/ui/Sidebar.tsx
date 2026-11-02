@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { Boxes, Cloud, Crown, MonitorDown, PanelLeftClose, Plus, Search, Settings, Trash2, UserRound } from 'lucide-react';
 import type { Account } from '../cloud/account';
 import { groupConversations } from '../chat/groups';
@@ -24,9 +24,11 @@ interface SidebarProps {
   /** What Quo Pro is (shown to people who aren't signed in or on Pro). */
   onOpenPro: () => void;
   onGetApp: () => void;
+  /** A card above the footer (the desktop app nudge), drawn inside the sidebar's margins. */
+  notice?: ReactNode;
 }
 
-export function Sidebar({ conversations, currentId, installedCount, account, onOpenAccount, onNewChat, onOpen, onDelete, onCollapse, onOpenModels, onOpenSettings, onOpenPro, onGetApp }: SidebarProps) {
+export function Sidebar({ conversations, currentId, installedCount, account, onOpenAccount, onNewChat, onOpen, onDelete, onCollapse, onOpenModels, onOpenSettings, onOpenPro, onGetApp, notice }: SidebarProps) {
   const sync = useSyncStatus();
   const [query, setQuery] = useState('');
   const syncNeedsAttention = sync.phase === 'error' && sync.error?.code !== 'offline';
@@ -74,6 +76,7 @@ export function Sidebar({ conversations, currentId, installedCount, account, onO
           ))}
         </nav>
 
+        {notice}
         <div className="sidebar-footer">
           <button className="footer-btn press" onClick={onOpenModels}>
             <Boxes size={18} /> Offline models

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { AppWindow, Laptop, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import { promptInstall } from '../install';
 import { DESKTOP_DOWNLOADS, desktopOS } from '../platform';
 import { AFTER_DOWNLOAD, useInstallMethod } from './GetAppSheet';
@@ -36,16 +36,24 @@ export function nudgeAllowed(now = Date.now(), record = readRecord()): boolean {
  * from the browser in one click (Chrome / Edge), or, where the browser can't
  * install apps (Firefox, Safari), get the desktop app.
  */
+// Once the card has appeared, it shows at once wherever it is drawn next (the sidebar, or the corner when the sidebar is
+// hidden), instead of waiting again.
+let appeared = false;
+
 export function InstallNudge({ slowBrowser, onMore }: { slowBrowser: boolean; onMore: () => void }) {
   const method = useInstallMethod();
   const os = desktopOS();
-  const [visible, setVisible] = useState(false);
+  const [visible, setVisible] = useState(appeared);
   const [leaving, setLeaving] = useState(false);
   const [downloaded, setDownloaded] = useState(false);
 
   // A beat after the reply, so it never interrupts reading.
   useEffect(() => {
-    const timer = setTimeout(() => setVisible(true), 2500);
+    if (appeared) return;
+    const timer = setTimeout(() => {
+      appeared = true;
+      setVisible(true);
+    }, 2500);
     return () => clearTimeout(timer);
   }, []);
 
@@ -80,7 +88,6 @@ export function InstallNudge({ slowBrowser, onMore }: { slowBrowser: boolean; on
   return (
     <aside className={`install-nudge glass thick${leaving ? ' leaving' : ''}`} aria-labelledby="install-nudge-title">
       <button className="icon-btn round press nudge-x" onClick={notNow} aria-label="Not now"><X size={16} /></button>
-      <span className="nudge-icon">{browserInstall ? <AppWindow size={22} /> : <Laptop size={22} />}</span>
       {downloaded && os ? (
         <>
           <h3 id="install-nudge-title">Your download has started</h3>
