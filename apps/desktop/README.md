@@ -228,7 +228,7 @@ You can also run the workflow manually (Actions → Desktop release → Run work
 
 ### Signing and notarization (optional)
 
-Builds succeed unsigned when these repository secrets are missing:
+Builds succeed unsigned when these are missing. Repository **secrets**:
 
 | Secret | Used for |
 | --- | --- |
@@ -237,10 +237,12 @@ Builds succeed unsigned when these repository secrets are missing:
 | `APPLE_API_KEY` | Contents of the App Store Connect API key (`.p8`), for notarization |
 | `APPLE_API_KEY_ID` | API key ID |
 | `APPLE_API_ISSUER` | API key issuer ID |
-| `WIN_CSC_LINK` | Windows code-signing certificate (`.pfx`, base64 or URL) |
-| `WIN_CSC_KEY_PASSWORD` | Its password |
+| `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET` | Windows through Azure Artifact Signing: the app registration allowed to sign (role "Artifact Signing Certificate Profile Signer" on the certificate profile) |
+| `WIN_CSC_LINK`, `WIN_CSC_KEY_PASSWORD` | Windows with an exportable `.pfx` instead (certificate authorities no longer issue these for new certificates) |
 
-Without `CSC_LINK`, the macOS app is ad-hoc signed (so it launches on Apple silicon) and not notarized. Notarization runs only when `CSC_LINK` and all three `APPLE_API_*` secrets are set.
+Repository **variables** for Azure Artifact Signing: `AZURE_SIGNING_ENDPOINT` (the signing account's region endpoint, e.g. `https://neu.codesigning.azure.net`), `AZURE_SIGNING_ACCOUNT` (the signing account's name), `AZURE_SIGNING_PROFILE` (the Public Trust certificate profile) and `WIN_PUBLISHER_NAME` (exactly as in the certificate, e.g. `Astra Labs Ltd`; updates check it).
+
+Without `CSC_LINK`, the macOS app is ad-hoc signed (so it launches on Apple silicon) and not notarized. Notarization runs only when `CSC_LINK` and all three `APPLE_API_*` secrets are set. Windows signs through Azure when its three secrets and four variables are set, otherwise with `WIN_CSC_LINK`, otherwise not at all. Linux builds aren't signed; electron-updater checks each download against the SHA-512 in `latest-linux.yml`.
 
 ## Known limitations
 
