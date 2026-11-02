@@ -69,6 +69,8 @@ export interface GeneratedImage {
   dataUrl?: string;
   /** The image model's name. */
   model?: string;
+  /** Credits it used (0: one of the day's free images). */
+  charged?: number;
   error?: string;
 }
 

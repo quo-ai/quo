@@ -26,9 +26,9 @@ import { IMAGE_ASPECTS, IMAGE_DATA_URL, MAX_IMAGE_CHARS, MAX_IMAGE_PROMPT_CHARS,
 
 export const IMAGE_MODELS = {
   // Checked 2 Nov 2026 with one test image each: correct text on a sign, about $0.009, 8 s.
-  create: { id: 'black-forest-labs/flux-3-image-klein', name: 'FLUX 3 Klein', holdUsd: 0.03 },
+  create: { id: 'black-forest-labs/flux-3-image-klein', name: 'FLUX 3 Klein', holdUsd: 0.03, typicalUsd: 0.009 },
   // Takes a reference image and keeps what isn't asked to change: about $0.034, 6.5 s.
-  edit: { id: 'google/gemini-3.1-flash-lite-image', name: 'Gemini 3.1 Flash Lite Image', holdUsd: 0.08 },
+  edit: { id: 'google/gemini-3.1-flash-lite-image', name: 'Gemini 3.1 Flash Lite Image', holdUsd: 0.08, typicalUsd: 0.034 },
 } as const;
 
 type ImageModel = (typeof IMAGE_MODELS)[keyof typeof IMAGE_MODELS];
@@ -67,7 +67,7 @@ export async function handleImage(request: Request): Promise<Response> {
   const freeLimits = { perSubject: config.freeDailyImages, perIp: config.freeDailyImagesPerIp };
   const freeUses = reference ? 2 : 1;
   const free = (await takeFree(db, freeKeys, freeLimits, { uses: freeUses })).ok;
-  const attempts: [ImageModel, number][] = reference
+  let attempts: [ImageModel, number][] = reference
     ? [[IMAGE_MODELS.edit, CREATE_MS + FALLBACK_MS]]
     : free ? [[IMAGE_MODELS.create, CREATE_MS + FALLBACK_MS]] : [[IMAGE_MODELS.create, CREATE_MS], [IMAGE_MODELS.edit, FALLBACK_MS]];
   let holdId: string | null = null;
@@ -78,11 +78,14 @@ export async function handleImage(request: Request): Promise<Response> {
         ? 'Changing an image counts as two of the day’s free images, and you have one left. Ask for a new image instead.'
         : `You’ve made today’s ${config.freeDailyImages} free images. They come back tomorrow.`);
     }
-    const holdUsd = Math.max(...attempts.map(([model]) => model.holdUsd));
-    const want = costToMillicredits(holdUsd);
-    const hold = await reserveCredits(db, identity.userId, want, want);
+    // Held for the dearest model that may make it. A balance that covers only the first model's hold gets that model
+    // alone, for the whole time, instead of being refused: most images cost a fraction of the hold.
+    const full = costToMillicredits(Math.max(...attempts.map(([model]) => model.holdUsd)));
+    const least = costToMillicredits(attempts[0][0].holdUsd);
+    const hold = await reserveCredits(db, identity.userId, full, least);
     if (!hold) throw new HttpError(402, 'insufficient_credits', 'You don’t have enough credits to make an image.');
     holdId = hold.id;
+    if (hold.amount < full) attempts = [[attempts[0][0], CREATE_MS + FALLBACK_MS]];
   }
 
   let made: Made | null = null;
@@ -90,17 +93,17 @@ export async function handleImage(request: Request): Promise<Response> {
   try {
     made = await firstImage(attempts, prompt, aspect, reference, request.signal);
   } finally {
-    // Paid only for an image that was made, at what it really cost (the hold if OpenRouter didn't say).
+    // Paid only for an image that was made, at what it really cost (the model's typical cost if OpenRouter didn't say).
     if (free && !made) await refundFreeMessage(db, freeKeys, undefined, freeUses).catch(() => {});
     if (holdId && identity.userId) {
-      const actual = made ? costToMillicredits(made.costUsd ?? made.model.holdUsd) : 0;
+      const actual = made ? costToMillicredits(made.costUsd ?? made.model.typicalUsd) : 0;
       charged = await settleCredits(db, identity.userId, holdId, actual, `image:${made?.model.id ?? 'failed'}`, randomUUID()).then(result => result.charged, error => {
         console.error('[image] settle', error);
         return 0;
       });
     }
   }
-  await noteCost(db, free ? 'image:free' : 'image:paid', { usd: made.costUsd ?? made.model.holdUsd, charged });
+  await noteCost(db, free ? 'image:free' : 'image:paid', { usd: made.costUsd ?? made.model.typicalUsd, charged });
   return json({
     image: made.image,
     model: { id: made.model.id, name: made.model.name },

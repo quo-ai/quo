@@ -1,7 +1,10 @@
 import { Download, ImageOff } from 'lucide-react';
 import type { GeneratedImage } from '../../chat/types';
+import { Facts } from '../Facts';
 
 const ratio = (aspect: string) => aspect.replace(':', ' / ');
+/** What an image cost, as replies show it: free, or the credits with up to two decimals. */
+const cost = (charged: number | undefined) => (charged === undefined ? null : charged === 0 ? 'Free' : `${charged} credit${charged === 1 ? '' : 's'}`);
 const extension = (dataUrl: string) => /^data:image\/(png|jpeg|webp)/.exec(dataUrl)?.[1]?.replace('jpeg', 'jpg') ?? 'png';
 
 /**
@@ -22,7 +25,7 @@ export function GeneratedImages({ images }: { images: GeneratedImage[] }) {
           )}
           <figcaption>
             <details>
-              <summary>{image.status === 'done' && image.model ? `Made with ${image.model}` : 'Image prompt'}</summary>
+              <summary>{image.status === 'done' && image.model ? <Facts items={[`Made with ${image.model}`, cost(image.charged)]} /> : 'Image prompt'}</summary>
               <p>{image.prompt}</p>
             </details>
             {image.status === 'done' && image.dataUrl && (
