@@ -2,13 +2,32 @@
 
 // Auto-update from GitHub Releases (electron-updater reads the latest*.yml
 // files electron-builder publishes). Failures, e.g. offline, are only logged.
+// The check is the one thing Quo contacts by itself at start-up, so the person can
+// turn it off: Help → Check for Updates at Start-up (saved in updates.json).
 
+const fs = require('node:fs');
+const path = require('node:path');
 const { app, BrowserWindow, dialog } = require('electron');
+
+const prefsFile = dir => path.join(dir ?? app.getPath('userData'), 'updates.json');
+
+/** Whether Quo checks for a new version when it starts: yes, unless the person turned it off. */
+function readUpdateChecks(dir) {
+  try {
+    return JSON.parse(fs.readFileSync(prefsFile(dir), 'utf8')).check !== false;
+  } catch {
+    return true;
+  }
+}
+
+function writeUpdateChecks(on, dir) {
+  fs.writeFileSync(prefsFile(dir), JSON.stringify({ check: on === true }));
+}
 
 const warn = error => console.warn('[updater]', String(error?.message ?? error).split('\n')[0]);
 
 function initAutoUpdates() {
-  if (!app.isPackaged || process.env.QUO_DISABLE_UPDATES === '1') return;
+  if (!app.isPackaged || process.env.QUO_DISABLE_UPDATES === '1' || !readUpdateChecks()) return;
   try {
     const { autoUpdater } = require('electron-updater');
     autoUpdater.logger = null;
@@ -40,4 +59,4 @@ function initAutoUpdates() {
   }
 }
 
-module.exports = { initAutoUpdates };
+module.exports = { initAutoUpdates, readUpdateChecks, writeUpdateChecks };

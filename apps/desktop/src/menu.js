@@ -1,6 +1,7 @@
 'use strict';
 
 const { app, Menu, shell } = require('electron');
+const { readUpdateChecks, writeUpdateChecks } = require('./updater');
 
 const LINKS = {
   website: 'https://quo.computer',
@@ -34,6 +35,9 @@ function buildMenu() {
         { label: 'Source code on GitHub', click: () => shell.openExternal(LINKS.source) },
         { type: 'separator' },
         { label: 'Report an issue', click: () => shell.openExternal(LINKS.issues) },
+        { type: 'separator' },
+        // The only thing Quo contacts by itself: GitHub, once at start-up, for a new version.
+        { label: 'Check for Updates at Start-up', type: 'checkbox', checked: readUpdateChecks(), click: item => writeUpdateChecks(item.checked) },
       ],
     },
   ];

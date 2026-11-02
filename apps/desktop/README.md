@@ -224,25 +224,31 @@ You can also run the workflow manually (Actions → Desktop release → Run work
 
 ### Auto-update
 
-`electron-updater` checks GitHub Releases once at startup in packaged builds (`QUO_DISABLE_UPDATES=1` turns that off). It downloads in the background, then asks "A new version of Quo is ready. Restart to update?" (Restart / Later). With Later, the update installs the next time Quo quits. Errors, including being offline, are only logged. Supported: the Windows installer, the AppImage, the .deb (asks for the admin password to install), and **signed** macOS builds.
+`electron-updater` checks GitHub Releases once at startup in packaged builds. The person can turn that off in the Help menu (Check for Updates at Start-up, saved in `updates.json` in the profile); `QUO_DISABLE_UPDATES=1` also turns it off. It downloads in the background, then asks "A new version of Quo is ready. Restart to update?" (Restart / Later). With Later, the update installs the next time Quo quits. Errors, including being offline, are only logged. Supported: the Windows installer, the AppImage, the .deb (asks for the admin password to install), and **signed** macOS builds.
 
-### Signing and notarization (optional)
+### Signing (free)
 
-Builds succeed unsigned when these are missing. Repository **secrets**:
+**Windows: SignPath Foundation**, which signs open-source projects for free ([terms](https://signpath.org/terms)). Its requirements are met in the repo: the [code signing policy](https://quo.computer/code-signing/) page (linked from the home page, the download section and every release's notes), the installer's privacy notice (`build/installer-notice.txt`, shown before installing) and a way to turn off the one thing the app contacts by itself (Help → Check for Updates at Start-up). Once SignPath accepts the project:
 
-| Secret | Used for |
-| --- | --- |
-| `CSC_LINK` | macOS Developer ID Application certificate (`.p12`, base64 or URL) |
-| `CSC_KEY_PASSWORD` | Its password |
-| `APPLE_API_KEY` | Contents of the App Store Connect API key (`.p8`), for notarization |
-| `APPLE_API_KEY_ID` | API key ID |
-| `APPLE_API_ISSUER` | API key issuer ID |
-| `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET` | Windows through Azure Artifact Signing: the app registration allowed to sign (role "Artifact Signing Certificate Profile Signer" on the certificate profile) |
-| `WIN_CSC_LINK`, `WIN_CSC_KEY_PASSWORD` | Windows with an exportable `.pfx` instead (certificate authorities no longer issue these for new certificates) |
+1. In SignPath, create two artifact configurations in the project, named `app` and `installer`:
+   ```xml
+   <!-- app: a zip of win-unpacked; only Quo's own program is signed (llama.cpp's engine is shipped as its makers built it) -->
+   <artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
+     <zip-file><pe-file path="Quo.exe" product-name="Quo"><authenticode-sign/></pe-file></zip-file>
+   </artifact-configuration>
+   <!-- installer: the .exe itself -->
+   <artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
+     <pe-file product-name="Quo"><authenticode-sign/></pe-file>
+   </artifact-configuration>
+   ```
+2. Install the SignPath GitHub App on the repository, and make a CI user with an API token.
+3. In the repository's settings: the secret `SIGNPATH_API_TOKEN`, and the variables `SIGNPATH_ORGANIZATION_ID`, `SIGNPATH_PROJECT_SLUG`, `SIGNPATH_POLICY_SLUG` and `WIN_PUBLISHER_NAME` (the certificate's name, `SignPath Foundation`, which updates then check).
 
-Repository **variables** for Azure Artifact Signing: `AZURE_SIGNING_ENDPOINT` (the signing account's region endpoint, e.g. `https://neu.codesigning.azure.net`), `AZURE_SIGNING_ACCOUNT` (the signing account's name), `AZURE_SIGNING_PROFILE` (the Public Trust certificate profile) and `WIN_PUBLISHER_NAME` (exactly as in the certificate, e.g. `Astra Labs Ltd`; updates check it).
+The release workflow then builds the app (`--dir`), has it signed, builds the installer from the signed app (`--prepackaged`), has that signed, and makes `latest.yml` match the signed file (`scripts/finish-signed-windows.js`; updates download the whole installer, as the block map was the unsigned file's). Each signing request is approved by hand in SignPath, and the workflow waits up to an hour for each. Without these settings the installer is built unsigned, as before (or with `WIN_CSC_LINK` / `WIN_CSC_KEY_PASSWORD`, a `.pfx` certificate, if one is ever set).
 
-Without `CSC_LINK`, the macOS app is ad-hoc signed (so it launches on Apple silicon) and not notarized. Notarization runs only when `CSC_LINK` and all three `APPLE_API_*` secrets are set. Windows signs through Azure when its three secrets and four variables are set, otherwise with `WIN_CSC_LINK`, otherwise not at all. Linux builds aren't signed; electron-updater checks each download against the SHA-512 in `latest-linux.yml`.
+**macOS: no free option.** Notarisation needs the paid Apple Developer Program, so the Mac app is ad-hoc signed (it launches on Apple silicon; Gatekeeper asks once, and the website says how to open it). If the program is ever joined, these secrets switch on signing and notarisation with no other change: `CSC_LINK` (Developer ID Application certificate, `.p12`, base64), `CSC_KEY_PASSWORD`, and `APPLE_API_KEY` (the `.p8`'s contents), `APPLE_API_KEY_ID`, `APPLE_API_ISSUER`.
+
+**Linux** builds aren't signed; electron-updater checks each download against the SHA-512 in `latest-linux.yml`. The Android app is signed by Google Play.
 
 ## Known limitations
 

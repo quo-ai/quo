@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Generates the website's document pages (privacy, terms, refunds, pricing,
-support, brand, delete account, models, changelog, 404) in website/.
+support, brand, delete account, models, changelog, code signing, 404) in website/.
 
 Header, footer and the icon sprite are taken from website/index.html so every
 page stays in sync with the home page. Edit the content below, then run:
@@ -17,7 +17,7 @@ from datetime import datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))  # data_pages.py, beside this script
-from data_pages import changelog_page, models_page  # noqa: E402
+from data_pages import changelog_page, code_signing_page, models_page  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent  # website/
 SITE = 'https://quo.computer'
@@ -408,6 +408,7 @@ PAGES = [
     ('pricing/index.html', '/pricing/', 'Pricing — Quo', 'Quo is free on your device. Quo Pro, Quo Sync and credit packs for the cloud models.', PRICING, ''),
     ('models/index.html', '/models/', 'Which AI model runs on my device? — Quo', 'Every open AI model in Quo for phone, browser and desktop: download size, memory it needs, photos, thinking, free or Premium.', models_page(ROOT / 'scripts' / 'models.json'), 'doc wide'),
     ('changelog/index.html', '/changelog/', 'What’s new — Quo', 'Every release of Quo for desktop, web and phone, with what changed.', changelog_page(ROOT.parent / 'CHANGELOG.md', UPDATED), 'doc'),
+    ('code-signing/index.html', '/code-signing/', 'Code signing policy — Quo', 'How the Quo desktop app is signed: free code signing by SignPath Foundation, what is signed, who approves it, and privacy.', code_signing_page('<a href="/privacy/">privacy policy</a>'), 'doc'),
     ('refunds/index.html', '/refunds/', 'Refund policy — Quo', 'How to get a refund for Quo Pro, Quo Sync and credit packs.', refunds, 'doc'),
     ('delete-account/index.html', '/delete-account/', 'Delete your Quo account — Quo', 'How to delete your Quo account and the data held for it.', delete_account, 'doc'),
     ('404.html', '/404', 'Page not found — Quo', 'This page doesn’t exist.', not_found, 'not-found'),
