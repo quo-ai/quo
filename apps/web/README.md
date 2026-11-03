@@ -39,6 +39,7 @@ The app is static (`dist/`) and must be served with cross-origin isolation heade
 | `OPENROUTER_API_KEY` | for cloud models | Without it, cloud models are hidden |
 | `RESEND_API_KEY`, `EMAIL_FROM` | for sign-in | Emails sign-in codes; needs a verified sending domain. Without it, sign-in, paid models and Quo Sync answer `setup_required` |
 | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_*` (one per product, incl. `STRIPE_PRICE_SYNC_YEARLY`) | for purchases | Stripe Managed Payments as merchant of record (a `sk_test_` key takes test cards); its webhook is `/api/stripe/webhook`. Without a key, purchases answer `setup_required` |
+| `STRIPE_TEST_EMAILS` | no | With a test key in production, only these accounts (comma-separated) may buy, with test cards; everyone else sees purchases as not open yet |
 | `SYNC_LIMIT_MB` | optional | Most encrypted data one account may keep (default 250) |
 | `CRON_SECRET` | for Quo Sync clean-up | Lets Vercel Cron call `/api/cron/sync-cleanup` (daily, see `vercel.json`); without it that route doesn't exist and nothing is ever cleaned up. The standalone server runs the clean-up on a timer instead |
 | `DEFAULT_CLOUD_MODEL`, `FREE_DAILY_MESSAGES`, `FREE_DAILY_MESSAGES_PER_IP` | optional | Free tier (defaults: GPT-6 Luna, 20 per device, 60 per IP, per day) |

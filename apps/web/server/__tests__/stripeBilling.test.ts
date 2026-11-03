@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { createHmac, randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, beforeEach, expect, it } from 'vitest';
-import { applyStripeEvent, handleStripeWebhook, stripeForm, type StripeEvent } from '../billing.js';
+import { applyStripeEvent, billingMode, handleStripeWebhook, stripeForm, type StripeEvent } from '../billing.js';
 import { ensureMonthlyGrant, getBalance, MILLI } from '../credits.js';
 import { createTestDb, getDb, type Db } from '../db.js';
 import { config } from '../env.js';
@@ -86,4 +86,27 @@ it('encodes requests the way Stripe reads them', () => {
     `${encodeURIComponent('managed_payments[enabled]')}=true`,
     `${encodeURIComponent('metadata[user_id]')}=u%201`,
   ]);
+});
+
+it('a test key on the production server lets only the listed testers buy; a live key lets everyone', () => {
+  const saved = { production: config.production, key: config.stripe.secretKey, testers: config.stripe.testers, resend: config.resendKey };
+  try {
+    Object.assign(config, { production: true, resendKey: 're_x' });
+    config.stripe.testers = ['tester@example.com'];
+    config.stripe.secretKey = null;
+    expect(billingMode('tester@example.com')).toBe('off'); // no key: nothing simulated in production
+    config.stripe.secretKey = 'sk_test_x';
+    expect(billingMode('Tester@Example.com')).toBe('test');
+    expect(billingMode('someone@example.com')).toBe('off');
+    expect(billingMode(null)).toBe('off');
+    config.stripe.secretKey = 'sk_live_x';
+    expect(billingMode('someone@example.com')).toBe('live');
+    Object.assign(config, { production: false });
+    config.stripe.secretKey = 'sk_test_x';
+    expect(billingMode(null)).toBe('test'); // development: anyone, with test cards
+  } finally {
+    Object.assign(config, { production: saved.production, resendKey: saved.resend });
+    config.stripe.secretKey = saved.key;
+    config.stripe.testers = saved.testers;
+  }
 });

@@ -65,6 +65,17 @@ async function requireUser(request: Request): Promise<string> {
 /** Real money only with a live key; a test key takes test cards. */
 export const billingLive = () => Boolean(config.stripe.secretKey?.startsWith('sk_live_'));
 
+/** How purchases work for this person: real money, Stripe's test cards, simulated (development), or not open. */
+export type BillingMode = 'live' | 'test' | 'sandbox' | 'off';
+export function billingMode(email: string | null | undefined): BillingMode {
+  if (!features.billing) return 'off';
+  if (!config.stripe.secretKey) return 'sandbox';
+  if (billingLive()) return 'live';
+  // A test key on the production server: test cards give real credits, so only the listed testers may use them.
+  if (config.production && !(email && config.stripe.testers.includes(email.toLowerCase()))) return 'off';
+  return 'test';
+}
+
 export function handleBillingConfig(): Response {
   return json({ live: billingLive(), products: Object.entries(PRODUCTS).map(([id, product]) => ({ id, ...product })) });
 }
@@ -80,6 +91,7 @@ export async function handleCheckout(request: Request): Promise<Response> {
   if (!priceId) throw new HttpError(503, 'setup_required', SETUP_MESSAGES.billing);
   const db = await getDb();
   const [user] = await db.query<{ email: string; stripe_customer_id: string | null }>('select email, stripe_customer_id from users where id = $1', [userId]);
+  if (!user || billingMode(user.email) === 'off') throw new HttpError(503, 'setup_required', SETUP_MESSAGES.billing);
   // Our own id for this purchase: the credits it gives are filed under it, so a refund of it finds them.
   const tags = { user_id: userId, product, purchase: randomUUID() };
   const plan = !isPack(product);
@@ -90,7 +102,7 @@ export async function handleCheckout(request: Request): Promise<Response> {
     client_reference_id: userId,
     metadata: tags,
     ...(plan ? { subscription_data: { metadata: tags } } : { payment_intent_data: { metadata: tags }, customer_creation: 'always' }),
-    ...(user?.stripe_customer_id ? { customer: user.stripe_customer_id } : { customer_email: user?.email }),
+    ...(user.stripe_customer_id ? { customer: user.stripe_customer_id } : { customer_email: user.email }),
     success_url: `${config.appUrl}/?checkout=success&product=${product}`,
     cancel_url: `${config.appUrl}/?checkout=cancelled`,
   });

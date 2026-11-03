@@ -6,7 +6,7 @@ import { HttpError, json, readJson } from './http.js';
 import { freeSubject, identify, type Identity } from './identity.js';
 import { clearSessionCookie } from './session.js';
 import { SYNC_PLANS } from './sync.js';
-import { billingLive } from './billing.js';
+import { billingLive, billingMode, type BillingMode } from './billing.js';
 
 export interface AccountSummary {
   user: { email: string } | null;
@@ -17,7 +17,8 @@ export interface AccountSummary {
   /** Credits (not millicredits), one decimal; null when signed out. */
   credits: number | null;
   free: { limit: number; remaining: number };
-  billing: { live: boolean };
+  /** live: real money. mode: how purchases work for this person (older apps read only live). */
+  billing: { live: boolean; mode: BillingMode };
   /** What this deployment offers, so the app only shows what works. */
   features: { cloud: boolean; accounts: boolean; billing: boolean };
 }
@@ -25,9 +26,11 @@ export interface AccountSummary {
 export async function accountSummary(db: Db, identity: Identity): Promise<AccountSummary> {
   const limits = { perSubject: config.freeDailyMessages, perIp: config.freeDailyMessagesPerIp };
   const free = { limit: config.freeDailyMessages, remaining: await freeRemaining(db, { subject: freeSubject(identity), ip: identity.ip }, limits) };
-  const billing = { live: billingLive() };
-  const offered = { cloud: features.cloud, accounts: features.accounts, billing: features.billing };
-  const signedOut: AccountSummary = { user: null, plan: 'free', sync: false, subscription: null, credits: null, free, billing, features: offered };
+  const offer = (email: string | null) => {
+    const mode = billingMode(email);
+    return { billing: { live: billingLive(), mode }, features: { cloud: features.cloud, accounts: features.accounts, billing: mode !== 'off' } };
+  };
+  const signedOut: AccountSummary = { user: null, plan: 'free', sync: false, subscription: null, credits: null, free, ...offer(null) };
   if (!identity.userId) return signedOut;
 
   const [user] = await db.query<{ email: string }>('select email from users where id = $1', [identity.userId]);
@@ -47,8 +50,7 @@ export async function accountSummary(db: Db, identity: Identity): Promise<Accoun
     subscription: sub ? { plan: sub.plan, status: sub.status, renewsAt: sub.current_period_end ? new Date(sub.current_period_end).toISOString() : null } : null,
     credits: Math.round(balance / 100) / 10,
     free,
-    billing,
-    features: offered,
+    ...offer(user.email),
   };
 }
 

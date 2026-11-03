@@ -69,6 +69,8 @@ export const config = {
   stripe: {
     secretKey: env.STRIPE_SECRET_KEY || null,
     webhookSecret: env.STRIPE_WEBHOOK_SECRET || null,
+    /** With a test key in production, only these accounts may buy (with test cards): anyone else would get credits for nothing. */
+    testers: (env.STRIPE_TEST_EMAILS || '').split(',').map(email => email.trim().toLowerCase()).filter(Boolean),
     prices: {
       pro_monthly: env.STRIPE_PRICE_PRO_MONTHLY || null,
       pro_yearly: env.STRIPE_PRICE_PRO_YEARLY || null,

@@ -12,7 +12,8 @@ export interface Account {
   subscription: { plan: string; status: string; renewsAt: string | null } | null;
   credits: number | null;
   free: { limit: number; remaining: number };
-  billing: { live: boolean };
+  /** mode is missing from older servers. */
+  billing: { live: boolean; mode?: 'live' | 'test' | 'sandbox' | 'off' };
   /** Which services the server has set up (anything off answers `setup_required`). */
   features: { cloud: boolean; accounts: boolean; billing: boolean };
 }

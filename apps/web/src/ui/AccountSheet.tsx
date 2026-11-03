@@ -20,6 +20,14 @@ const PACKS: { id: ProductId; credits: string; price: string; note?: string }[] 
   { id: 'pack_6000', credits: '6,000', price: '$60', note: 'Save 17%' },
 ];
 
+const BILLING_NOTES: Partial<Record<NonNullable<Account['billing']['mode']>, string>> = {
+  test: 'Test mode: pay with the card 4242 4242 4242 4242. Nothing is charged.',
+  sandbox: 'Sandbox: purchases are simulated, nothing is charged.',
+  off: 'Purchases aren’t open yet. They’re coming soon.',
+};
+/** What to say about purchases here, if anything (older servers send only live). */
+const billingNote = (account: Account) => BILLING_NOTES[account.billing.mode ?? (account.billing.live ? 'live' : 'sandbox')];
+
 /** Sign in, plan, credits and purchases. */
 export function AccountSheet({ account, onClose }: AccountSheetProps) {
   const sheet = useRef<HTMLDivElement>(null);
@@ -194,7 +202,7 @@ function SignedIn({ account, onClose }: { account: Account; onClose: () => void 
         </div>
       </div>
 
-      {!account.billing.live && <p className="sandbox-note">Sandbox: purchases are simulated, nothing is charged.</p>}
+      {billingNote(account) && <p className="sandbox-note">{billingNote(account)}</p>}
 
       {account.sync && !pro && (
         <div className="plan-card current">
