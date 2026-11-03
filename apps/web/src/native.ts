@@ -14,6 +14,9 @@ import type { ChatReply } from './providers/wire';
 /** Code mode's approval levels: ask every time, ask only for risky steps, or don't ask (pushes always ask). */
 export type Autonomy = 'ask' | 'risky' | 'all';
 
+/** An image model file the person added in the desktop app, as main describes it (no path). */
+export interface OwnImageModel { id: string; name: string; family: string; label: string; steps: number; cfg: number; edits: boolean; needs?: string }
+
 export interface NativeFailure {
   code: string;
   message: string;
@@ -273,6 +276,12 @@ declare global {
         make: (request: { modelId: string; prompt: string; aspect: string; steps?: number; cfg?: number; seed?: number; size?: 'standard' | 'quick'; reference?: string }) => Promise<NativeResult<{ image: string; seed: number; setAside?: boolean }>>;
         cancel: () => Promise<NativeResult<unknown>>;
         onEvent: (callback: (event: { type: 'progress'; step: number; steps: number }) => void) => () => void;
+        /** The person's own image model files (apps/desktop/src/images/custom.js): never a path. Older apps lack it. */
+        custom?: {
+          list: () => Promise<NativeResult<OwnImageModel[]>>;
+          pick: () => Promise<NativeResult<OwnImageModel | null>>;
+          remove: (id: string) => Promise<NativeResult<unknown>>;
+        };
       };
       /** quo:// links (apps/desktop/src/links.js): told that one came, then takes the model main checked. */
       links?: { take: () => Promise<NativeResult<{ repo: string; file?: string } | null>>; onOpen: (callback: () => void) => () => void };

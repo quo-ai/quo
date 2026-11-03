@@ -24,6 +24,16 @@ const QUICK = {
   '16:9': [1024, 576],
   '9:16': [576, 1024],
 };
+/** Stable Diffusion 1.5 makes pictures of about a quarter megapixel. */
+const SMALL = {
+  '1:1': [512, 512],
+  '4:3': [576, 448],
+  '3:4': [448, 576],
+  '3:2': [640, 448],
+  '2:3': [448, 640],
+  '16:9': [704, 384],
+  '9:16': [384, 704],
+};
 const SHAPES = {
   '1:1': [1024, 1024],
   '4:3': [1152, 896],
@@ -56,12 +66,14 @@ function cleanPrompt(value) {
 }
 
 /** sd-cli's arguments for one image: only Quo's own files and checked numbers. */
-function imageArgs({ dir, prompt, shape, steps, cfg, seed, output, quick = false, reference = null }) {
-  const [width, height] = (quick ? QUICK : SHAPES)[shape];
+function imageArgs({ dir, files = null, prompt, shape, steps, cfg, seed, output, quick = false, small = false, reference = null }) {
+  const [width, height] = (small ? SMALL : quick ? QUICK : SHAPES)[shape];
+  // A one-file checkpoint (SDXL, SD 1.5: custom.js), or the three parts: a Quo model's folder, or a file and its base's parts.
+  const model = files?.checkpoint
+    ? ['-m', files.checkpoint]
+    : ['--diffusion-model', files?.diffusion ?? path.join(dir, IMAGE_FILES.diffusion), '--llm', files?.text ?? path.join(dir, IMAGE_FILES.text), '--vae', files?.vae ?? path.join(dir, IMAGE_FILES.vae)];
   return [
-    '--diffusion-model', path.join(dir, IMAGE_FILES.diffusion),
-    '--llm', path.join(dir, IMAGE_FILES.text),
-    '--vae', path.join(dir, IMAGE_FILES.vae),
+    ...model,
     '-p', prompt,
     '-W', String(width), '-H', String(height),
     '--steps', String(steps),
@@ -105,10 +117,10 @@ class ImageEngine {
   }
 
   /** Makes one PNG from the model in `dir` (checked by the caller); onProgress gets { step, steps }. */
-  make({ dir, prompt, shape, steps, cfg, seed, quick = false, reference = null }, onProgress = () => {}) {
+  make({ dir, files = null, prompt, shape, steps, cfg, seed, quick = false, small = false, reference = null }, onProgress = () => {}) {
     if (this.child) return Promise.reject(new ImageError('busy', 'An image is already being made.'));
     const output = path.join(this.tmpdir, `quo-image-${crypto.randomUUID()}.png`);
-    const args = [...this.command.args, ...imageArgs({ dir, prompt, shape, steps, cfg, seed, output, quick, reference })];
+    const args = [...this.command.args, ...imageArgs({ dir, files, prompt, shape, steps, cfg, seed, output, quick, small, reference })];
     const child = spawn(this.command.file, args, { cwd: this.directory ?? this.tmpdir, stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
     this.child = child;
     let tail = '';
@@ -149,4 +161,4 @@ class ImageEngine {
   }
 }
 
-module.exports = { ImageEngine, ImageError, IMAGE_FILES, SHAPES, QUICK, MAX_PROMPT, cleanPrompt, imageArgs, parseProgress, isOutOfMemory, binaryIn };
+module.exports = { ImageEngine, ImageError, IMAGE_FILES, SHAPES, QUICK, SMALL, MAX_PROMPT, cleanPrompt, imageArgs, parseProgress, isOutOfMemory, binaryIn };

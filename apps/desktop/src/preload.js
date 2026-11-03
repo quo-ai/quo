@@ -121,6 +121,12 @@ contextBridge.exposeInMainWorld('quoDesktop', {
       images: {
         make: request => invoke('images:make', { modelId: request?.modelId, prompt: request?.prompt, aspect: request?.aspect, steps: request?.steps, cfg: request?.cfg, seed: request?.seed, size: request?.size, reference: request?.reference }),
         cancel: () => invoke('images:cancel'),
+        // The person's own image models: chosen in a native dialog; the page gets an id, a name and a family, never a path.
+        custom: {
+          list: () => invoke('images:custom:list'),
+          pick: () => invoke('images:custom:pick'),
+          remove: id => invoke('images:custom:remove', { id }),
+        },
         onEvent: callback => subscribe('images:event', callback),
       },
     }),

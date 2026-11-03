@@ -3,7 +3,7 @@
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { app, BrowserWindow, nativeTheme, session, shell, systemPreferences } = require('electron');
+const { app, BrowserWindow, dialog, nativeTheme, session, shell, systemPreferences } = require('electron');
 const { APP_HOST, APP_URL, API_ORIGIN, registerScheme, handleAppProtocol, setEngineTarget } = require('./protocol');
 const { setupAgent } = require('./agent/ipc');
 const { setupClaude } = require('./claude/ipc');
@@ -11,6 +11,7 @@ const { setupProviders } = require('./providers/ipc');
 const { setupWeb } = require('./web/ipc');
 const { engineAvailable, engineDirectory, setupEngine } = require('./engine/ipc');
 const { setupImages } = require('./images/ipc');
+const { CustomImageModels } = require('./images/custom');
 const { MIN_SIZE, loadWindowState, trackWindowState } = require('./windowState');
 const { buildMenu } = require('./menu');
 const { initAutoUpdates } = require('./updater');
@@ -177,7 +178,17 @@ function start() {
   if (hasEngine) {
     const { engine, store } = setupEngine();
     // Images made on this computer (images/): only with the engine, from models it downloaded.
-    hasImages = setupImages({ store, engineDirectory: engineDirectory(), stopChat: () => engine.stop() }).available;
+    hasImages = setupImages({
+      store,
+      engineDirectory: engineDirectory(),
+      stopChat: () => engine.stop(),
+      custom: new CustomImageModels({ listFile: path.join(app.getPath('userData'), 'custom-image-models.json'), store }),
+      pickFile: async sender => {
+        const window = BrowserWindow.fromWebContents(sender) ?? undefined;
+        const result = await dialog.showOpenDialog(window, { title: 'Choose an image model file', properties: ['openFile'], filters: [{ name: 'Image models', extensions: ['safetensors', 'gguf'] }] });
+        return result.canceled ? null : result.filePaths[0] ?? null;
+      },
+    }).available;
     setEngineTarget(() => engine.target(), { started: () => engine.requestStarted(), ended: () => engine.requestEnded() });
   } else {
     console.warn('[quo] The native engine is missing; using the in-browser engine. Run "npm run fetch:engine".');

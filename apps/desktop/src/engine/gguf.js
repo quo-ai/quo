@@ -119,9 +119,47 @@ async function readGgufMeta(file) {
   }
 }
 
+/**
+ * The tensors a GGUF file holds: each name with its shape (the image model families tell themselves apart by them:
+ * images/families.js). Reads past the metadata only; null for a file that isn't GGUF or is too large to describe.
+ */
+async function readGgufTensors(file, limit = 20_000) {
+  let handle;
+  try {
+    handle = await fsp.open(file, 'r');
+    const reader = new Reader(handle);
+    if ((await reader.bytes(4)).toString('latin1') !== 'GGUF') return null;
+    const version = await reader.u32();
+    if (version < 2 || version > 3) return null;
+    const tensors = await reader.u64();
+    const pairs = await reader.u64();
+    if (pairs > 10_000 || tensors > limit) return null;
+    for (let i = 0; i < pairs; i++) {
+      await reader.string();
+      await value(reader, await reader.u32());
+    }
+    const found = [];
+    for (let i = 0; i < tensors; i++) {
+      const name = await reader.string(4096);
+      const dims = await reader.u32();
+      if (dims > 8) return null;
+      const shape = [];
+      for (let d = 0; d < dims; d++) shape.push(Number(await reader.u64()));
+      await reader.u32(); // type
+      await reader.u64(); // offset
+      found.push({ name, shape });
+    }
+    return found;
+  } catch {
+    return null;
+  } finally {
+    await handle?.close().catch(() => {});
+  }
+}
+
 /** Whether the file has a multi-token-prediction head. False when it cannot be told. */
 async function hasMtp(file) {
   return ((await readGgufMeta(file))?.nextnPredictLayers ?? 0) > 0;
 }
 
-module.exports = { readGgufMeta, hasMtp };
+module.exports = { readGgufMeta, readGgufTensors, hasMtp };

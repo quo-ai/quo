@@ -3,6 +3,7 @@ import { NativeError, unwrap } from '../native';
 import { downloadState } from '../storage/downloads';
 import { DEVICE_IMAGE_MODELS, type ImageModel } from './deviceModels';
 import { imagePrefs } from './prefs';
+import { ownImageModels } from './ownModels';
 
 /**
  * Images made on this computer (desktop app, apps/desktop/src/images/). Offline chats use them once an image model is
@@ -15,7 +16,8 @@ const bridge = () => (typeof window === 'undefined' ? null : window.quoDesktop?.
 /** The image model this computer can use now, or null (browser, no image engine, or none downloaded). */
 export function deviceImageModel(): ImageModel | null {
   if (!bridge()) return null;
-  const installed = DEVICE_IMAGE_MODELS.filter(model => downloadState(model.id)?.status === 'installed');
+  // Quo's own once downloaded, and the person's own files (always there).
+  const installed = [...DEVICE_IMAGE_MODELS.filter(model => downloadState(model.id)?.status === 'installed'), ...ownImageModels()];
   return installed.find(model => model.id === imagePrefs().model) ?? installed[0] ?? null;
 }
 

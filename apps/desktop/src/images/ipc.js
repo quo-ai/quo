@@ -13,6 +13,8 @@ const { ipcMain } = require('electron');
 const { trusted } = require('../trust');
 const { ModelError, hasModelHeader } = require('../engine/models');
 const { ImageEngine, ImageError, IMAGE_FILES, SHAPES, cleanPrompt } = require('./engine');
+const { CustomImageModels, ID: CUSTOM_ID } = require('./custom');
+const { FAMILIES } = require('./families');
 
 const imagesDirectory = engineDirectory => (engineDirectory ? path.join(engineDirectory, 'images') : null);
 const whole = (value, min, max) => Number.isSafeInteger(value) && value >= min && value <= max;
@@ -58,7 +60,7 @@ async function modelFolder(store, modelId) {
 /**
  * @param {{ store: import('../engine/models').ModelStore, engineDirectory: string | null, stopChat?: () => Promise<unknown>, ipc?: { handle: Function } }} options
  */
-function setupImages({ store, engineDirectory, stopChat, ipc = ipcMain, engine = new ImageEngine({ directory: imagesDirectory(engineDirectory) }) }) {
+function setupImages({ store, engineDirectory, stopChat, ipc = ipcMain, engine = new ImageEngine({ directory: imagesDirectory(engineDirectory) }), custom = null, pickFile = async () => null }) {
   if (!engine.available) return { available: false };
 
   const handle = (channel, task) =>
@@ -75,14 +77,17 @@ function setupImages({ store, engineDirectory, stopChat, ipc = ipcMain, engine =
 
   handle('images:make', async (payload, event) => {
     const request = checkRequest(payload);
-    const dir = await modelFolder(store, request.modelId);
+    // One the person added (custom.js), checked again now; or one of Quo's, in its own folder.
+    const own = custom && CUSTOM_ID.test(request.modelId) ? await custom.resolve(request.modelId) : null;
+    const dir = own ? null : await modelFolder(store, request.modelId);
+    const small = own ? FAMILIES[own.family].sizes === 'small' : false;
     const progress = update => {
       if (!event.sender.isDestroyed?.()) event.sender.send('images:event', { type: 'progress', ...update });
     };
     // A picture to change goes to sd-cli as a file of its own, removed once the image is made (or isn't).
     const reference = request.reference ? path.join(os.tmpdir(), `quo-reference-${crypto.randomUUID()}.${request.reference.extension}`) : null;
     if (reference) await fsp.writeFile(reference, request.reference.bytes, { mode: 0o600 });
-    const job = { ...request, dir, reference };
+    const job = { ...request, dir, files: own?.files ?? null, small, reference };
     let png;
     let setAside = false;
     try {
@@ -100,6 +105,14 @@ function setupImages({ store, engineDirectory, stopChat, ipc = ipcMain, engine =
     return { image: `data:image/png;base64,${png.toString('base64')}`, seed: request.seed, setAside };
   });
   handle('images:cancel', () => engine.cancel());
+  // Image models the person has: chosen only in the native dialog (pickFile), described to the page without their path.
+  handle('images:custom:list', () => (custom ? custom.list() : []));
+  handle('images:custom:pick', async (_payload, event) => {
+    if (!custom) return null;
+    const file = await pickFile(event.sender);
+    return file ? custom.add(file) : null;
+  });
+  handle('images:custom:remove', ({ id }) => (custom && typeof id === 'string' ? custom.remove(id) : null));
 
   return { available: true, engine };
 }
