@@ -28,14 +28,12 @@ extraResources:
       - "!registerSW.js"
       # wllama's build for browsers without JSPI: Electron's Chromium never needs it.
       - "!assets/wllama-compat-*"
-  # Claude Agent (src/claude/sdk.js): only the Agent SDK's own code and its terms. The npm package is a dev
-  # dependency because it also brings Anthropic's own copy of Claude Code; Quo runs the person's own install instead.
-  - from: node_modules/@anthropic-ai/claude-agent-sdk
-    to: claude-agent-sdk
-    filter:
-      - sdk.mjs
-      - LICENSE.md
-      - README.md
+  # Claude Agent's SDK is not packaged while releases leave Claude Agent out (src/claude/release.js: Anthropic's approval
+  # first). Once approved, add back only the Agent SDK's own code and its terms (the npm package is a dev dependency
+  # because it also brings Anthropic's own copy of Claude Code; Quo runs the person's own install instead):
+  #   - from: node_modules/@anthropic-ai/claude-agent-sdk
+  #     to: claude-agent-sdk
+  #     filter: [sdk.mjs, LICENSE.md, README.md]
 
 # Harden the shipped binary: it can't be reused as a plain Node runtime or
 # debugger target (https://www.electronjs.org/docs/latest/tutorial/fuses).

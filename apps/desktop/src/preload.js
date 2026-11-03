@@ -7,6 +7,8 @@ const { contextBridge, ipcRenderer } = require('electron');
 const arg = name => process.argv.find(value => value.startsWith(`--${name}=`))?.slice(name.length + 3);
 const version = arg('quo-version') ?? '';
 const hasEngine = arg('quo-engine') === '1';
+// Claude Agent: development builds only, until Anthropic approves it for releases (src/claude/release.js).
+const hasClaude = arg('quo-claude') === '1';
 
 const invoke = (channel, payload) => ipcRenderer.invoke(channel, payload);
 function subscribe(channel, callback) {
@@ -16,7 +18,7 @@ function subscribe(channel, callback) {
 }
 
 // Contract with the web app (apps/web/src/platform.ts): `platform`, `version` and
-// `agent` (Code mode), `providers` (the user's own API keys) and `claude` (Claude Agent) always exist; `engine` and `models` exist only when this
+// `agent` (Code mode) and `providers` (the user's own API keys) always exist; `claude` (Claude Agent) only where it's offered; `engine` and `models` exist only when this
 // build includes the native llama.cpp engine, and the web app falls back to its
 // in-browser engine without them. Every call resolves to { ok } or { error: { code, message } }.
 contextBridge.exposeInMainWorld('quoDesktop', {
@@ -60,13 +62,15 @@ contextBridge.exposeInMainWorld('quoDesktop', {
   },
   // Claude Agent: Claude through the person's own Claude Code login. The page sends a conversation and gets the reply;
   // it never sees the login and can't choose the program or its settings.
-  claude: {
-    status: options => invoke('claude:status', { check: options?.check === true }),
-    models: () => invoke('claude:models'),
-    request: request => invoke('claude:request', request),
-    abort: id => invoke('claude:abort', { id }),
-    onEvent: callback => subscribe('claude:event', callback),
-  },
+  ...(hasClaude && {
+    claude: {
+      status: options => invoke('claude:status', { check: options?.check === true }),
+      models: () => invoke('claude:models'),
+      request: request => invoke('claude:request', request),
+      abort: id => invoke('claude:abort', { id }),
+      onEvent: callback => subscribe('claude:event', callback),
+    },
+  }),
   // Web search and page reading. A search key can be saved or cleared but never read back.
   web: {
     state: () => invoke('web:state'),

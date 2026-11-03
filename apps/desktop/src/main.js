@@ -17,6 +17,7 @@ const { runSmoke } = require('./smoke');
 const { windowIcon } = require('./appIcon');
 const { loadTheme, setupTheme, windowBackground } = require('./theme');
 const { setupLinks } = require('./links');
+const { claudeAgentOffered } = require('./claude/release');
 
 const isSmoke = process.argv.includes('--smoke') || process.env.QUO_SMOKE === '1';
 
@@ -67,7 +68,7 @@ function createWindow({ hidden = false } = {}) {
       contextIsolation: true,
       sandbox: true,
       nodeIntegration: false,
-      additionalArguments: [`--quo-version=${app.getVersion()}`, ...(hasEngine ? ['--quo-engine=1'] : [])],
+      additionalArguments: [`--quo-version=${app.getVersion()}`, ...(hasEngine ? ['--quo-engine=1'] : []), ...(claudeAgentOffered(app.isPackaged) ? ['--quo-claude=1'] : [])],
     },
   });
   if (!hidden) {
@@ -168,7 +169,8 @@ function start() {
   nativeTheme.on('updated', matchWindow);
   const { keys } = setupProviders();
   setupAgent({ web: setupWeb({ keys }) });
-  setupClaude();
+  // Left out of released builds until Anthropic approves (claude/release.js).
+  if (claudeAgentOffered(app.isPackaged)) setupClaude();
   hasEngine = engineAvailable();
   if (hasEngine) {
     const { engine } = setupEngine();
