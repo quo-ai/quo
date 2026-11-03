@@ -26,7 +26,8 @@ function familyOf(tensors) {
   const shape = name => tensors.find(tensor => tensor.name === name)?.shape ?? [];
   const whole = has('model.diffusion_model.') && has('first_stage_model.');
   if (whole && has('conditioner.embedders.1.')) return 'sdxl';
-  if (whole && has('cond_stage_model.')) return 'sd1';
+  // SD 1.x reads CLIP (cond_stage_model.transformer.…); SD 2.x has OpenCLIP there (cond_stage_model.model.…) and isn't run.
+  if (whole && has('cond_stage_model.transformer.')) return 'sd1';
   if (has('cap_embedder.') && has('context_refiner.') && has('x_embedder.')) return 'zimage';
   if (has('double_blocks.') && has('single_blocks.') && shape('txt_in.weight').includes(7680)) return 'flux2-klein';
   return null;

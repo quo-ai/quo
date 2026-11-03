@@ -20,6 +20,8 @@ const SD1 = [t('model.diffusion_model.input_blocks.0.0.weight'), t('first_stage_
 const ZIMAGE = [t('cap_embedder.1.weight', [2560, 3840]), t('context_refiner.0.attention.qkv.weight'), t('x_embedder.weight')];
 const KLEIN = [t('double_blocks.0.img_attn.qkv.weight'), t('single_blocks.0.linear1.weight'), t('txt_in.weight', [3072, 7680])];
 const FLUX1 = [t('double_blocks.0.img_attn.qkv.weight'), t('single_blocks.0.linear1.weight'), t('txt_in.weight', [3072, 4096])];
+// SD 2.x: the same layout as SD 1.5 but OpenCLIP as its text model (names as in v2-1_768-ema-pruned.safetensors).
+const SD2 = [t('model.diffusion_model.input_blocks.0.0.weight'), t('first_stage_model.decoder.conv_in.weight'), t('cond_stage_model.model.ln_final.weight'), t('cond_stage_model.model.transformer.resblocks.0.attn.in_proj_weight')];
 
 function safetensors(file, tensors) {
   const header = Buffer.from(JSON.stringify(Object.fromEntries(tensors.map(({ name, shape }) => [name, { dtype: 'F16', shape, data_offsets: [0, 0] }]))));
@@ -50,6 +52,7 @@ describe('which family a file belongs to', () => {
     assert.equal(familyOf(KLEIN), 'flux2-klein');
     assert.equal(familyOf(KLEIN.map(x => ({ ...x, shape: [...x.shape].reverse() }))), 'flux2-klein');
     assert.equal(familyOf(FLUX1), null);
+    assert.equal(familyOf(SD2), null); // not taken for SD 1.5
     for (const value of [[], null, [t('token_embd.weight'), t('blk.0.attn_q.weight')], [t('model.diffusion_model.x')]]) assert.equal(familyOf(value), null);
   });
 
