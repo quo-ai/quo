@@ -86,13 +86,11 @@ export function Sidebar({ conversations, currentId, installedCount, account, onO
             <Boxes size={18} /> Offline models
             <span className="count">{installedCount ? `${installedCount} on device` : 'None yet'}</span>
           </button>
-          {/* Shown once there are images: everything made, across chats (ImagesSheet). */}
-          {imageCount > 0 && (
-            <button className="footer-btn press" onClick={() => setImagesOpen(true)}>
-              <Images size={18} /> Images
-              <span className="count">{imageCount}</span>
-            </button>
-          )}
+          {/* Everything made, across chats (ImagesSheet); with none yet, it says how to make one. */}
+          <button className="footer-btn press" onClick={() => setImagesOpen(true)}>
+            <Images size={18} /> Images
+            <span className="count">{imageCount ? imageCount : 'None yet'}</span>
+          </button>
           <button className="footer-btn press" onClick={onOpenSettings}>
             <Settings size={18} /> Settings
             {syncNeedsAttention && <span className="count attention" title="Quo Sync needs attention">Sync needs attention</span>}
