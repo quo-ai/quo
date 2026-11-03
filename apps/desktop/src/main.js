@@ -184,7 +184,7 @@ function start() {
     hasImages = setupImages({
       store,
       engineDirectory: engineDirectory(),
-      stopChat: () => engine.stop(),
+      stopChat: () => engine.unload('images'),
       custom: new CustomImageModels({ listFile: path.join(app.getPath('userData'), 'custom-image-models.json'), store }),
       pickFile: async sender => {
         const window = BrowserWindow.fromWebContents(sender) ?? undefined;

@@ -144,7 +144,7 @@ class LlamaEngine extends EventEmitter {
     this.devicesCache = null;
     this.deviceCount = null; // GPUs found, once known
     this.queue = Promise.resolve();
-    this.idle = new IdleWatch({ idleMs, onIdle: () => void this.stop() });
+    this.idle = new IdleWatch({ idleMs, onIdle: () => void this.unload('idle') });
   }
 
   get available() {
@@ -298,6 +298,16 @@ class LlamaEngine extends EventEmitter {
 
   stop() {
     return this._exclusive(() => this._stop());
+  }
+
+  /**
+   * Lets go of the model on Quo's own account (nobody used it for a while, or an image needs the memory), and says so
+   * ('unloaded'), so the page loads it again with the next message instead of sending it to a server that is gone.
+   */
+  async unload(reason) {
+    const had = this.current?.modelId ?? null;
+    await this.stop();
+    if (had) this.emit('unloaded', { modelId: had, reason });
   }
 
   async _stop() {

@@ -65,6 +65,18 @@ describe('llama-server output', () => {
     await assert.rejects(engine.start({ modelId: 'x', modelPath: 'x', contextSize: 2048 }), { code: 'engine_missing' });
   });
 
+  it('says when it lets a model go on its own (idle, or for an image), so the page loads it again', async () => {
+    const engine = new LlamaEngine({ directory: temp() });
+    const said = [];
+    engine.on('unloaded', event => said.push(event));
+    engine.current = { modelId: 'qwen35-4b' }; // as if a model were loaded
+    await engine.unload('images');
+    assert.deepEqual(said, [{ modelId: 'qwen35-4b', reason: 'images' }]);
+    assert.deepEqual(engine.status(), { running: false });
+    await engine.unload('idle'); // nothing loaded: nothing to say
+    assert.equal(said.length, 1);
+  });
+
   it('does not kill an unrelated process left in the pid file', async () => {
     const root = temp();
     const pidFile = path.join(root, 'engine.pid');

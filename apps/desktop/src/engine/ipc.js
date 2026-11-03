@@ -63,6 +63,7 @@ function setupEngine() {
   engine.on('exit', ({ code, signal, expected }) => {
     if (!expected) broadcast('engine:event', { type: 'exit', code, signal });
   });
+  engine.on('unloaded', ({ reason }) => broadcast('engine:event', { type: 'exit', reason }));
   // Never leave a model loaded in an engine nobody is using. A normal quit, the
   // process ending and the usual termination signals all stop it; if the app is
   // killed outright (SIGKILL, a crash), the next launch ends the orphan (reapStale).

@@ -30,8 +30,8 @@ export class NativeEngine implements InferenceEngine {
   private current: { controller: AbortController; done: Promise<unknown> } | null = null;
 
   constructor() {
-    // The server can die on its own (out of memory, a crash). Forget the model,
-    // so the next message loads it again instead of failing.
+    // The server can stop on its own (out of memory, a crash), or main can let the model go (unused for a while, or an
+    // image on this computer needed the memory). Forget the model, so the next message loads it again.
     nativeBridge()?.engine.onEvent(event => {
       if (event.type === 'exit') this.status = null;
     });
@@ -46,7 +46,16 @@ export class NativeEngine implements InferenceEngine {
     return this.status?.running ? this.status.contextSize ?? null : null;
   }
 
-  async load(model: LocalModel, options: { contextSize?: number } = {}): Promise<void> {
+  load(model: LocalModel, options: { contextSize?: number } = {}): Promise<void> {
+    return this.open(model, options, true);
+  }
+
+  /**
+   * Loads the model unless it is loaded already. `stopFirst` stops a reply that is going (a different model, or the same
+   * one with another window); a reply that found the server gone loads it again with false, since that reply is itself
+   * what is going (stopping it would wait on itself for ever).
+   */
+  private async open(model: LocalModel, options: { contextSize?: number }, stopFirst: boolean): Promise<void> {
     // The window asked for, held back (or stored in 8 bits) where this computer cannot hold it (tuning.ts).
     const { contextSize, kvType } = windowFor(model, options.contextSize ?? model.contextSize, engineMemoryGB(await getDeviceProfile()));
     // Loaded already, with the room that was asked for.
@@ -59,7 +68,7 @@ export class NativeEngine implements InferenceEngine {
     const bridge = nativeBridge();
     if (!bridge) throw new NativeError('no_engine', 'The AI engine isn’t available.');
     this.loading = (async () => {
-      await this.stop();
+      if (stopFirst) await this.stop();
       this.status = null;
       this.status = unwrap(await bridge.engine.start({ modelId: model.id, contextSize, kvType }));
     })();
@@ -113,9 +122,9 @@ export class NativeEngine implements InferenceEngine {
       try {
         let response = await this.request(model, messages, sampling, thinking, maxTokens, controller.signal);
         if (response.status === 503) {
-          // The server is gone (it crashed or was stopped): load the model again, once.
+          // The server is gone (it crashed or was stopped): load the model again, once, with the same window.
           this.status = null;
-          await this.load(model);
+          await this.open(model, { contextSize: options.contextSize }, false);
           response = await this.request(model, messages, sampling, thinking, maxTokens, controller.signal);
         }
         if (!response.ok || !response.body) throw new NativeError('generation_failed', await errorText(response));
