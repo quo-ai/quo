@@ -129,7 +129,7 @@ privacy = f'''<h1>Privacy Policy</h1>
 <p>Quo asks for access to the microphone (voice input), camera and photos (to attach images) and files (to attach documents) only when you use those features. What they capture is processed on your device.</p>
 
 <h2>This website</h2>
-<p>This website uses no cookies, analytics or trackers. It runs on our own server in the UK, behind Cloudflare, which delivers it and protects it from attacks. Our server and Cloudflare process standard request information (such as IP address, browser type and the pages requested) to deliver and secure the site.</p>
+<p>This website uses no cookies, trackers or analytics scripts. It runs on our own server in the UK, behind Cloudflare, which delivers it and protects it from attacks. Our server and Cloudflare process standard request information (such as IP address, browser type and the pages requested) to deliver and secure the site.</p>
 
 <h2>Quo Web and Quo for desktop</h2>
 <p>With offline models, everything happens on your computer: your chats are saved only in your browser’s or the app’s storage on that computer, and nothing you type is sent anywhere. Models are downloaded once from Hugging Face, and the desktop app checks GitHub for updates; like any download, these requests show your IP address to those services.</p>
@@ -165,7 +165,7 @@ privacy = f'''<h1>Privacy Policy</h1>
 <li><strong>Usage data</strong> is kept by Google for no longer than 14 months.</li>
 <li><strong>Crash reports</strong> are kept by Google for about 90 days.</li>
 <li><strong>Emails</strong> are kept only as long as needed to help you.</li>
-<li><strong>Server logs</strong> (IP address, the page or request, and when) are kept on our server for 14 days, and by Cloudflare and Vercel under their retention policies.</li>
+<li><strong>Server logs</strong> (IP address, the page or request, the page you came from, browser type, the country Cloudflare reports, and when) are kept on our server for 14 days, and by Cloudflare and Vercel under their retention policies. We count totals from them, such as visitors a day, popular pages, the sites that link to us and countries; nothing is kept about you as a person.</li>
 <li><strong>Cloud messages</strong> aren’t stored by us; OpenRouter and the providers we use don’t retain them.</li>
 <li><strong>Free cloud message counts</strong> are deleted after two days.</li>
 <li><strong>Your account</strong> (email address, plan and credit records) is kept until you delete it. A sign-in code stops working after 10 minutes. The hash that stops a second free trial is kept for a year after the trial, also after you delete your account.</li>
