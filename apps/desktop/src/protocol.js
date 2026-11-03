@@ -233,6 +233,30 @@ async function proxyApi(request, url) {
 
 const notFound = () => respond(404, 'Not found', MIME_TYPES['.txt']);
 
+const served = new WeakSet();
+/**
+ * One of Quo's own local pages (the approval window, the document reader), in its own session: served over app://<host>/
+ * from a fixed list of files and nothing else. Not file://: with the grantFileProtocolExtraPrivileges fuse off, pages
+ * over file:// can't read the asar, so in a packaged build they would not load at all. Returns the page's base address.
+ */
+function serveLocalPage(ses, host, root, files) {
+  const base = `${APP_SCHEME}://${host}/`;
+  if (served.has(ses)) return base;
+  served.add(ses);
+  const allowed = new Map(files.map(file => [`/${file.split(/[\\/]/).join('/')}`, path.join(root, file)]));
+  ses.protocol.handle(APP_SCHEME, async request => {
+    const url = new URL(request.url);
+    const file = url.host === host && request.method === 'GET' ? allowed.get(url.pathname) : null;
+    if (!file) return notFound();
+    try {
+      return respond(200, await fs.readFile(file), MIME_TYPES[path.extname(file).toLowerCase()] ?? 'application/octet-stream', { 'cache-control': 'no-store' });
+    } catch {
+      return notFound();
+    }
+  });
+  return base;
+}
+
 function respond(status, body, contentType, extraHeaders = {}) {
   return new Response(body, {
     status,
@@ -240,4 +264,4 @@ function respond(status, body, contentType, extraHeaders = {}) {
   });
 }
 
-module.exports = { APP_SCHEME, APP_HOST, APP_URL, API_ORIGIN, registerScheme, handleAppProtocol, setEngineTarget };
+module.exports = { APP_SCHEME, APP_HOST, APP_URL, API_ORIGIN, registerScheme, handleAppProtocol, serveLocalPage, setEngineTarget };

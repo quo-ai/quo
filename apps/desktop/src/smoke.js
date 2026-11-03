@@ -9,6 +9,33 @@ const { app } = require('electron');
 
 const TIMEOUT_MS = 90_000;
 
+/** A one-page PDF and a Word file saying `text`, for the document reader (agent/files/documents.js). */
+function sampleDocuments(text) {
+  const stream = `BT /F1 12 Tf 20 150 Td (${text}) Tj ET`;
+  const objects = ['<< /Type /Catalog /Pages 2 0 R >>', '<< /Type /Pages /Kids [3 0 R] /Count 1 >>', '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 400 200] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>', `<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`, '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>'];
+  let pdf = '%PDF-1.4\n';
+  const offsets = objects.map((body, i) => {
+    const at = pdf.length;
+    pdf += `${i + 1} 0 obj\n${body}\nendobj\n`;
+    return at;
+  });
+  const xref = pdf.length;
+  pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n${offsets.map(at => `${String(at).padStart(10, '0')} 00000 n \n`).join('')}trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+  const { strToU8, zipSync } = require('fflate');
+  const docx = Buffer.from(zipSync({ 'word/document.xml': strToU8(`<w:document><w:body><w:p><w:r><w:t>${text}</w:t></w:r></w:p></w:body></w:document>`) }));
+  return { pdf: Buffer.from(pdf, 'latin1'), docx };
+}
+
+/** Code mode's document reader, in this build: its own locked-down process must find its code (outside the asar). */
+async function checkDocuments() {
+  const { reader } = require('./agent/files/documents');
+  const samples = sampleDocuments('Quo smoke test');
+  const read = async kind => reader.extract(kind, samples[kind]).then(text => text.includes('Quo smoke test'), error => String(error?.message ?? error));
+  const result = { pdf: await read('pdf'), docx: await read('docx') };
+  reader.stop();
+  return result;
+}
+
 // Runs in the page. `wasmPath` is a bundled .wasm file to check its MIME type.
 const probe = wasmPath => `(async () => {
   const withTimeout = (promise, ms) => Promise.race([promise, new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), ms))]);
@@ -18,7 +45,7 @@ const probe = wasmPath => `(async () => {
     jspi: typeof WebAssembly.Suspending === 'function',
     adapter: false,
     adapterInfo: null,
-    desktop: window.quoDesktop ? { platform: window.quoDesktop.platform, version: window.quoDesktop.version, nativeEngine: Boolean(window.quoDesktop.engine) } : null,
+    desktop: window.quoDesktop ? { platform: window.quoDesktop.platform, version: window.quoDesktop.version, nativeEngine: Boolean(window.quoDesktop.engine), toolServers: Boolean(window.quoDesktop.toolServers), localServer: Boolean(window.quoDesktop.localServer) } : null,
     title: document.title,
     sab: typeof SharedArrayBuffer,
   };
@@ -88,7 +115,24 @@ async function runSmoke(createWindow, webRoot) {
     });
     await loaded;
     const result = await win.webContents.executeJavaScript(probe(wasm ? `/assets/${wasm}` : null), true);
-    const ok = result.crossOriginIsolated && result.sab === 'function' && result.jspi && result.rendered && result.opfs &&
+    result.documents = await checkDocuments();
+    // Quo's own local pages (the approval window): they must load in this build, from the asar.
+    result.approvalPage = await (async () => {
+      const { BrowserWindow } = require('electron');
+      const { serveLocalPage } = require('./protocol');
+      const probeWindow = new BrowserWindow({ show: false, webPreferences: { sandbox: true, partition: 'smoke-approval' } });
+      try {
+        const base = serveLocalPage(probeWindow.webContents.session, 'approval', path.join(__dirname, 'approval'), ['approval.html', 'approval.js', 'approval.css']);
+        await probeWindow.loadURL(`${base}approval.html`);
+        return await probeWindow.webContents.executeJavaScript('Boolean(document.getElementById("card")) && getComputedStyle(document.body).margin !== ""');
+      } catch (error) {
+        return String(error?.message ?? error).slice(0, 120);
+      } finally {
+        probeWindow.destroy();
+      }
+    })();
+    const ok = result.documents.pdf === true && result.documents.docx === true && result.approvalPage === true && result.desktop?.toolServers === true &&
+      result.crossOriginIsolated && result.sab === 'function' && result.jspi && result.rendered && result.opfs &&
       /Quo/.test(result.title) &&
       result.desktop?.platform === process.platform && result.desktop?.version === app.getVersion() &&
       (!wasm || result.wasmType === 'application/wasm') &&

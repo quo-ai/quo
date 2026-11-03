@@ -2,6 +2,7 @@
 
 const path = require('node:path');
 const { BrowserWindow, app, ipcMain } = require('electron');
+const { serveLocalPage } = require('../protocol');
 const { normalizeChoice, shapeRequest } = require('./request');
 
 /**
@@ -110,7 +111,8 @@ function show(parent, request) {
     });
     window.once('closed', () => settle('deny')); // closing it is a no
     app.once('before-quit', () => settle('deny'));
-    window.loadFile(path.join(__dirname, 'approval.html')).catch(() => {});
+    // Over app://approval/ in its own session: file:// pages don't load from the asar in packaged builds (protocol.js).
+    window.loadURL(`${serveLocalPage(contents.session, 'approval', __dirname, ['approval.html', 'approval.js', 'approval.css'])}approval.html`).catch(() => {});
   });
 }
 

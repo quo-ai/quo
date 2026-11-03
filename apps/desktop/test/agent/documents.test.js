@@ -100,10 +100,14 @@ describe('documents in a project', () => {
 });
 
 describe('the document reader', () => {
-  it('runs locked down: Node’s permission model, read access to Quo’s own folder only, no code from strings', () => {
+  it('runs locked down: a sandboxed window in the app, Node’s permission model elsewhere', () => {
     const source = fs.readFileSync(path.join(__dirname, '../../src/agent/files/documents.js'), 'utf8');
     for (const flag of ['--permission', '--disallow-code-generation-from-strings', '--allow-fs-read=${appRoot}']) assert.ok(source.includes(flag), flag);
     assert.equal(/--allow-(fs-write|child-process|worker|addons|wasi)/.test(source), false);
+    // In the app: a sandboxed window with no Node, in a session that loads only Quo's own files and refuses permissions.
+    const window = fs.readFileSync(path.join(__dirname, '../../src/agent/files/reader/window.js'), 'utf8');
+    for (const setting of ['sandbox: true', 'contextIsolation: true', 'nodeIntegration: false', 'setPermissionRequestHandler', 'onBeforeRequest', "action: 'deny'", 'event.sender === this.window.webContents']) assert.ok(window.includes(setting), setting);
+    assert.match(fs.readFileSync(path.join(__dirname, '../../src/agent/files/reader/reader.html'), 'utf8'), /default-src 'none'; script-src 'self'/);
   });
 
   it('can’t write a file, even if a document took it over', async () => {
@@ -122,7 +126,7 @@ describe('the document reader', () => {
     try {
       const slow = new DocumentReader({ worker: hang, timeoutMs: 300 });
       await assert.rejects(slow.extract('pdf', Buffer.from('x')), error => error.code === 'document_slow');
-      assert.equal(slow.child, null);
+      assert.equal(slow.running, false);
       slow.stop();
     } finally {
       fs.rmSync(hang, { force: true });

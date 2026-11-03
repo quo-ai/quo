@@ -1,14 +1,9 @@
-// Takes the text out of documents (PDF, Word, PowerPoint, Excel, OpenDocument) for Code mode's reading tools. It runs as
-// a process of its own (documents.js starts it) under Node's permission model: it can read only its own code, can't write
-// a file or start a program, and gets each document's bytes from main, never a path. A document that tries to exploit the
-// PDF or zip reader lands here, not in the main process that holds the person's keys.
-//
-// One JSON message per line on stdin: { id, kind, data (base64) }. One per line back: { id, text } or { id, error }.
+// Takes the text out of documents (PDF, Word, PowerPoint, Excel, OpenDocument) for Code mode's reading tools, from their
+// bytes. Pure: no files, no network. In the app it runs in a hidden, sandboxed window with no Node (window.js); in tests
+// and plain Node in a process under Node's permission model (node-worker.mjs). Modules are loaded by path, so the same
+// file works in both.
 
-import path from 'node:path';
-import readline from 'node:readline';
-import { fileURLToPath } from 'node:url';
-import { strFromU8, unzipSync } from 'fflate';
+import { strFromU8, unzipSync } from '../../../../node_modules/fflate/esm/browser.js';
 
 const MAX_TEXT = 1_000_000;
 const MAX_UNZIPPED = 80 * 1024 * 1024;
@@ -79,12 +74,13 @@ function openDocument(bytes) {
   return xmlText(xml.replace(/<\/text:h>/g, '</text:p>'), { paragraph: 'text:p', tab: 'text:tab', lineBreak: 'text:line-break' });
 }
 
+const PDFJS = new URL('../../../../node_modules/pdfjs-dist/legacy/build/', import.meta.url).href;
+
 async function pdf(bytes) {
   // Loaded once, on the first PDF. No scripts from the document (isEvalSupported off), no fonts drawn: text only.
-  const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
-  // pdf.js's own character maps, for text in fonts that don't carry them (Chinese, Japanese, Korean).
-  const cMapUrl = `${fileURLToPath(new URL('../../cmaps/', import.meta.resolve('pdfjs-dist/legacy/build/pdf.mjs')))}${path.sep}`;
-  const task = pdfjs.getDocument({ data: bytes, isEvalSupported: false, disableFontFace: true, useSystemFonts: false, cMapUrl, cMapPacked: true, verbosity: 0 });
+  const pdfjs = await import(`${PDFJS}pdf.mjs`);
+  if (typeof window !== 'undefined') pdfjs.GlobalWorkerOptions.workerSrc = `${PDFJS}pdf.worker.mjs`;
+  const task = pdfjs.getDocument({ data: bytes, isEvalSupported: false, disableFontFace: true, useSystemFonts: false, verbosity: 0 });
   const document = await task.promise.catch(error => {
     throw new Error(/password/i.test(String(error?.name)) ? 'This PDF is password protected.' : 'This PDF couldn’t be opened. It may be damaged.');
   });
@@ -102,26 +98,13 @@ async function pdf(bytes) {
 
 const READERS = { pdf, docx, pptx, xlsx, odf: openDocument };
 
-async function handle(line) {
-  let request;
+/** The text of a document's bytes; a message that can be shown when it can't be read. */
+export async function extractText(kind, bytes) {
+  const read = READERS[kind];
+  if (!read) throw new Error('Quo can’t read this kind of document.');
   try {
-    request = JSON.parse(line);
-  } catch {
-    return;
-  }
-  try {
-    const read = READERS[request.kind];
-    if (!read) throw new Error('Quo can’t read this kind of document.');
-    const text = (await read(new Uint8Array(Buffer.from(String(request.data), 'base64')))).slice(0, MAX_TEXT);
-    process.stdout.write(`${JSON.stringify({ id: request.id, text })}\n`);
+    return (await read(bytes)).slice(0, MAX_TEXT);
   } catch (error) {
-    const message = error instanceof Error && /^(This|Quo)/.test(error.message) ? error.message : 'This document couldn’t be read. It may be damaged, or in a form Quo can’t read.';
-    process.stdout.write(`${JSON.stringify({ id: request.id, error: message })}\n`);
+    throw new Error(error instanceof Error && /^(This|Quo)/.test(error.message) ? error.message : 'This document couldn’t be read. It may be damaged, or in a form Quo can’t read.');
   }
 }
-
-// One at a time, in order: a big PDF doesn't run beside another.
-let queue = Promise.resolve();
-readline.createInterface({ input: process.stdin, crlfDelay: Infinity }).on('line', line => {
-  queue = queue.then(() => handle(line));
-});

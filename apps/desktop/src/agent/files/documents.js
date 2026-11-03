@@ -1,9 +1,10 @@
 'use strict';
 
 // Documents in a project folder (PDF, Word, PowerPoint, Excel, OpenDocument) read as text by Code mode's read_file and
-// search_text. Main checks the path (resolveInside, secrets) and reads the bytes; the text is taken out in a process of
-// its own (extract-worker.mjs) that can read only its own code, can't write or start anything, and is stopped if it takes
-// too long. Text is kept for a while, per file and version, so a second read or search is quick.
+// search_text. Main checks the path (resolveInside, secrets) and reads the bytes; the text is taken out elsewhere, never
+// in main: in the app, a hidden sandboxed window with no Node (reader/window.js); in tests and plain Node, a process under
+// Node's permission model (reader/node-worker.mjs). Either is stopped when a document takes too long. Text is kept per
+// file and version, so a second read or search is quick.
 
 const { spawn } = require('node:child_process');
 const fsp = require('node:fs/promises');
@@ -19,71 +20,95 @@ const CACHE_CHARS = 20_000_000;
 /** 'pdf', 'docx', … for a document Quo can read as text, or null. */
 const documentKind = file => KINDS[path.extname(String(file)).toLowerCase()] ?? null;
 
-/** A real folder for a file in the app: modules the worker loads must be outside app.asar for Node to read them itself. */
-const unpacked = file => file.replace(/([\\/])app\.asar(?=[\\/]|$)/, '$1app.asar.unpacked');
-
-class DocumentReader {
-  constructor({ execPath = process.execPath, electron = Boolean(process.versions.electron), worker = path.join(__dirname, 'extract-worker.mjs'), timeoutMs = TIMEOUT_MS } = {}) {
-    this.execPath = execPath;
-    this.electron = electron;
-    this.worker = worker;
-    this.timeoutMs = timeoutMs;
+/** Outside Electron: the reader as a Node process that can read only Quo's own folder, and can't write or start anything. */
+class NodeTransport {
+  constructor({ onReply, onGone, worker }) {
+    Object.assign(this, { onReply, onGone, worker });
     this.child = null;
-    this.waiting = new Map();
-    this.nextId = 1;
     this.buffer = '';
-    this.idle = null;
-    this.cache = new Map(); // `${file}:${size}:${mtime}` → text, oldest first
-    this.cached = 0;
   }
 
   start() {
-    const worker = unpacked(this.worker);
-    // Quo's own folder (the app's code and its modules), read only: not the person's files, which arrive as bytes.
-    const appRoot = unpacked(path.resolve(__dirname, '..', '..', '..'));
-    const child = spawn(this.execPath, [
+    const appRoot = path.resolve(__dirname, '..', '..', '..');
+    const child = spawn(process.execPath, [
       '--max-old-space-size=1024',
       '--disallow-code-generation-from-strings',
       '--permission', // Node's permission model: no writing, no programs, no workers, no native add-ons
       `--allow-fs-read=${appRoot}`,
-      worker,
-    ], {
-      env: { ...(this.electron ? { ELECTRON_RUN_AS_NODE: '1' } : {}), NODE_OPTIONS: '', ...(process.platform === 'win32' ? { SystemRoot: process.env.SystemRoot ?? 'C:\\Windows' } : {}) },
-      stdio: ['pipe', 'pipe', 'ignore'],
-      windowsHide: true,
-    });
+      this.worker,
+    ], { env: { NODE_OPTIONS: '', ...(process.platform === 'win32' ? { SystemRoot: process.env.SystemRoot ?? 'C:\\Windows' } : {}) }, stdio: ['pipe', 'pipe', 'ignore'], windowsHide: true });
     child.stdout.setEncoding('utf8');
-    child.stdout.on('data', chunk => this.receive(chunk));
+    child.stdout.on('data', chunk => {
+      this.buffer += chunk;
+      const lines = this.buffer.split('\n');
+      this.buffer = lines.pop() ?? '';
+      for (const line of lines) {
+        try {
+          const message = JSON.parse(line);
+          this.onReply(Number(message.id), message);
+        } catch {
+          // Not a message.
+        }
+      }
+    });
     child.stdin.on('error', () => {});
     const gone = () => {
       if (this.child !== child) return;
       this.child = null;
-      for (const { reject } of this.waiting.values()) reject(new AgentError('document_failed', 'The document reader stopped. Try again, or read a smaller document.'));
-      this.waiting.clear();
+      this.onGone('The document reader stopped.');
     };
     child.once('exit', gone);
     child.once('error', gone);
     this.child = child;
   }
 
-  receive(chunk) {
-    this.buffer += chunk;
-    const lines = this.buffer.split('\n');
-    this.buffer = lines.pop() ?? '';
-    for (const line of lines) {
-      let message;
-      try {
-        message = JSON.parse(line);
-      } catch {
-        continue;
-      }
-      const waiting = this.waiting.get(message.id);
-      if (!waiting) continue;
-      this.waiting.delete(message.id);
-      if (typeof message.text === 'string') waiting.resolve(message.text);
-      else waiting.reject(new AgentError('document_failed', String(message.error ?? 'This document couldn’t be read.').slice(0, 300)));
+  async send(id, kind, bytes) {
+    if (!this.child) this.start();
+    this.child.stdin.write(`${JSON.stringify({ id, kind, data: Buffer.from(bytes).toString('base64') })}\n`);
+  }
+
+  get running() {
+    return Boolean(this.child);
+  }
+
+  stop() {
+    const child = this.child;
+    this.child = null;
+    try {
+      child?.kill();
+    } catch {
+      // Gone.
     }
+  }
+}
+
+const inElectronMain = () => Boolean(process.versions.electron) && process.type === 'browser';
+
+class DocumentReader {
+  /** @param {{ worker?: string, timeoutMs?: number, transport?: 'window' | 'node' }} options */
+  constructor({ worker = path.join(__dirname, 'reader', 'node-worker.mjs'), timeoutMs = TIMEOUT_MS, transport = inElectronMain() ? 'window' : 'node' } = {}) {
+    this.timeoutMs = timeoutMs;
+    const hooks = { onReply: (id, result) => this.reply(id, result), onGone: reason => this.lost(reason), worker };
+    this.transport = transport === 'window' ? new (require('./reader/window').WindowTransport)(hooks) : new NodeTransport(hooks);
+    this.waiting = new Map();
+    this.nextId = 1;
+    this.idle = null;
+    this.cache = new Map(); // `${file}:${size}:${mtime}` → text, oldest first
+    this.cached = 0;
+  }
+
+  reply(id, result) {
+    const waiting = this.waiting.get(id);
+    if (!waiting) return;
+    this.waiting.delete(id);
+    if (typeof result.text === 'string') waiting.resolve(result.text);
+    else waiting.reject(new AgentError('document_failed', String(result.error ?? 'This document couldn’t be read.').slice(0, 300)));
     this.restIfIdle();
+  }
+
+  lost(reason) {
+    for (const { reject } of this.waiting.values()) reject(new AgentError('document_failed', `${reason} Try again, or read a smaller document.`));
+    this.waiting.clear();
   }
 
   restIfIdle() {
@@ -93,9 +118,8 @@ class DocumentReader {
     this.idle.unref?.();
   }
 
-  /** The text of one document's bytes, from the worker. */
+  /** The text of one document's bytes, from the reader. */
   extract(kind, bytes) {
-    if (!this.child) this.start();
     clearTimeout(this.idle);
     const id = this.nextId++;
     return new Promise((resolve, reject) => {
@@ -106,7 +130,7 @@ class DocumentReader {
         this.stop();
       }, this.timeoutMs);
       this.waiting.set(id, { resolve: text => (clearTimeout(timer), resolve(text)), reject: error => (clearTimeout(timer), reject(error)) });
-      this.child.stdin.write(`${JSON.stringify({ id, kind, data: bytes.toString('base64') })}\n`);
+      this.transport.send(id, kind, bytes).catch(error => this.reply(id, { error: error?.message ?? 'The document reader didn’t start.' }));
     });
   }
 
@@ -129,21 +153,23 @@ class DocumentReader {
     return text;
   }
 
+  get running() {
+    return this.transport.running;
+  }
+
   stop() {
     clearTimeout(this.idle);
-    const child = this.child;
-    this.child = null;
-    for (const { reject } of this.waiting.values()) reject(new AgentError('document_failed', 'The document reader stopped.'));
-    this.waiting.clear();
-    try {
-      child?.kill();
-    } catch {
-      // Gone.
-    }
+    this.transport.stop();
+    this.lost('The document reader stopped.');
   }
 }
 
-/** One reader for the app: documents are read one at a time. */
-const reader = new DocumentReader();
+/** One reader for the app, made when first used: documents are read one at a time. */
+let shared = null;
+const reader = {
+  text: (absolute, relative) => (shared ??= new DocumentReader()).text(absolute, relative),
+  extract: (kind, bytes) => (shared ??= new DocumentReader()).extract(kind, bytes),
+  stop: () => shared?.stop(),
+};
 
 module.exports = { DocumentReader, reader, documentKind, MAX_DOCUMENT_BYTES, KINDS };

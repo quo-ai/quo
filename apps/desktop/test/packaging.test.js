@@ -18,11 +18,13 @@ it('keeps in git every build/ file the packaging config uses', () => {
   assert.deepEqual(named.filter(file => !tracked.includes(file)), []);
 });
 
-it('ships the document reader outside the asar with only what it loads, and leaves pdf.js’s extras out', () => {
+it('ships the document reader with pdf.js’s text build only', () => {
   const root = path.join(__dirname, '..');
   const config = fs.readFileSync(path.join(root, 'electron-builder.yml'), 'utf8');
-  // The reader runs under Node's permission model and loads real files (src/agent/files/documents.js).
-  for (const unpacked of ['src/agent/files/extract-worker.mjs', 'node_modules/pdfjs-dist/**', 'node_modules/fflate/**']) assert.ok(config.includes(`  - ${unpacked}`), unpacked);
+  // Read in a sandboxed window from the asar (src/agent/files/reader/), so nothing needs unpacking.
+  assert.equal(/asarUnpack/.test(config), false);
   assert.ok(config.includes('"!node_modules/@napi-rs/**"'), 'the optional canvas package stays out');
-  assert.ok(fs.existsSync(path.join(root, 'node_modules/pdfjs-dist/legacy/build/pdf.mjs')), 'the text build of pdf.js is there');
+  for (const file of ['src/agent/files/reader/reader.html', 'src/agent/files/reader/extract.mjs', 'node_modules/pdfjs-dist/legacy/build/pdf.mjs', 'node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs', 'node_modules/fflate/esm/browser.js']) {
+    assert.ok(fs.existsSync(path.join(root, file)), file);
+  }
 });
