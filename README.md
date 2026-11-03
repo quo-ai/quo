@@ -51,6 +51,18 @@ Quo runs the model on your device instead:
 | **Android** | [llama.rn](https://github.com/mybigday/llama.rn), with a model built in | [Google Play](https://play.google.com/store/apps/details?id=com.quo.app) |
 | **iPhone and iPad** | llama.rn on Metal | Coming soon |
 
+**Desktop app in one line.** It picks the right download for your computer, checks it against the release, and installs it for you only (no admin rights):
+
+```bash
+curl -fsSL https://quo.computer/install.sh | sh     # macOS and Linux
+```
+
+```powershell
+irm https://quo.computer/install.ps1 | iex          # Windows, in PowerShell
+```
+
+Run it again to update the Mac app (Windows and Linux update themselves).
+
 In a browser, use Chrome or Edge on a computer: Firefox and Safari run on the processor, which is slower, and phone browsers don't have the memory (use the app).
 
 <table>
