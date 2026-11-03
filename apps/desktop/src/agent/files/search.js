@@ -5,6 +5,7 @@ const vm = require('node:vm');
 const { AgentError, looksBinary, redactSecrets, resolveInside } = require('../safety');
 const { globToRegExp, walkFiles } = require('./glob');
 const { LIMITS, clip, integer, limitOf, limitOutput } = require('./limits');
+const { documentKind, reader } = require('./documents');
 
 
 /**
@@ -55,16 +56,19 @@ async function searchText(ctx, args = {}) {
       stopped = 'it took too long';
       break;
     }
-    let buffer;
+    let text;
     try {
-      const stat = await fsp.stat(file.absolute);
-      if (stat.size > LIMITS.maxFileBytes) continue;
-      buffer = await fsp.readFile(file.absolute);
+      if (documentKind(file.relative)) text = await reader.text(file.absolute, file.relative); // a PDF, Word file…: its text
+      else {
+        const stat = await fsp.stat(file.absolute);
+        if (stat.size > LIMITS.maxFileBytes) continue;
+        const buffer = await fsp.readFile(file.absolute);
+        if (looksBinary(buffer)) continue;
+        text = buffer.toString('utf8');
+      }
     } catch {
       continue;
     }
-    if (looksBinary(buffer)) continue;
-    const text = buffer.toString('utf8');
     sandbox.text = text;
     let found;
     try {

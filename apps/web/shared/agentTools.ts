@@ -27,7 +27,7 @@ export const AGENT_TOOLS: AgentTool[] = [
   },
   {
     name: 'read_file',
-    description: 'Read a text file, with line numbers. It reads one page at a time; the result says how to read more. Use start_line and end_line to read a part. Secrets files (.env, keys, credentials) cannot be read.',
+    description: 'Read a text file, with line numbers. PDF, Word (.docx), PowerPoint (.pptx), Excel (.xlsx) and OpenDocument files are read as their text. It reads one page at a time; the result says how to read more. Use start_line and end_line to read a part. Secrets files (.env, keys, credentials) cannot be read.',
     parameters: {
       type: 'object',
       properties: {
@@ -54,7 +54,7 @@ export const AGENT_TOOLS: AgentTool[] = [
   },
   {
     name: 'search_text',
-    description: 'Search file contents for text or a regular expression. Returns file:line: text. Skips dependencies, build output, binaries and secrets.',
+    description: 'Search file contents for text or a regular expression, also inside PDF, Word, PowerPoint, Excel and OpenDocument files. Returns file:line: text. Skips dependencies, build output, other binaries and secrets.',
     parameters: {
       type: 'object',
       properties: {

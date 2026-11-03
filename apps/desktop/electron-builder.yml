@@ -15,6 +15,19 @@ files:
   - src/**/*
   - engine.lock.json
   - package.json
+  # Documents in Code mode (src/agent/files/documents.js) need only pdf.js's text build: no viewer, types, fonts or the
+  # optional canvas package (text needs no drawing).
+  - "!node_modules/@napi-rs/**"
+  - "!node_modules/pdfjs-dist/{build,web,image_decoders,types,standard_fonts,wasm,iccs}/**"
+  - "!node_modules/pdfjs-dist/legacy/{web,image_decoders}/**"
+  - "!node_modules/pdfjs-dist/**/*.map"
+
+# The document reader runs as its own locked-down Node process (Node's permission model), which reads its code from real
+# files: it and the modules it loads stay outside the asar.
+asarUnpack:
+  - src/agent/files/extract-worker.mjs
+  - node_modules/pdfjs-dist/**
+  - node_modules/fflate/**
 
 # The built web app (`npm run build:web`), served from app://quo/.
 # No service worker in the desktop app, so its files are left out.
