@@ -101,6 +101,8 @@ it('a test key on the production server lets only the listed testers buy; a live
     expect(billingMode(null)).toBe('off');
     config.stripe.secretKey = 'sk_live_x';
     expect(billingMode('someone@example.com')).toBe('live');
+    config.stripe.secretKey = 'rk_live_x';
+    expect(billingMode('someone@example.com')).toBe('live');
     Object.assign(config, { production: false });
     config.stripe.secretKey = 'sk_test_x';
     expect(billingMode(null)).toBe('test'); // development: anyone, with test cards

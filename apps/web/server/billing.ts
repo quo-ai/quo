@@ -63,7 +63,8 @@ async function requireUser(request: Request): Promise<string> {
 }
 
 /** Real money only with a live key; a test key takes test cards. */
-export const billingLive = () => Boolean(config.stripe.secretKey?.startsWith('sk_live_'));
+/** A live secret key (sk_live_) or a live restricted key (rk_live_) takes real money. */
+export const billingLive = () => /^(sk|rk)_live_/.test(config.stripe.secretKey ?? '');
 
 /** How purchases work for this person: real money, Stripe's test cards, simulated (development), or not open. */
 export type BillingMode = 'live' | 'test' | 'sandbox' | 'off';
