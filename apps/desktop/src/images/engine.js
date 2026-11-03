@@ -14,7 +14,16 @@ const { spawn } = require('node:child_process');
 
 /** The files an image model is made of, as ModelStore keeps them in its folder. */
 const IMAGE_FILES = { diffusion: 'diffusion.gguf', text: 'text.gguf', vae: 'vae.safetensors' };
-/** Each shape Quo asks for, in pixels (multiples of 64, about a megapixel). */
+/** Each shape Quo asks for, in pixels (multiples of 64): about a megapixel, or about half for "quick". */
+const QUICK = {
+  '1:1': [768, 768],
+  '4:3': [896, 640],
+  '3:4': [640, 896],
+  '3:2': [960, 640],
+  '2:3': [640, 960],
+  '16:9': [1024, 576],
+  '9:16': [576, 1024],
+};
 const SHAPES = {
   '1:1': [1024, 1024],
   '4:3': [1152, 896],
@@ -47,8 +56,8 @@ function cleanPrompt(value) {
 }
 
 /** sd-cli's arguments for one image: only Quo's own files and checked numbers. */
-function imageArgs({ dir, prompt, shape, steps, cfg, seed, output }) {
-  const [width, height] = SHAPES[shape];
+function imageArgs({ dir, prompt, shape, steps, cfg, seed, output, quick = false, reference = null }) {
+  const [width, height] = (quick ? QUICK : SHAPES)[shape];
   return [
     '--diffusion-model', path.join(dir, IMAGE_FILES.diffusion),
     '--llm', path.join(dir, IMAGE_FILES.text),
@@ -59,6 +68,8 @@ function imageArgs({ dir, prompt, shape, steps, cfg, seed, output }) {
     '--cfg-scale', String(cfg),
     '--seed', String(seed),
     '-o', output,
+    // A picture to change (a model that edits): a file main wrote from checked image bytes, deleted afterwards.
+    ...(reference ? ['-r', reference] : []),
     // Decodes the picture in tiles: about 200 MB less graphics memory at the same speed (measured on an RTX 3070 Ti).
     '--vae-tiling',
   ];
@@ -94,10 +105,10 @@ class ImageEngine {
   }
 
   /** Makes one PNG from the model in `dir` (checked by the caller); onProgress gets { step, steps }. */
-  make({ dir, prompt, shape, steps, cfg, seed }, onProgress = () => {}) {
+  make({ dir, prompt, shape, steps, cfg, seed, quick = false, reference = null }, onProgress = () => {}) {
     if (this.child) return Promise.reject(new ImageError('busy', 'An image is already being made.'));
     const output = path.join(this.tmpdir, `quo-image-${crypto.randomUUID()}.png`);
-    const args = [...this.command.args, ...imageArgs({ dir, prompt, shape, steps, cfg, seed, output })];
+    const args = [...this.command.args, ...imageArgs({ dir, prompt, shape, steps, cfg, seed, output, quick, reference })];
     const child = spawn(this.command.file, args, { cwd: this.directory ?? this.tmpdir, stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
     this.child = child;
     let tail = '';
@@ -138,4 +149,4 @@ class ImageEngine {
   }
 }
 
-module.exports = { ImageEngine, ImageError, IMAGE_FILES, SHAPES, MAX_PROMPT, cleanPrompt, imageArgs, parseProgress, isOutOfMemory, binaryIn };
+module.exports = { ImageEngine, ImageError, IMAGE_FILES, SHAPES, QUICK, MAX_PROMPT, cleanPrompt, imageArgs, parseProgress, isOutOfMemory, binaryIn };

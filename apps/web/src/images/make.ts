@@ -42,7 +42,7 @@ export async function makeImages(messages: Message[], replyId: string, update: (
           images = images.map((one, i) => (i === index ? { ...one, progress: { step, steps } } : one));
           update(images);
         };
-        const made = await makeOnDevice({ prompt: image.prompt, aspect: image.aspect }, signal, shown);
+        const made = await makeOnDevice({ prompt: image.prompt, aspect: image.aspect, ...(image.edit && last?.dataUrl ? { reference: last.dataUrl } : {}) }, signal, shown);
         const note = made.setAside ? 'The chat model was set aside to make room. It loads again with your next message.' : undefined;
         images = images.map((one, i) => (i === index ? { ...one, status: 'done', dataUrl: made.image, model: made.model, charged: 0, where: 'device', progress: undefined, ...(note ? { note } : {}) } : one));
         update(images);

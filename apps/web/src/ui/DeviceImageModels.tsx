@@ -1,6 +1,7 @@
-import { Download, Pause, Play, Trash2 } from 'lucide-react';
+import { CheckCircle2, Download, Pause, Play, Trash2 } from 'lucide-react';
 import { engineMemoryGB, type DeviceProfile } from '../device';
-import { DEVICE_IMAGE_MODELS, imageModelBytes, type ImageModel } from '../images/deviceModels';
+import { DEVICE_IMAGE_MODELS, imageModelBytes, suggestedImageModel, type ImageModel } from '../images/deviceModels';
+import { deviceImageModel } from '../images/device';
 import { cancelDownload, removeDeviceModel, startDeviceDownload, type DownloadState } from '../storage/downloads';
 import { setImagePrefs, useImagePrefs } from '../images/prefs';
 import { Facts } from './Facts';
@@ -13,10 +14,20 @@ import { downloadErrorText, formatBytes, percent } from './format';
 export function DeviceImageModels({ device, downloads }: { device: DeviceProfile | null; downloads: Record<string, DownloadState> }) {
   const memory = device ? engineMemoryGB(device) : null;
   const prefs = useImagePrefs();
+  const suggested = suggestedImageModel(memory);
+  const installed = DEVICE_IMAGE_MODELS.filter(model => downloads[model.id]?.status === 'installed');
+  const inUse = installed.length > 1 ? deviceImageModel()?.id ?? null : null;
   return (
     <div className="storage-box">
       <p>Make images on this computer. With an image model downloaded, offline chats make their pictures here: nothing is sent anywhere, and there are no credits or limits.</p>
-      {DEVICE_IMAGE_MODELS.map(model => <ImageModelCard key={model.id} model={model} state={downloads[model.id]} slow={memory !== null && memory < model.minMemoryGB} gpu={Boolean(device?.gpu)} />)}
+      {DEVICE_IMAGE_MODELS.map(model => <ImageModelCard key={model.id} model={model} state={downloads[model.id]} slow={memory !== null && memory < model.minMemoryGB} gpu={Boolean(device?.gpu)} recommended={model.id === suggested.id && installed.length === 0} inUse={inUse} />)}
+      <div className="field-row">
+        <span>Picture size</span>
+        <div className="segmented" role="radiogroup" aria-label="Picture size">
+          <button type="button" role="radio" aria-checked={prefs.size === 'standard'} aria-selected={prefs.size === 'standard'} onClick={() => setImagePrefs({ size: 'standard' })} title="About a megapixel: the sharpest">Standard</button>
+          <button type="button" role="radio" aria-checked={prefs.size === 'quick'} aria-selected={prefs.size === 'quick'} onClick={() => setImagePrefs({ size: 'quick' })} title="About half the pixels: roughly a third faster">Quicker</button>
+        </div>
+      </div>
       <label className="hf-check">
         <input type="checkbox" checked={prefs.everyOnDevice} onChange={event => setImagePrefs({ everyOnDevice: event.target.checked })} />
         Make every image on this computer, cloud chats too (when an image model is downloaded)
@@ -28,7 +39,7 @@ export function DeviceImageModels({ device, downloads }: { device: DeviceProfile
   );
 }
 
-function ImageModelCard({ model, state, slow, gpu }: { model: ImageModel; state?: DownloadState; slow: boolean; gpu: boolean }) {
+function ImageModelCard({ model, state, slow, gpu, recommended, inUse }: { model: ImageModel; state?: DownloadState; slow: boolean; gpu: boolean; recommended: boolean; inUse: string | null }) {
   const status = state?.status ?? 'idle';
   const total = state?.total || imageModelBytes(model);
   const pct = percent(state?.loaded ?? 0, total);
@@ -40,10 +51,12 @@ function ImageModelCard({ model, state, slow, gpu }: { model: ImageModel; state?
     <div className="model-card">
       <div className="model-head">
         <span className="model-name">{model.name}</span>
+        {recommended && <span className="badge">Recommended</span>}
+        {inUse === model.id && <span className="badge green"><CheckCircle2 size={12} /> In use</span>}
         <span className="model-size">{formatBytes(total)}</span>
       </div>
       <p className="model-desc">{model.description}</p>
-      <p className="model-meta muted"><Facts items={[`By ${model.maker}`, model.licence]} /></p>
+      <p className="model-meta muted"><Facts items={[`By ${model.maker}`, model.licence, model.edits ? 'Changes pictures on this computer' : null]} /></p>
       {note && status !== 'installed' && <p className="model-meta warn">{note}</p>}
       {status === 'installed' && <p className="model-meta muted">Ready: offline chats make images with it. Ask for a picture, or type /image.</p>}
       {busy && (
@@ -57,6 +70,7 @@ function ImageModelCard({ model, state, slow, gpu }: { model: ImageModel; state?
         </>
       )}
       <div className="model-actions">
+        {status === 'installed' && inUse !== null && inUse !== model.id && <button className="btn btn-glass press" onClick={() => setImagePrefs({ model: model.id })}>Use this model</button>}
         {status === 'installed' && <button className="btn btn-ghost press" onClick={() => void removeDeviceModel(model)}><Trash2 size={15} /> Remove</button>}
         {(status === 'idle' || status === 'error') && <button className="btn btn-glass press" onClick={() => void startDeviceDownload(model)}><Download size={16} /> Download</button>}
         {status === 'partial' && <button className="btn btn-glass press" onClick={() => void startDeviceDownload(model)}><Play size={15} /> Resume at {pct}%</button>}

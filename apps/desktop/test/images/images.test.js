@@ -8,8 +8,8 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const { describe, it } = require('node:test');
-const { ImageEngine, ImageError, SHAPES, cleanPrompt, imageArgs, isOutOfMemory, parseProgress } = require('../../src/images/engine');
-const { checkRequest, modelFolder, setupImages } = require('../../src/images/ipc');
+const { ImageEngine, ImageError, SHAPES, QUICK, cleanPrompt, imageArgs, isOutOfMemory, parseProgress } = require('../../src/images/engine');
+const { checkRequest, imageBytes, modelFolder, setupImages } = require('../../src/images/ipc');
 const { ModelStore, ModelError, hasSafetensorsHeader } = require('../../src/engine/models');
 const { tempDir } = require('../tempdir');
 
@@ -40,7 +40,7 @@ describe('what the page may ask for', () => {
 
   it('takes only the shapes Quo offers, and keeps steps, guidance and seed within bounds', () => {
     const ok = checkRequest({ modelId: 'z-image-turbo', prompt: 'a lighthouse', aspect: '16:9', steps: 8, cfg: 1, seed: 7 });
-    assert.deepEqual(ok, { modelId: 'z-image-turbo', prompt: 'a lighthouse', shape: '16:9', steps: 8, cfg: 1, seed: 7 });
+    assert.deepEqual(ok, { modelId: 'z-image-turbo', prompt: 'a lighthouse', shape: '16:9', steps: 8, cfg: 1, seed: 7, quick: false, reference: null });
     for (const aspect of ['2:1', '__proto__', 'constructor', '1024x1024', '', undefined]) {
       assert.throws(() => checkRequest({ modelId: 'm', prompt: 'x', aspect }), error => error instanceof ImageError && error.code === 'bad_shape', String(aspect));
     }
@@ -67,6 +67,32 @@ describe('what the page may ask for', () => {
     assert.equal(isOutOfMemory('ggml_vulkan: Device memory allocation of size 2147483648 failed.\nErrorOutOfDeviceMemory'), true);
     assert.equal(isOutOfMemory('CUDA error: out of memory'), true);
     assert.equal(isOutOfMemory('[E] generate failed --- main.cpp:926'), false);
+  });
+
+  it('takes a picture to change only as PNG, JPEG or WebP whose bytes say so, and not too big', () => {
+    const png = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.alloc(16)]);
+    assert.equal(imageBytes(`data:image/png;base64,${png.toString('base64')}`).extension, 'png');
+    const webp = Buffer.concat([Buffer.from('RIFF'), Buffer.alloc(4), Buffer.from('WEBP'), Buffer.alloc(8)]);
+    assert.equal(imageBytes(`data:image/webp;base64,${webp.toString('base64')}`).extension, 'webp');
+    for (const value of [
+      `data:image/png;base64,${Buffer.from('#!/bin/sh\nrm -rf ~').toString('base64')}`, // says PNG, isn't
+      `data:image/svg+xml;base64,${Buffer.from('<svg/>').toString('base64')}`,
+      `data:text/html;base64,${png.toString('base64')}`,
+      `https://example.com/a.png`, 'file:///etc/passwd', '/tmp/x.png', 42, {},
+      `data:image/png;base64,${'A'.repeat(17_000_000)}`,
+      `data:image/webp;base64,${Buffer.concat([Buffer.from('RIFF'), Buffer.alloc(4), Buffer.from('WAVE')]).toString('base64')}`,
+    ]) assert.throws(() => imageBytes(value), { code: 'bad_reference' }, String(value).slice(0, 40));
+    assert.equal(checkRequest({ modelId: 'm', prompt: 'x', aspect: '1:1' }).reference, null);
+    assert.throws(() => checkRequest({ modelId: 'm', prompt: 'x', aspect: '1:1', reference: 'nope' }), { code: 'bad_reference' });
+  });
+
+  it('makes the quicker size at about half the pixels, and passes a picture to change as one -r file', () => {
+    for (const [width, height] of Object.values(QUICK)) assert.ok(width % 64 === 0 && height % 64 === 0 && width * height <= 620_000);
+    const args = imageArgs({ dir: '/m', prompt: 'x', shape: '1:1', steps: 4, cfg: 1, seed: 1, output: '/o.png', quick: true, reference: '/tmp/quo-reference-1.png' });
+    assert.deepEqual([args[args.indexOf('-W') + 1], args[args.indexOf('-r') + 1]], ['768', '/tmp/quo-reference-1.png']);
+    assert.equal(imageArgs({ dir: '/m', prompt: 'x', shape: '1:1', steps: 4, cfg: 1, seed: 1, output: '/o.png' }).includes('-r'), false);
+    assert.equal(checkRequest({ modelId: 'm', prompt: 'x', aspect: '1:1', size: 'quick' }).quick, true);
+    assert.equal(checkRequest({ modelId: 'm', prompt: 'x', aspect: '1:1', size: '--steps 999' }).quick, false);
   });
 
   it('reads the progress bar', () => {
@@ -160,6 +186,15 @@ describe('the page’s side', () => {
     assert.deepEqual([calls, stopped], [2, 1]);
     const always = setup({ make: async () => Promise.reject(new ImageError('out_of_memory', 'Not enough graphics memory for this image.')), stopChat: async () => {} });
     assert.equal((await always.get('images:make')(page, { modelId: 'z', prompt: 'a cat', aspect: '1:1' })).error.code, 'out_of_memory');
+  });
+
+  it('writes a picture to change to its own file for sd-cli, and removes it afterwards, made or not', async () => {
+    let seen = null;
+    const handlers = setup({ make: async job => { seen = job.reference; assert.ok(fs.existsSync(job.reference)); throw new ImageError('failed', 'no'); } });
+    const png = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.alloc(16)]);
+    const answer = await handlers.get('images:make')(page, { modelId: 'z', prompt: 'a cat', aspect: '1:1', reference: `data:image/png;base64,${png.toString('base64')}` });
+    assert.equal(answer.error.code, 'failed');
+    assert.ok(seen && !fs.existsSync(seen));
   });
 
   it('offers nothing where the image engine isn’t bundled', () => {

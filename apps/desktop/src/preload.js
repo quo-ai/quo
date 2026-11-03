@@ -119,7 +119,7 @@ contextBridge.exposeInMainWorld('quoDesktop', {
     // Images made on this computer (images/ipc.js): the page gives a downloaded model's id, a prompt and a shape.
     ...(hasImages && {
       images: {
-        make: request => invoke('images:make', { modelId: request?.modelId, prompt: request?.prompt, aspect: request?.aspect, steps: request?.steps, cfg: request?.cfg, seed: request?.seed }),
+        make: request => invoke('images:make', { modelId: request?.modelId, prompt: request?.prompt, aspect: request?.aspect, steps: request?.steps, cfg: request?.cfg, seed: request?.seed, size: request?.size, reference: request?.reference }),
         cancel: () => invoke('images:cancel'),
         onEvent: callback => subscribe('images:event', callback),
       },

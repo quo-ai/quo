@@ -137,3 +137,6 @@ code.path { padding: 1px 6px; border-radius: var(--r-inner); background: var(--r
 .gen-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 8px 0 2px; }
 .gen-note { margin: 6px 0 0; font-size: var(--t-meta); color: var(--ink-3); }
 .gen-check { display: inline-flex; align-items: center; gap: 6px; font-size: var(--t-meta); color: var(--ink-2); }
+/* A labelled choice in a settings box (Picture size, ui/DeviceImageModels.tsx). */
+.field-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; font-size: var(--t-small); color: var(--ink-2); }
+.field-row .segmented { margin: 0; flex: 0 1 240px; }

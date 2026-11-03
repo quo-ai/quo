@@ -50,6 +50,33 @@ describe('image models on this computer', () => {
     }
   });
 
+  it('suggests the most detailed model that fits the graphics memory, and uses the one chosen when several are downloaded', async () => {
+    const { suggestedImageModel } = await import('../deviceModels');
+    expect(suggestedImageModel(8).id).toBe('image-z-image-turbo');
+    expect(suggestedImageModel(6).id).toBe('image-flux2-klein-4b');
+    expect(suggestedImageModel(null).id).toBe('image-z-image-turbo');
+    state.installed.add('image-z-image-turbo');
+    state.installed.add('image-flux2-klein-4b');
+    expect(deviceImageModel()?.id).toBe('image-z-image-turbo');
+    setImagePrefs({ model: 'image-flux2-klein-4b' });
+    expect(deviceImageModel()?.id).toBe('image-flux2-klein-4b');
+    setImagePrefs({ model: 'gone' });
+    expect(deviceImageModel()?.id).toBe('image-z-image-turbo');
+    setImagePrefs({ model: null });
+  });
+
+  it('sends a picture to change only to a model that changes pictures, and the chosen size', async () => {
+    state.installed.add('image-flux2-klein-4b');
+    setImagePrefs({ model: 'image-flux2-klein-4b', size: 'quick' });
+    await makeOnDevice({ prompt: 'at night', aspect: '1:1', reference: 'data:image/png;base64,AAAA' }, new AbortController().signal);
+    expect(sent.at(-1)).toMatchObject({ modelId: 'image-flux2-klein-4b', reference: 'data:image/png;base64,AAAA', size: 'quick', steps: 4 });
+    setImagePrefs({ model: 'image-z-image-turbo', size: 'standard' });
+    state.installed.add('image-z-image-turbo');
+    await makeOnDevice({ prompt: 'at night', aspect: '1:1', reference: 'data:image/png;base64,AAAA' }, new AbortController().signal);
+    expect(sent.at(-1)).not.toHaveProperty('reference');
+    setImagePrefs({ model: null });
+  });
+
   it('is used only once downloaded, in the desktop app', () => {
     expect(deviceImageModel()).toBeNull();
     state.installed.add(model.id);
@@ -63,7 +90,7 @@ describe('image models on this computer', () => {
     const steps: number[] = [];
     const made = await makeOnDevice({ prompt: 'a lighthouse', aspect: '16:9' }, new AbortController().signal, step => steps.push(step));
     expect(made).toEqual({ image: 'data:image/png;base64,device', model: model.name, setAside: false });
-    expect(sent).toEqual([{ modelId: model.id, prompt: 'a lighthouse', aspect: '16:9', steps: model.steps, cfg: model.cfg }]);
+    expect(sent).toEqual([{ modelId: model.id, prompt: 'a lighthouse', aspect: '16:9', steps: model.steps, cfg: model.cfg, size: 'standard' }]);
     expect(steps).toEqual([8]);
     expect(progress).toBeNull(); // stopped listening
   });
