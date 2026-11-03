@@ -5,7 +5,7 @@ import type { DownloadEvent, DownloadRequest } from './download.worker';
 import { localEngine } from '../engine/localEngine';
 import { chooseFolder, forgetFolder, getUsableFolder, reconnectFolder } from './folder';
 import { cleanUpBrowserCopy, deleteModel, getModelDiskState, moveModelToFolder, type ModelLocation } from './modelStore';
-import { cancelNative, listenForDownloads, refreshNative, removeNative, startNative, type DownloadStore } from './nativeDownloads';
+import { cancelNative, listenForDownloads, refreshNative, removeNative, startNative, type DownloadableModel, type DownloadStore } from './nativeDownloads';
 import { requestPersistence } from './persistence';
 
 /**
@@ -235,6 +235,17 @@ export function cancelDownload(modelId: string): void {
   setPending(modelId, false);
   if (nativeBridge()) return cancelNative(modelId);
   workers.get(modelId)?.postMessage({ type: 'cancel' } satisfies DownloadRequest);
+}
+
+/** The download state of a model, right now (image models read it to know they're installed). */
+export const downloadState = (modelId: string): DownloadState | undefined => states[modelId];
+
+/** Downloads or removes a model only the desktop app has (an image model: images/deviceModels.ts). */
+export async function startDeviceDownload(model: DownloadableModel): Promise<void> {
+  if (nativeBridge()) await startNative(model, nativeStore);
+}
+export async function removeDeviceModel(model: DownloadableModel): Promise<void> {
+  if (nativeBridge()) await removeNative(model, nativeStore);
 }
 
 export async function removeModel(model: LocalModel): Promise<void> {

@@ -11,6 +11,8 @@ import { CloudModelRow } from './CloudModelRow';
 import { CodeSettings } from './CodeSettings';
 import { ExternalModels } from './ExternalModels';
 import { HuggingFaceModels } from './HuggingFaceModels';
+import { DeviceImageModels } from './DeviceImageModels';
+import { canMakeImagesOnDevice } from '../images/device';
 import { KeysTab } from './keys/KeysTab';
 import { WebSettings } from './WebSettings';
 import { ModelList } from './ModelList';
@@ -87,6 +89,12 @@ export function ModelsSheet({ initialTab = 'device', device, downloads, activeMo
               <HuggingFaceModels device={device} />
               <div className="sheet-section-title">Models you already have</div>
               <ExternalModels />
+              {canMakeImagesOnDevice() && (
+                <>
+                  <div className="sheet-section-title">Images on this computer</div>
+                  <DeviceImageModels device={device} downloads={downloads} />
+                </>
+              )}
             </>
           )}
           <div className="sheet-section-title">Storage</div>

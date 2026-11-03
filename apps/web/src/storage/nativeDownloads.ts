@@ -1,4 +1,8 @@
 import { allLocalModels, type LocalModel } from '../catalog';
+import { DEVICE_IMAGE_MODELS } from '../images/deviceModels';
+
+/** What a download needs: chat models and image models (images/deviceModels.ts) alike. */
+export type DownloadableModel = Pick<LocalModel, 'id' | 'files'> & { custom?: boolean };
 import { nativeBridge, unwrap, type ModelEvent } from '../native';
 import type { DownloadState } from './downloads';
 
@@ -16,10 +20,10 @@ export interface DownloadStore {
   setPending(modelId: string, active: boolean): void;
 }
 
-const filesOf = (model: LocalModel) => model.files.map(({ url, name, sizeBytes }) => ({ url, name, sizeBytes }));
+const filesOf = (model: DownloadableModel) => model.files.map(({ url, name, sizeBytes }) => ({ url, name, sizeBytes }));
 // What is on disk is judged against the sizes the files have now and the ones they used to have; an optional file (a
 // drafter) never decides whether the model is installed.
-export const stateFilesOf = (model: LocalModel) => model.files.map(({ url, name, sizeBytes, altSizes, optional }) => ({ url, name, sizeBytes, ...(altSizes ? { altSizes } : {}), ...(optional ? { optional: true } : {}) }));
+export const stateFilesOf = (model: DownloadableModel) => model.files.map(({ url, name, sizeBytes, altSizes, optional }) => ({ url, name, sizeBytes, ...(altSizes ? { altSizes } : {}), ...(optional ? { optional: true } : {}) }));
 
 let listening = false;
 
@@ -65,7 +69,8 @@ async function onEvent(event: ModelEvent, store: DownloadStore): Promise<void> {
 export async function refreshNative(store: DownloadStore): Promise<void> {
   const bridge = nativeBridge();
   if (!bridge) return;
-  await Promise.all(allLocalModels().map(async model => {
+  const models: DownloadableModel[] = [...allLocalModels(), ...DEVICE_IMAGE_MODELS];
+  await Promise.all(models.map(async model => {
     if (model.custom) {
       const size = model.files[0].sizeBytes;
       return store.set(model.id, { status: 'installed', loaded: size, total: size, location: null });
@@ -82,7 +87,7 @@ export async function refreshNative(store: DownloadStore): Promise<void> {
   }));
 }
 
-export async function startNative(model: LocalModel, store: DownloadStore): Promise<void> {
+export async function startNative(model: DownloadableModel, store: DownloadStore): Promise<void> {
   const bridge = nativeBridge();
   if (!bridge || model.custom) return;
   store.setPending(model.id, true);
@@ -95,7 +100,7 @@ export function cancelNative(modelId: string): void {
   void nativeBridge()?.models.cancel(modelId);
 }
 
-export async function removeNative(model: LocalModel, store: DownloadStore): Promise<void> {
+export async function removeNative(model: DownloadableModel, store: DownloadStore): Promise<void> {
   const bridge = nativeBridge();
   if (!bridge) return;
   store.setPending(model.id, false);

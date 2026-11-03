@@ -69,8 +69,10 @@ export interface GeneratedImage {
   dataUrl?: string;
   /** The image model's name. */
   model?: string;
-  /** Credits it used (0: one of the day's free images). */
+  /** Credits it used (0: one of the day's free images, or made on this computer). */
   charged?: number;
+  /** Made on this computer (images/device.ts) or in Quo's cloud. Older images have none: the cloud. */
+  where?: 'device' | 'cloud';
   error?: string;
 }
 

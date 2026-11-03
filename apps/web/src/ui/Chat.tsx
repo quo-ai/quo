@@ -236,7 +236,8 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
         const controller = new AbortController();
         agentRun.current = controller;
         try {
-          await makeImages(current.messages, assistant.id, images => update({ images }, true), controller.signal);
+          // An offline chat makes them on this computer when it can (images/device.ts).
+          await makeImages(current.messages, assistant.id, images => update({ images }, true), controller.signal, { onDevice: choice.kind === 'local' });
         } finally {
           agentRun.current = null;
         }

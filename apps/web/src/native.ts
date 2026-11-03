@@ -263,6 +263,12 @@ declare global {
       web?: DesktopWeb;
       engine?: NativeBridge['engine'];
       models?: NativeBridge['models'];
+      /** Images made on this computer (apps/desktop/src/images/): a downloaded image model's id, a prompt and a shape. */
+      images?: {
+        make: (request: { modelId: string; prompt: string; aspect: string; steps?: number; cfg?: number; seed?: number }) => Promise<NativeResult<{ image: string; seed: number }>>;
+        cancel: () => Promise<NativeResult<unknown>>;
+        onEvent: (callback: (event: { type: 'progress'; step: number; steps: number }) => void) => () => void;
+      };
       /** quo:// links (apps/desktop/src/links.js): told that one came, then takes the model main checked. */
       links?: { take: () => Promise<NativeResult<{ repo: string; file?: string } | null>>; onOpen: (callback: () => void) => () => void };
     };

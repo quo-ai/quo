@@ -9,7 +9,8 @@ const extension = (dataUrl: string) => /^data:image\/(png|jpeg|webp)/.exec(dataU
 
 /**
  * The images a reply asked for (src/images/), under its words: a placeholder while one is made, then the image with the
- * prompt it was made from, the image model, and a way to save it. Made in Quo's cloud from the prompt alone.
+ * prompt it was made from, the image model, and a way to save it. Made on this computer (offline chats with an image
+ * model downloaded) or in Quo's cloud from the prompt alone.
  */
 export function GeneratedImages({ images }: { images: GeneratedImage[] }) {
   return (
@@ -25,7 +26,7 @@ export function GeneratedImages({ images }: { images: GeneratedImage[] }) {
           )}
           <figcaption>
             <details>
-              <summary>{image.status === 'done' && image.model ? <Facts items={[`Made with ${image.model}`, cost(image.charged)]} /> : 'Image prompt'}</summary>
+              <summary>{image.status === 'done' && image.model ? <Facts items={[`Made with ${image.model}`, image.where === 'device' ? 'On this computer' : cost(image.charged)]} /> : 'Image prompt'}</summary>
               <p>{image.prompt}</p>
             </details>
             {image.status === 'done' && image.dataUrl && (
