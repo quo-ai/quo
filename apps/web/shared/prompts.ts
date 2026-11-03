@@ -51,6 +51,19 @@ export const IMAGE_WRITER_PROMPT = [
   ...IMAGE_PROMPT_RULES,
 ].join('\n');
 
+/**
+ * A side call for the message right after a reply that made an image, in a chat whose model has no image rules (offline
+ * models): the line if the message asks for a picture, else one word, and the chat goes on as usual.
+ */
+export const IMAGE_FOLLOW_UP_PROMPT = [
+  'You decide if the user wants a picture. The last reply made an image.',
+  'If the user asks for a new picture or a change to the last image, reply with this line only:',
+  IMAGE_LINE,
+  ...IMAGE_PROMPT_RULES,
+  '- For a change, write the full prompt again with the change in it.',
+  '- If the user wants anything else, reply with the word CHAT only.',
+].join('\n');
+
 const writing = (where: 'cloud' | 'local', extra: string[] = []) => (where === 'local' ? [WRITING_SHORT] : [...WRITING, ...extra]);
 const withNote = (lines: string[], env: Environment | null | undefined) => lines.join('\n') + (env ? `\n${environmentNote(env)}` : '');
 const secrets = (where: 'cloud' | 'local', verb = 'read, print, copy or send') =>

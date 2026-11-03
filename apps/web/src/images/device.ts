@@ -13,12 +13,17 @@ import { ownImageModels } from './ownModels';
 
 const bridge = () => (typeof window === 'undefined' ? null : window.quoDesktop?.images ?? null);
 
-/** The image model this computer can use now, or null (browser, no image engine, or none downloaded). */
-export function deviceImageModel(): ImageModel | null {
+/**
+ * The image model this computer can use now, or null (browser, no image engine, or none downloaded). A change to a picture
+ * (`edit`) goes to one that changes pictures when one is downloaded, so the picture stays the same apart from the change;
+ * the others make a new one from the changed prompt.
+ */
+export function deviceImageModel(options: { edit?: boolean } = {}): ImageModel | null {
   if (!bridge()) return null;
   // Quo's own once downloaded, and the person's own files (always there).
   const installed = [...DEVICE_IMAGE_MODELS.filter(model => downloadState(model.id)?.status === 'installed'), ...ownImageModels()];
-  return installed.find(model => model.id === imagePrefs().model) ?? installed[0] ?? null;
+  const chosen = installed.find(model => model.id === imagePrefs().model) ?? installed[0] ?? null;
+  return options.edit && chosen && !chosen.edits ? installed.find(model => model.edits) ?? chosen : chosen;
 }
 
 /** Whether this computer could make images at all (the desktop app with its image engine). */
@@ -26,7 +31,7 @@ export const canMakeImagesOnDevice = (): boolean => bridge() !== null;
 
 export async function makeOnDevice(ask: { prompt: string; aspect: ImageAspect; reference?: string }, signal: AbortSignal, onProgress: (step: number, steps: number) => void = () => {}): Promise<{ image: string; model: string; setAside: boolean }> {
   const images = bridge();
-  const model = deviceImageModel();
+  const model = deviceImageModel({ edit: Boolean(ask.reference) });
   if (!images || !model) throw new NativeError('not_installed', 'Download an image model first.');
   const stop = () => void images.cancel();
   signal.addEventListener('abort', stop, { once: true });

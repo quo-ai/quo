@@ -15,7 +15,7 @@ import { autoSummarize, MIN_MESSAGES, SUMMARIZE_AT } from '../context/settings';
 import { contextUsage, ratio, type ContextMode } from '../context/usage';
 import { replyInCloud, replyOffline, replyOwn, replyWithAgent, replyWithWeb, type ReplyTarget } from '../chat/replies';
 import { makeImages } from '../images/make';
-import { hasImagesToMake, replyWithImage, showingImages } from '../images/reply';
+import { hasImagesToMake, replyWithImage, replyWithImageFollowUp, showingImages } from '../images/reply';
 import { asImageAsk } from '../images/tags';
 import { ApiError } from '../cloud/api';
 import type { Account } from '../cloud/account';
@@ -195,6 +195,8 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
         // No image rules in this chat's prompt (small offline models, Code mode): the model writes just the prompt.
         setStatus('generating');
         await replyWithImage(choice, userText, target.prior as Message[], update, { contextSize: code && choice.kind === 'local' ? AGENT_CONTEXT : undefined });
+      } else if (!imageAsk && !code && !sent.length && (await replyWithImageFollowUp(choice, userText, target.prior as Message[], update, setStatus))) {
+        // Right after an image in an offline chat, the message asked for a picture (a side call decided): the reply is that image.
       } else if (code && (choice.kind === 'local' || choice.model.agent || (choice.kind === 'cloud' && choice.model.agentLight))) {
         setStatus('generating');
         const controller = new AbortController();

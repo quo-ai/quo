@@ -1,4 +1,4 @@
-import { IMAGE_WRITER_PROMPT } from '../../shared/prompts';
+import { IMAGE_FOLLOW_UP_PROMPT, IMAGE_WRITER_PROMPT } from '../../shared/prompts';
 import { generateCloud } from '../cloud/cloudEngine';
 import { applyUsage } from '../cloud/account';
 import { localEngine, type ChatTurn } from '../engine/localEngine';
@@ -31,4 +31,19 @@ export async function writeImagePrompt(choice: ModelChoice, request: string, las
   // A model that answered without the line: its words, if they look like a prompt, else the person's.
   const words = text.replace(/<\/?[a-z][^>]*>/gi, ' ').replace(/\s+/g, ' ').trim();
   return { prompt: (words.length >= 12 ? words : request).slice(0, 4000), aspect: '1:1', edit: Boolean(last) && /\b(change|make it|edit|instead|same|again|more|less|turn it)\b/i.test(request) };
+}
+
+/**
+ * The message right after a reply that made an image, in an offline model's chat: whether it asks for a picture (a new one,
+ * or a change to that one, whose prompt is `last`), decided by the model in a short side call. `ask` is null when it is
+ * about something else, and the chat answers as usual; `stopped` when the person pressed Stop.
+ */
+export async function imageFollowUp(choice: Extract<ModelChoice, { kind: 'local' }>, request: string, last: string): Promise<{ ask: ImageAsk | null; stopped: boolean }> {
+  const turns: ChatTurn[] = [{ role: 'system', content: IMAGE_FOLLOW_UP_PROMPT }, { role: 'user', content: `The last image was made from this prompt: ${last}\n\nThe user asks: ${request}` }];
+  try {
+    const result = await localEngine.generate(choice.model, turns, { thinking: false, onUpdate: () => {} });
+    return { ask: result.stopped ? null : imageAsks(result.content)[0] ?? null, stopped: result.stopped };
+  } catch {
+    return { ask: null, stopped: false }; // the ordinary reply says what went wrong
+  }
 }

@@ -72,7 +72,15 @@ describe('image models on this computer', () => {
     expect(sent.at(-1)).toMatchObject({ modelId: 'image-flux2-klein-4b', reference: 'data:image/png;base64,AAAA', size: 'quick', steps: 4 });
     setImagePrefs({ model: 'image-z-image-turbo', size: 'standard' });
     state.installed.add('image-z-image-turbo');
+    // The chosen model makes new pictures; a change goes to the downloaded one that changes pictures, so the rest stays.
+    await makeOnDevice({ prompt: 'at night', aspect: '1:1' }, new AbortController().signal);
+    expect(sent.at(-1)).toMatchObject({ modelId: 'image-z-image-turbo' });
     await makeOnDevice({ prompt: 'at night', aspect: '1:1', reference: 'data:image/png;base64,AAAA' }, new AbortController().signal);
+    expect(sent.at(-1)).toMatchObject({ modelId: 'image-flux2-klein-4b', reference: 'data:image/png;base64,AAAA' });
+    // Without one, the change is made again from its prompt, and the picture is not sent.
+    state.installed.delete('image-flux2-klein-4b');
+    await makeOnDevice({ prompt: 'at night', aspect: '1:1', reference: 'data:image/png;base64,AAAA' }, new AbortController().signal);
+    expect(sent.at(-1)).toMatchObject({ modelId: 'image-z-image-turbo' });
     expect(sent.at(-1)).not.toHaveProperty('reference');
     setImagePrefs({ model: null });
   });

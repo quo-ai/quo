@@ -1,8 +1,10 @@
+import type { ReplyStatus } from '../chat/replies';
 import { newId, type GeneratedImage, type Message } from '../chat/types';
 import type { ModelChoice } from '../models';
 import { lastImagePrompt } from './make';
 import { imageAsks, withoutImageAsks, type ImageAsk } from './tags';
-import { writeImagePrompt } from './writer';
+import { localEngine } from '../engine/localEngine';
+import { imageFollowUp, writeImagePrompt } from './writer';
 
 type Update = (patch: Partial<Message>, persist: boolean) => void;
 
@@ -27,6 +29,23 @@ export function showingImages(update: Update): Update {
 export async function replyWithImage(choice: ModelChoice, request: string, earlier: Message[], update: Update, options: { contextSize?: number } = {}): Promise<void> {
   const ask = await writeImagePrompt(choice, request, lastImagePrompt(earlier), options);
   update({ content: '', images: [pending(ask)] }, true);
+}
+
+/**
+ * An offline chat's message right after a reply that made an image ("remove the apple"): its prompt has no image rules, so
+ * a side call decides whether the message asks for a picture. True when the reply is that image (or was stopped); false
+ * when the chat should answer as usual. `earlier` ends with the person's new message.
+ */
+export async function replyWithImageFollowUp(choice: ModelChoice, request: string, earlier: Message[], update: Update, setStatus: (status: ReplyStatus) => void): Promise<boolean> {
+  const before = earlier.at(-2);
+  const last = before?.role === 'assistant' ? before.images?.filter(image => image.status === 'done').at(-1)?.prompt : undefined;
+  if (choice.kind !== 'local' || !last) return false;
+  if (localEngine.modelId !== choice.model.id) setStatus('loading');
+  const { ask, stopped } = await imageFollowUp(choice, request, last);
+  setStatus('generating');
+  if (stopped) update({ content: '', stopped: true }, true);
+  else if (ask) update({ content: '', images: [pending(ask)] }, true);
+  return stopped || Boolean(ask);
 }
 
 /** Whether a reply still has images to make. */
