@@ -17,7 +17,7 @@ ROWS = [
     ('Coding agent in your project folder', 'Yes, asks before each step', 'Agent features (new)', 'Agents (preview)', 'No', 'No (other tools use it)'),
     ('Chats synced between devices, end-to-end encrypted', 'Yes (Quo Sync)', 'No', 'No', 'No', 'No'),
     ('Cloud models in the same app, clearly marked', 'Yes', 'No', 'Your own keys', 'No', 'Separate service'),
-    ('Local server for other apps (OpenAI-style API)', 'No', 'Yes', 'Yes', 'Yes', 'Yes'),
+    ('Local server for other apps (OpenAI-style API)', 'Yes, off until you turn it on', 'Yes', 'Yes', 'Yes', 'Yes'),
     ('MCP tool servers', 'No', 'Yes', 'Yes', 'No', 'Through other apps'),
     ('Mac engine', 'llama.cpp (Metal)', 'MLX and llama.cpp', 'llama.cpp, MLX in testing', 'llama.cpp', 'llama.cpp, some MLX'),
 ]
@@ -40,7 +40,7 @@ def compare_page() -> str:
 <ul>
 <li><strong>LM Studio</strong> has the most polished model browser and, on a Mac, the MLX engine, which is often the fastest there. It is free but not open source.</li>
 <li><strong>Ollama</strong> is the usual choice for developers who want a command line and a local server that other tools connect to.</li>
-<li><strong>Jan</strong> is open source and adds tool servers (MCP) and a local server, on the desktop.</li>
+<li><strong>Jan</strong> is open source and adds tool servers (MCP), on the desktop.</li>
 <li><strong>GPT4All</strong> is simple, and its LocalDocs feature answers questions from a folder of documents.</li>
 </ul>
 

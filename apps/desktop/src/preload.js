@@ -116,6 +116,13 @@ contextBridge.exposeInMainWorld('quoDesktop', {
         remove: id => invoke('models:custom:remove', { id }),
       },
     },
+    // The local server for other apps (server/localApi.js): turning it on is asked about in a native dialog.
+    localServer: {
+      state: () => invoke('localapi:state'),
+      set: on => invoke('localapi:set', { on: on === true }),
+      renewKey: () => invoke('localapi:renew-key'),
+      setPort: port => invoke('localapi:port', { port }),
+    },
     // Images made on this computer (images/ipc.js): the page gives a downloaded model's id, a prompt and a shape.
     ...(hasImages && {
       images: {

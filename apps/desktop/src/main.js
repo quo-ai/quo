@@ -12,6 +12,7 @@ const { setupWeb } = require('./web/ipc');
 const { engineAvailable, engineDirectory, setupEngine } = require('./engine/ipc');
 const { setupImages } = require('./images/ipc');
 const { CustomImageModels } = require('./images/custom');
+const { setupLocalApi } = require('./server/ipc');
 const { MIN_SIZE, loadWindowState, trackWindowState } = require('./windowState');
 const { buildMenu } = require('./menu');
 const { initAutoUpdates } = require('./updater');
@@ -177,6 +178,8 @@ function start() {
   hasEngine = engineAvailable();
   if (hasEngine) {
     const { engine, store } = setupEngine();
+    // A server other apps on this computer can use, off unless the person turned it on (server/localApi.js).
+    setupLocalApi({ settingsFile: path.join(app.getPath('userData'), 'local-api.json'), engine });
     // Images made on this computer (images/): only with the engine, from models it downloaded.
     hasImages = setupImages({
       store,

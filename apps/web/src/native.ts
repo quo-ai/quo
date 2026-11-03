@@ -14,6 +14,9 @@ import type { ChatReply } from './providers/wire';
 /** Code mode's approval levels: ask every time, ask only for risky steps, or don't ask (pushes always ask). */
 export type Autonomy = 'ask' | 'risky' | 'all';
 
+/** The local server for other apps: whether it's on, where, and the key to give them. */
+export interface LocalServerState { on: boolean; port: number; address: string; key: string }
+
 /** An image model file the person added in the desktop app, as main describes it (no path). */
 export interface OwnImageModel { id: string; name: string; family: string; label: string; steps: number; cfg: number; edits: boolean; needs?: string }
 
@@ -271,6 +274,13 @@ declare global {
       web?: DesktopWeb;
       engine?: NativeBridge['engine'];
       models?: NativeBridge['models'];
+      /** The local server for other apps (apps/desktop/src/server/localApi.js). Older apps lack it. */
+      localServer?: {
+        state: () => Promise<NativeResult<LocalServerState>>;
+        set: (on: boolean) => Promise<NativeResult<LocalServerState>>;
+        renewKey: () => Promise<NativeResult<LocalServerState>>;
+        setPort: (port: number) => Promise<NativeResult<LocalServerState>>;
+      };
       /** Images made on this computer (apps/desktop/src/images/): a downloaded image model's id, a prompt and a shape. */
       images?: {
         make: (request: { modelId: string; prompt: string; aspect: string; steps?: number; cfg?: number; seed?: number; size?: 'standard' | 'quick'; reference?: string }) => Promise<NativeResult<{ image: string; seed: number; setAside?: boolean }>>;
