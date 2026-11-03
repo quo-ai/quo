@@ -254,7 +254,7 @@ The release workflow then builds the app (`--dir`), has it signed, builds the in
 ## Known limitations
 
 - **Unsigned builds trigger OS warnings.** On macOS, Gatekeeper blocks the first launch: right-click → Open, or System Settings → Privacy & Security → Open Anyway. On Windows, SmartScreen shows "Windows protected your PC": More info → Run anyway.
-- **macOS auto-update requires a signed build.** Squirrel.Mac refuses unsigned updates. Unsigned macOS users must download new versions by hand.
+- **macOS auto-update requires a signed build.** Squirrel.Mac refuses unsigned updates, so a Mac build without a Developer ID signature (checked with `codesign` at start-up, `updater.js`) downloads nothing: it says once per version that a new Quo is out, with a button to the download page (or run the install command again).
 - The AppImage needs FUSE 2 (`libfuse2`/`libfuse2t64` on Ubuntu 22.04+). The .deb doesn't. On systems without unprivileged user namespaces, the AppImage starts with Chromium's sandbox off. The .deb installs an AppArmor profile instead.
 - Linux GPU inference in the *browser* engine may fall back to CPU on some driver packages (see [WebGPU](#webgpu)). The native engine isn't affected.
 - No CUDA build is bundled (Vulkan is used on NVIDIA). macOS on Intel runs on the processor. Windows on ARM and Linux on ARM use the in-browser engine.

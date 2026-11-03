@@ -183,7 +183,7 @@ function start() {
   buildMenu();
   createWindow();
   links.start({ enabled: hasEngine });
-  initAutoUpdates();
+  void initAutoUpdates();
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
