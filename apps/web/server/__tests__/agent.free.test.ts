@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { FREE_CODE_STEPS } from '../../shared/agentTools.js';
 import { randomUUID } from 'node:crypto';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { ALL_TOOLS, AGENT_MODEL, call, ctx, events, loadServer, signIn, step, stubUpstream } from './agentHelpers.js';
@@ -62,8 +63,8 @@ describe('Code mode on the free model', () => {
       { role: 'user', content: 'Look' },
       ...Array.from({ length: steps }, (_, i) => [{ role: 'assistant', content: '', tool_calls: [call_(i)] }, { role: 'tool', tool_call_id: `c${i}`, content: 'x' }]).flat(),
     ];
-    expect((await light(token, { messages: turn(7) })).status).toBe(200);
-    const over = await light(token, { messages: turn(8) });
+    expect((await light(token, { messages: turn(FREE_CODE_STEPS - 1) })).status).toBe(200);
+    const over = await light(token, { messages: turn(FREE_CODE_STEPS) });
     expect(over.status).toBe(429);
     expect((await over.json()).error).toBe('free_code_turn_limit');
     const big = await light(token, { messages: [{ role: 'user', content: 'x'.repeat(120_000) }] });
@@ -180,7 +181,7 @@ describe('web search in a chat with no folder yet', () => {
     const token = await signIn('folderless-web3@example.com');
     stubUpstream(chunk);
     const search = (i: number) => [{ role: 'assistant', content: '', tool_calls: [{ id: `c${i}`, type: 'function', function: { name: 'web_search', arguments: '{"query":"x"}' } }] }, { role: 'tool', tool_call_id: `c${i}`, content: 'r' }];
-    const long = [{ role: 'user', content: 'Look it up' }, ...Array.from({ length: 8 }, (_, i) => search(i)).flat()];
+    const long = [{ role: 'user', content: 'Look it up' }, ...Array.from({ length: FREE_CODE_STEPS }, (_, i) => search(i)).flat()];
     const response = await asLuna(token, long, ['open_project', 'web_search', 'fetch_url']);
     expect(response.status).toBe(429);
     expect((await response.json()).error).toBe('free_code_turn_limit');
