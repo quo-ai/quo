@@ -1,8 +1,9 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Download, Search } from 'lucide-react';
 import { engineMemoryGB, type DeviceProfile } from '../device';
 import { addHfModel } from '../models/hfStore';
-import { parameterCount, repoFiles, searchModels, suggestFile, toLocalModel, type RepoFile, type RepoFiles, type RepoResult } from '../models/huggingface';
+import { modelInfo, parameterCount, repoFiles, searchModels, suggestFile, toLocalModel, type RepoFile, type RepoFiles, type RepoResult } from '../models/huggingface';
+import { clearModelLink, useModelLink } from '../models/links';
 import { startDownload } from '../storage/downloads';
 import { formatBytes } from './format';
 import { toast } from './Toasts';
@@ -48,11 +49,32 @@ export function HuggingFaceModels({ device }: { device: DeviceProfile | null }) 
     if (!list.length) toast('No GGUF models found for that.');
   });
 
-  const choose = (result: RepoResult) => run(async signal => {
+  /** Shows a repository's sizes, with the one a link named chosen if the repository has it. */
+  const show = async (result: RepoResult, signal: AbortSignal, wanted?: string) => {
     const files = await repoFiles(result.repo, signal);
     if (!files.models.length) throw new Error('That repository has no single-file GGUF model Quo can use.');
-    setOpen({ result, files, file: suggestFile(files.models, memory), vision: files.projectors.length > 0 });
-  });
+    const file = files.models.find(entry => entry.path === wanted) ?? suggestFile(files.models, memory);
+    setOpen({ result, files, file, vision: files.projectors.length > 0 });
+  };
+  const choose = (result: RepoResult) => run(signal => show(result, signal));
+
+  // Opened from Hugging Face ("Use this model → Quo"): show that model, ready to add. Nothing downloads until Add.
+  const link = useModelLink();
+  const box = useRef<HTMLDivElement>(null);
+  const openLink = useRef(show);
+  openLink.current = show;
+  useEffect(() => {
+    if (!link) return;
+    clearModelLink();
+    box.current?.scrollIntoView({ block: 'start' });
+    void run(async signal => {
+      setResults(null);
+      const result = await modelInfo(link.repo, signal);
+      if (!result) throw new Error(`${link.repo} has no GGUF model Quo can run.`);
+      if (result.support === 'not-chat' || result.support === 'newer-engine') throw new Error(`${result.repo}: ${SUPPORT_NOTE[result.support]}`);
+      await openLink.current(result, signal, link.file);
+    });
+  }, [link]); // only a new link starts it: run and show are the same work each render
 
   const add = () => {
     if (!open?.file) return;
@@ -64,7 +86,7 @@ export function HuggingFaceModels({ device }: { device: DeviceProfile | null }) 
 
   const suggested = open ? suggestFile(open.files.models, memory) : null;
   return (
-    <div className="storage-box hf-models">
+    <div className="storage-box hf-models" ref={box}>
       <p>Search Hugging Face for any GGUF model. Quo’s engine runs about 160 kinds (Llama, Qwen, Gemma, Mistral, DeepSeek, GLM, Phi and more), and checks which kind a model is before you download it.</p>
       <form className="hf-search" onSubmit={event => { event.preventDefault(); void search(); }}>
         <input value={query} onChange={event => setQuery(event.target.value)} placeholder="Search models, e.g. “Mistral” or “Qwen coder”" aria-label="Search Hugging Face" maxLength={100} />

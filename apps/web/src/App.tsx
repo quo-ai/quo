@@ -28,6 +28,7 @@ import { GetAppSheet } from './ui/GetAppSheet';
 import { InstallNudge, nudgeAllowed } from './ui/InstallNudge';
 import { ModelPicker } from './ui/ModelPicker';
 import { ModelsSheet, type ModelsTab } from './ui/ModelsSheet';
+import { listenForModelLinks } from './models/links';
 import { OfflineModelCard } from './ui/OfflineModelCard';
 import { MOD_KEY, Sidebar } from './ui/Sidebar';
 import { MemorySheet } from './ui/MemorySheet';
@@ -102,6 +103,8 @@ export function App() {
     setModelsTab(tab);
     setModelsOpen(true);
   }, []);
+  // Desktop app: Hugging Face's "Use this model → Quo" opens Models & storage on that model (models/links.ts).
+  useEffect(() => listenForModelLinks(() => openModels('device')), [openModels]);
   const closeAccount = useCallback(() => {
     setAccountOpen(false);
     setWanted(null);

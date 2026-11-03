@@ -1,6 +1,10 @@
 # https://www.electron.build/configuration
 appId: com.quo.desktop
 productName: Quo
+# quo:// links (src/links.js): Info.plist on macOS and the .desktop file on Linux; Windows registers it when Quo starts.
+protocols:
+  - name: Quo
+    schemes: [quo]
 copyright: Copyright © 2026 Astra Labs Ltd
 
 directories:

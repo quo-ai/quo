@@ -11,6 +11,7 @@ import { ENGINE_ARCHITECTURES } from './architectures';
 const HF = 'https://huggingface.co';
 /** owner/name, each starting with a letter or digit, never "..": nothing else becomes part of an address. */
 const REPO = /^(?!.*\.\.)[A-Za-z0-9][\w.-]*\/[A-Za-z0-9][\w.-]*$/;
+export const isRepoId = (value: unknown): value is string => typeof value === 'string' && value.length <= 200 && REPO.test(value);
 
 /** Architectures the engine loads that make embeddings or speech, not chat. */
 const NOT_CHAT = /bert|embed(?!ded)|t5encoder|wavtokenizer|tts$|^clef$|decision/;
@@ -83,6 +84,18 @@ export async function searchModels(query: string, signal?: AbortSignal): Promise
   if (!response.ok) throw new Error('Hugging Face didn’t answer. Check your connection and try again.');
   const list = (await response.json()) as ApiModel[];
   return (Array.isArray(list) ? list : []).map(toRepoResult).filter((result): result is RepoResult => Boolean(result));
+}
+
+/** One repository's details, as search gives them: for a link that names it (models/links.ts). Null if it has no GGUF facts. */
+export async function modelInfo(repo: string, signal?: AbortSignal): Promise<RepoResult | null> {
+  if (!REPO.test(repo)) throw new Error('That isn’t a Hugging Face model.');
+  const params = new URLSearchParams();
+  for (const field of ['gguf', 'downloads', 'likes']) params.append('expand[]', field);
+  const response = await fetch(`${HF}/api/models/${repo}?${params}`, { signal });
+  if (response.status === 404 || response.status === 401) throw new Error('Hugging Face has no public model called that.');
+  if (!response.ok) throw new Error('Hugging Face didn’t answer. Check your connection and try again.');
+  const result = toRepoResult((await response.json()) as ApiModel);
+  return result && result.repo.toLowerCase() === repo.toLowerCase() ? result : null;
 }
 
 const QUANT = /(?:^|[-_.])((?:UD-)?(?:I?Q\d(?:_[0-9A-Z]+)*|BF16|F16|F32|MXFP4(?:_MOE)?))(?=\.gguf$|[-_.])/i;

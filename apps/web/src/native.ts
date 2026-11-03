@@ -263,6 +263,8 @@ declare global {
       web?: DesktopWeb;
       engine?: NativeBridge['engine'];
       models?: NativeBridge['models'];
+      /** quo:// links (apps/desktop/src/links.js): told that one came, then takes the model main checked. */
+      links?: { take: () => Promise<NativeResult<{ repo: string; file?: string } | null>>; onOpen: (callback: () => void) => () => void };
     };
   }
 }

@@ -109,5 +109,10 @@ contextBridge.exposeInMainWorld('quoDesktop', {
         remove: id => invoke('models:custom:remove', { id }),
       },
     },
+    // quo:// links from outside (links.js): the page is only told that one came, and takes the model main checked.
+    links: {
+      take: () => invoke('links:take'),
+      onOpen: callback => subscribe('links:open', () => callback()),
+    },
   }),
 });

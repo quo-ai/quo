@@ -16,6 +16,7 @@ const { initAutoUpdates } = require('./updater');
 const { runSmoke } = require('./smoke');
 const { windowIcon } = require('./appIcon');
 const { loadTheme, setupTheme, windowBackground } = require('./theme');
+const { setupLinks } = require('./links');
 
 const isSmoke = process.argv.includes('--smoke') || process.env.QUO_SMOKE === '1';
 
@@ -179,16 +180,23 @@ function start() {
 
   buildMenu();
   createWindow();
+  links.start({ enabled: hasEngine });
   initAutoUpdates();
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
 }
 
+let links = null;
 if (!isSmoke && !app.requestSingleInstanceLock()) {
   app.quit();
 } else {
-  app.on('second-instance', focusMainWindow);
+  // quo:// links (Hugging Face's "Use this model"): links.js.
+  links = setupLinks({ getWindow: () => mainWindow, focus: focusMainWindow });
+  app.on('second-instance', (_event, argv) => {
+    focusMainWindow();
+    links.fromArgs(argv);
+  });
   app.on('window-all-closed', () => {
     // macOS apps stay running with no windows open.
     if (process.platform !== 'darwin') app.quit();
