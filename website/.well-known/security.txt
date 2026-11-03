@@ -1,0 +1,7 @@
+# How to report a security problem in Quo (RFC 9116). Full policy: https://github.com/quo-ai/quo/security/policy
+Contact: mailto:hello@quo.computer
+Contact: https://github.com/quo-ai/quo/security/advisories/new
+Expires: 2027-11-01T00:00:00.000Z
+Preferred-Languages: en
+Policy: https://github.com/quo-ai/quo/security/policy
+Canonical: https://quo.computer/.well-known/security.txt
