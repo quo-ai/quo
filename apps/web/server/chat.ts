@@ -4,7 +4,7 @@ import { MILLI, getBalance, reserveCredits, settleCredits } from './credits.js';
 import { getDb } from './db.js';
 import { config, features, SETUP_MESSAGES } from './env.js';
 import { noteCost } from './costs.js';
-import { freeRemaining, refundFreeMessage, takeFree, takeFreeMessage } from './freeTier.js';
+import { FREE_BUDGET_MESSAGE, freeBudgetReached, freeRemaining, refundFreeMessage, takeFree, takeFreeMessage } from './freeTier.js';
 import { HttpError, readJson } from './http.js';
 import { freeSubject, identify } from './identity.js';
 import { defaultLevel, isLevel, levelFromLegacy, reasoningParam, type ThinkLevel } from '../shared/thinking.js';
@@ -117,7 +117,9 @@ export async function handleChat(request: Request): Promise<Response> {
   let holdId: string | null = null;
   let searchesAllowed = 0;
   let searchCost = 0;
-  const freeTake = isFreeModel(model) ? await takeFree(db, lightAgent ? codeKeys : freeKeys, lightAgent ? codeLimits : freeLimits) : null;
+  // Past the day's free budget the free model is paid with credits, like any other, by those who have them.
+  const overBudget = isFreeModel(model) && (await freeBudgetReached(db));
+  const freeTake = isFreeModel(model) && !overBudget ? await takeFree(db, lightAgent ? codeKeys : freeKeys, lightAgent ? codeLimits : freeLimits) : null;
   if (freeTake?.ok) {
     mode = 'free';
     if (freeTake.firstToday && !lightAgent) void noteCost(db, 'people:free');
@@ -125,7 +127,7 @@ export async function handleChat(request: Request): Promise<Response> {
   } else {
     if (!identity.userId) {
       throw isFreeModel(model)
-        ? lightAgent ? new HttpError(429, 'free_code_limit', FREE_CODE_LIMIT_MESSAGE) : new HttpError(429, 'free_limit', 'You’ve used today’s free cloud messages.')
+        ? overBudget ? new HttpError(429, 'free_budget', FREE_BUDGET_MESSAGE) : lightAgent ? new HttpError(429, 'free_code_limit', FREE_CODE_LIMIT_MESSAGE) : new HttpError(429, 'free_limit', 'You’ve used today’s free cloud messages.')
         : new HttpError(401, 'sign_in_required', 'Sign in to use this model.');
     }
     if (wantsWeb) {
@@ -139,7 +141,7 @@ export async function handleChat(request: Request): Promise<Response> {
     const hold = await reserveCredits(db, identity.userId, want, min);
     if (!hold) {
       throw isFreeModel(model)
-        ? lightAgent ? new HttpError(429, 'free_code_limit', FREE_CODE_LIMIT_MESSAGE) : new HttpError(429, 'free_limit', 'You’ve used today’s free cloud messages.')
+        ? overBudget ? new HttpError(429, 'free_budget', FREE_BUDGET_MESSAGE) : lightAgent ? new HttpError(429, 'free_code_limit', FREE_CODE_LIMIT_MESSAGE) : new HttpError(429, 'free_limit', 'You’ve used today’s free cloud messages.')
         : new HttpError(402, 'insufficient_credits', 'You don’t have enough credits for this model.');
     }
     holdId = hold.id;

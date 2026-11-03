@@ -18,6 +18,15 @@ export async function recordCost(db: Db, kind: CostKind, { usd = 0, charged = 0,
   );
 }
 
+/** What the free tier has cost Quo so far today (UTC), in USD. */
+export async function freeSpentToday(db: Db, now = new Date()): Promise<number> {
+  const [row] = await db.query<{ usd: number }>(
+    `select coalesce(sum(usd), 0)::float8 as usd from daily_costs where day = $1 and kind in ('chat:free', 'code:free', 'image:free')`,
+    [day(now)],
+  );
+  return row?.usd ?? 0;
+}
+
 /** Records without ever failing the request it belongs to. */
 export function noteCost(db: Db, kind: CostKind, values: Parameters<typeof recordCost>[2] = {}): Promise<void> {
   return recordCost(db, kind, values).catch(error => console.error('[costs]', error instanceof Error ? error.message : error));

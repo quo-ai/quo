@@ -18,6 +18,9 @@ export function FailureCard({ failure, offlineReady, signedIn, onAction, onRetry
       title = 'You’ve used today’s free cloud messages.';
       actions = <>{offline}<button className="btn btn-primary press" onClick={() => onAction(signedIn ? 'get-pro' : 'sign-in')}>{signedIn ? 'Get Pro' : 'Sign in for more'}</button></>;
       break;
+    case 'free_budget':
+      actions = <>{offline}{signedIn && <button className="btn btn-primary press" onClick={() => onAction('top-up')}>Get credits</button>}</>;
+      break;
     case 'insufficient_credits':
       actions = <><button className="btn btn-primary press" onClick={() => onAction('top-up')}>Get credits</button><button className="btn btn-soft press" onClick={() => onAction('use-free')}>Use the free model</button>{offline}</>;
       break;

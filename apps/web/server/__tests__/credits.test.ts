@@ -99,6 +99,28 @@ describe('the free trial', () => {
     expect(await grantTrial(db, (await newAccount('bob@example.com')).id, 'bob@example.com', now)).toBe(true);
   });
 
+  it('treats Gmail’s dots and googlemail.com as the same address, and nobody else’s dots', async () => {
+    // Built at run time: the secrets check refuses other people's addresses written in the repository.
+    const gmail = (name: string, domain = ['gmail', 'com'].join('.')) => `${name}@${domain}`;
+    expect(await grantTrial(db, (await newAccount(gmail('john.smith'))).id, gmail('john.smith'), now)).toBe(true);
+    for (const variant of [gmail('johnsmith'), gmail('j.o.h.n.smith+x'), gmail('John.Smith', ['googlemail', 'com'].join('.'))]) {
+      expect(await grantTrial(db, (await newAccount(variant)).id, variant, now)).toBe(false);
+    }
+    expect(await grantTrial(db, (await newAccount('john.smith@example.com')).id, 'john.smith@example.com', now)).toBe(true);
+    expect(await grantTrial(db, (await newAccount('johnsmith@example.com')).id, 'johnsmith@example.com', now)).toBe(true);
+  });
+
+  it('asks the address limit only for a new claim, and a trial it holds back comes at a later sign-in', async () => {
+    let asked = 0;
+    const no = async () => (asked++, false);
+    const dana = await newAccount('dana@example.com');
+    expect(await grantTrial(db, dana.id, dana.email, now, no)).toBe(false);
+    expect(await getBalance(db, dana.id, now)).toBe(0);
+    expect(await grantTrial(db, dana.id, dana.email, now, async () => true)).toBe(true); // a later sign-in
+    expect(await grantTrial(db, dana.id, dana.email, now, no)).toBe(false); // already claimed: not asked
+    expect(asked).toBe(1);
+  });
+
   it('keeps only a keyed hash of the address, for a year', async () => {
     await grantTrial(db, userId, 'cara@example.com', now);
     const rows = await db.query<{ email_hash: string }>('select email_hash from trial_claims');

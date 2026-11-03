@@ -43,6 +43,7 @@ The app is static (`dist/`) and must be served with cross-origin isolation heade
 | `SYNC_LIMIT_MB` | optional | Most encrypted data one account may keep (default 250) |
 | `CRON_SECRET` | for Quo Sync clean-up | Lets Vercel Cron call `/api/cron/sync-cleanup` (daily, see `vercel.json`); without it that route doesn't exist and nothing is ever cleaned up. The standalone server runs the clean-up on a timer instead |
 | `DEFAULT_CLOUD_MODEL`, `FREE_DAILY_MESSAGES`, `FREE_DAILY_MESSAGES_PER_IP` | optional | Free tier (defaults: GPT-6 Luna, 20 per device, 60 per IP, per day) |
+| `FREE_DAILY_BUDGET_CENTS` | optional | What the whole free tier (free model, its Code mode and searches, free images) may cost in a day, for everyone together (default 500, $5; 0 for no limit). Past it, free use pauses until midnight UTC with its own message (`free_budget`); paid use and offline models carry on |
 | `FREE_DAILY_SEARCHES`, `FREE_DAILY_SEARCHES_PER_IP` | optional | Web searches that come with the free model (defaults: 3 per device, 10 per IP, per day; each costs about $0.007 plus the results as tokens) |
 
 The server reports what's switched on in `/api/me` (`features`). Services that aren't set up yet **stay visible** in the app and answer `503 setup_required` with a plain message when used (sign-in, paid models, purchases, Quo Sync), so the app shows "coming soon" instead of hiding them; set the variables and they just work. The database schema is created automatically on first use.

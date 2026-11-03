@@ -5,6 +5,8 @@ import { getDb } from './db.js';
 import { sendLoginCode } from './email.js';
 import { config, features, SETUP_MESSAGES } from './env.js';
 import { takeFreeMessage } from './freeTier.js';
+
+export const TRIALS_PER_ADDRESS = 3;
 import { HttpError, json, readJson } from './http.js';
 import { anonymous, identify } from './identity.js';
 import { accountSummary } from './account.js';
@@ -70,7 +72,9 @@ export async function handleAuthVerify(request: Request): Promise<Response> {
   await db.query('delete from login_codes where email = $1', [email]);
   const created = await db.query('insert into users (id, email) values ($1, $2) on conflict (email) do nothing returning id', [randomUUID(), email]);
   const [user] = await db.query<{ id: string }>('select id from users where email = $1', [email]);
-  const trial = await grantTrial(db, user.id, email);
+  // New trials from one internet address: a few a day (TRIALS_PER_ADDRESS), so making addresses doesn't multiply them.
+  const ip = `trial:${anonymous(request).ip}`;
+  const trial = await grantTrial(db, user.id, email, new Date(), () => takeFreeMessage(db, { subject: ip, ip }, { perSubject: TRIALS_PER_ADDRESS, perIp: TRIALS_PER_ADDRESS }));
   // An invite counts only for a new account whose address never had the trial: not for signing in again or coming back.
   if (created.length > 0 && trial && body.ref) await claimReferral(db, user.id, body.ref).catch(error => console.error('[referral]', error));
 

@@ -16,17 +16,20 @@ export const AGENT_MODEL = 'anthropic/claude-haiku-5.5';
 export const READ_TOOLS = ['list_directory', 'read_file', 'find_files', 'search_text'];
 export const ALL_TOOLS = [...READ_TOOLS, 'edit_file', 'write_file', 'run_command', 'open_repo'];
 
-export function call(token: string | null, method: string, path: string, body?: unknown) {
+export function call(token: string | null, method: string, path: string, body?: unknown, ip = '10.0.0.7') {
   return ctx.handleApi(new Request(`http://localhost/api/${path}`, {
     method,
-    headers: { 'content-type': 'application/json', 'x-quo-device': randomUUID(), 'x-forwarded-for': '10.0.0.7', ...(token ? { authorization: `Bearer ${token}` } : {}) },
+    headers: { 'content-type': 'application/json', 'x-quo-device': randomUUID(), 'x-forwarded-for': ip, ...(token ? { authorization: `Bearer ${token}` } : {}) },
     body: body === undefined ? undefined : JSON.stringify(body),
   }), path.split('?')[0]);
 }
 
+// Each test account signs up from its own address, as different people would: a few new trials a day per address.
+let people = 0;
 export async function signIn(email: string): Promise<string> {
-  const start = await (await call(null, 'POST', 'auth/start', { email })).json();
-  return (await (await call(null, 'POST', 'auth/verify', { email, code: start.devCode, client: 'app' })).json()).token;
+  const ip = `10.20.${Math.floor(++people / 250)}.${people % 250}`;
+  const start = await (await call(null, 'POST', 'auth/start', { email }, ip)).json();
+  return (await (await call(null, 'POST', 'auth/verify', { email, code: start.devCode, client: 'app' }, ip)).json()).token;
 }
 
 export async function events(response: Response) {

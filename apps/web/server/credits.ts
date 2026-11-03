@@ -86,10 +86,17 @@ export async function revokeGrants(db: Db, prefix: string, reason: string): Prom
  * The free trial, once per email address: the first time, a keyed one-way hash of the address (a +tag dropped) is kept in
  * trial_claims for TRIAL_CLAIM_DAYS, also after the account is deleted. The hash can't be turned back into the address.
  * An account from before claims existed records its claim at its next sign-in (the grant itself is once per account).
+ * `allow` is asked only for a claim that would be new (sign-in passes a per-address daily limit); when it says no, nothing
+ * is recorded, so the trial comes at a later sign-in instead.
  */
-export async function grantTrial(db: Db, userId: string, email: string, now = new Date()): Promise<boolean> {
+export async function grantTrial(db: Db, userId: string, email: string, now = new Date(), allow?: () => Promise<boolean>): Promise<boolean> {
+  const key = trialClaimKey(email);
+  if (allow) {
+    const seen = await db.query('select 1 from trial_claims where email_hash = $1', [key]);
+    if (seen.length > 0 || !(await allow())) return false;
+  }
   return db.tx(async t => {
-    const claimed = await t.query('insert into trial_claims (email_hash, claimed_at) values ($1, $2) on conflict do nothing returning email_hash', [trialClaimKey(email), now]);
+    const claimed = await t.query('insert into trial_claims (email_hash, claimed_at) values ($1, $2) on conflict do nothing returning email_hash', [key, now]);
     if (claimed.length === 0) return false;
     return grantCredits(t, userId, 'trial', TRIAL_CREDITS, new Date(now.getTime() + TRIAL_DAYS * 86_400_000), `trial:${userId}`);
   });
@@ -97,10 +104,15 @@ export async function grantTrial(db: Db, userId: string, email: string, now = ne
 
 export const TRIAL_CLAIM_DAYS = 365;
 
-/** The trial claim for an email address: name+tag@domain counts as name@domain. Keyed, so a list of addresses can't be checked against it. */
+/**
+ * The trial claim for an email address: name+tag@domain counts as name@domain, and for Gmail (which ignores dots and also
+ * answers at googlemail.com) j.o.hn at googlemail.com counts as john at gmail.com. Keyed, so a list of addresses can't be checked against it.
+ */
 export function trialClaimKey(email: string): string {
-  const [name, domain] = email.trim().toLowerCase().split('@');
-  return createHmac('sha256', config.sessionSecret).update(`trial-claim:${name.split('+')[0]}@${domain}`).digest('base64url');
+  const [name, rawDomain] = email.trim().toLowerCase().split('@');
+  const domain = rawDomain === 'googlemail.com' ? 'gmail.com' : rawDomain;
+  const local = name.split('+')[0];
+  return createHmac('sha256', config.sessionSecret).update(`trial-claim:${domain === 'gmail.com' ? local.replaceAll('.', '') : local}@${domain}`).digest('base64url');
 }
 
 /** Removes trial claims older than TRIAL_CLAIM_DAYS (the daily clean-up). */

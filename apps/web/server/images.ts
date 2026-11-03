@@ -4,7 +4,7 @@ import { getBalance, reserveCredits, settleCredits } from './credits.js';
 import { getDb } from './db.js';
 import { config, features } from './env.js';
 import { noteCost } from './costs.js';
-import { freeRemaining, refundFreeMessage, takeFree } from './freeTier.js';
+import { FREE_BUDGET_MESSAGE, freeBudgetReached, freeRemaining, refundFreeMessage, takeFree } from './freeTier.js';
 import { HttpError, json, readJson } from './http.js';
 import { freeSubject, identify } from './identity.js';
 import { IMAGE_ASPECTS, IMAGE_DATA_URL, MAX_IMAGE_CHARS, MAX_IMAGE_PROMPT_CHARS, type ImageAspect } from '../shared/content.js';
@@ -66,12 +66,14 @@ export async function handleImage(request: Request): Promise<Response> {
   const freeKeys = { subject: `image:${freeSubject(identity)}`, ip: `image:${identity.ip}` };
   const freeLimits = { perSubject: config.freeDailyImages, perIp: config.freeDailyImagesPerIp };
   const freeUses = reference ? 2 : 1;
-  const free = (await takeFree(db, freeKeys, freeLimits, { uses: freeUses })).ok;
+  const overBudget = await freeBudgetReached(db);
+  const free = !overBudget && (await takeFree(db, freeKeys, freeLimits, { uses: freeUses })).ok;
   let attempts: [ImageModel, number][] = reference
     ? [[IMAGE_MODELS.edit, CREATE_MS + FALLBACK_MS]]
     : free ? [[IMAGE_MODELS.create, CREATE_MS + FALLBACK_MS]] : [[IMAGE_MODELS.create, CREATE_MS], [IMAGE_MODELS.edit, FALLBACK_MS]];
   let holdId: string | null = null;
   if (!free) {
+    if (overBudget && (!identity.userId || !features.accounts)) throw new HttpError(429, 'free_budget', FREE_BUDGET_MESSAGE);
     if (!identity.userId || !features.accounts) {
       const left = reference ? await freeRemaining(db, freeKeys, freeLimits).catch(() => 0) : 0;
       throw new HttpError(429, 'image_limit', left > 0

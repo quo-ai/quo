@@ -19,6 +19,7 @@ const REASONS: Record<string, string> = {
   offline: 'You’re offline.',
   provider_unreachable: 'The provider can’t be reached.',
   free_limit: 'Today’s free messages are used up.',
+  free_budget: 'Quo’s free cloud model has reached today’s limit.',
   insufficient_credits: 'You’re out of credits.',
   provider_credit: 'Your account with the provider is out of credit.',
   provider_auth: 'The provider didn’t accept your key.',

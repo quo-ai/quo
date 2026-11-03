@@ -56,6 +56,9 @@ export const config = {
   /** Images that come free every day (each costs us about a cent: server/images.ts), on any model. */
   freeDailyImages: int(env.FREE_DAILY_IMAGES, 3),
   freeDailyImagesPerIp: int(env.FREE_DAILY_IMAGES_PER_IP, 10),
+  /** What the free tier (free model, its Code mode and searches, free images) may cost Quo in a day, for everyone together, in
+   * US cents. Past it, free use pauses until midnight UTC: paid use and offline models carry on. 0 means no limit. */
+  freeDailyBudgetCents: int(env.FREE_DAILY_BUDGET_CENTS, 500),
 
   /** Lets the host's scheduler call /api/cron/*; unset means those routes don't exist. */
   cronSecret: env.CRON_SECRET || null,

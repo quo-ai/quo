@@ -1,5 +1,6 @@
 import { createHmac } from 'node:crypto';
 import type { Db } from './db.js';
+import { freeSpentToday } from './costs.js';
 import { config } from './env.js';
 
 /**
@@ -89,4 +90,12 @@ export async function freeRemaining(db: Db, keys: FreeKeys, limits: FreeLimits, 
   );
   const used = (key: string) => rows.find(row => row.key === key)?.count ?? 0;
   return Math.max(0, Math.min(limits.perSubject - used(subjectKey(keys)), limits.perIp - used(ipKey(keys))));
+}
+
+export const FREE_BUDGET_MESSAGE = 'Quo’s free cloud model has reached today’s limit for everyone. It’s back after midnight (UTC); offline models and paid models work now.';
+
+/** True once the free tier's cost today has reached the daily budget (FREE_DAILY_BUDGET_CENTS), for everyone together. */
+export async function freeBudgetReached(db: Db, now = new Date()): Promise<boolean> {
+  if (config.freeDailyBudgetCents <= 0) return false;
+  return (await freeSpentToday(db, now)) * 100 >= config.freeDailyBudgetCents;
 }
