@@ -1,10 +1,12 @@
 import { useMemo, useState, type ReactNode } from 'react';
-import { Boxes, Cloud, Crown, MonitorDown, PanelLeftClose, Plus, Search, Settings, Trash2, UserRound } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { Boxes, Cloud, Crown, Images, MonitorDown, PanelLeftClose, Plus, Search, Settings, Trash2, UserRound } from 'lucide-react';
 import type { Account } from '../cloud/account';
 import { groupConversations } from '../chat/groups';
 import type { Conversation } from '../chat/types';
 import { useSyncStatus } from '../sync';
 import { QuoMark } from './QuoMark';
+import { ImagesSheet, imagesIn } from './ImagesSheet';
 
 const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
 export const MOD_KEY = isMac ? '⌘' : 'Ctrl';
@@ -29,6 +31,8 @@ interface SidebarProps {
 }
 
 export function Sidebar({ conversations, currentId, installedCount, account, onOpenAccount, onNewChat, onOpen, onDelete, onCollapse, onOpenModels, onOpenSettings, onOpenPro, onGetApp, notice }: SidebarProps) {
+  const [imagesOpen, setImagesOpen] = useState(false);
+  const imageCount = useMemo(() => imagesIn(conversations).length, [conversations]);
   const sync = useSyncStatus();
   const [query, setQuery] = useState('');
   const syncNeedsAttention = sync.phase === 'error' && sync.error?.code !== 'offline';
@@ -82,6 +86,13 @@ export function Sidebar({ conversations, currentId, installedCount, account, onO
             <Boxes size={18} /> Offline models
             <span className="count">{installedCount ? `${installedCount} on device` : 'None yet'}</span>
           </button>
+          {/* Shown once there are images: everything made, across chats (ImagesSheet). */}
+          {imageCount > 0 && (
+            <button className="footer-btn press" onClick={() => setImagesOpen(true)}>
+              <Images size={18} /> Images
+              <span className="count">{imageCount}</span>
+            </button>
+          )}
           <button className="footer-btn press" onClick={onOpenSettings}>
             <Settings size={18} /> Settings
             {syncNeedsAttention && <span className="count attention" title="Quo Sync needs attention">Sync needs attention</span>}
@@ -107,6 +118,8 @@ export function Sidebar({ conversations, currentId, installedCount, account, onO
           )}
         </div>
       </div>
+      {/* On the page itself: the sidebar slides as a drawer on phones, which would carry the sheet with it. */}
+      {imagesOpen && createPortal(<ImagesSheet conversations={conversations} onOpenChat={onOpen} onClose={() => setImagesOpen(false)} />, document.body)}
     </aside>
   );
 }
