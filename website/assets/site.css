@@ -126,6 +126,15 @@ main > section { scroll-margin-top: 4rem; }
 .term { margin: 0; padding: var(--s-5); border-radius: var(--r-card); background: var(--code-bg); border: var(--bw) solid var(--rule); color: var(--code-ink); overflow-x: auto; font-size: 0.875rem; line-height: 1.6; }
 .term .c { color: var(--syn-comment); }
 
+/* One-line install, under the desktop downloads: the visitor's system first (site.js). */
+.install { margin-top: var(--s-5); display: grid; gap: var(--s-2); }
+.install-title { margin: 0; font-size: var(--t-small); color: var(--ink-2); }
+.install-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "os copy" "code code"; align-items: center; gap: var(--s-2) var(--s-3); padding: var(--s-3) var(--s-4); border-radius: var(--r-card); background: var(--code-bg); border: var(--bw) solid var(--rule); }
+.install-os { grid-area: os; font-size: var(--t-small); color: var(--syn-comment); }
+.install-row .btn { grid-area: copy; }
+/* The whole command stays visible: it wraps at a space on a narrow screen rather than hiding its end. */
+.install-row code { grid-area: code; color: var(--code-ink); font-size: 0.875rem; overflow-wrap: anywhere; }
+
 .faq details, .doc details { border-top: var(--bw) solid var(--rule); padding: var(--s-4) 0; }
 .faq details:last-child, .doc details:last-of-type { border-bottom: var(--bw) solid var(--rule); }
 .faq summary, .doc summary { cursor: pointer; font-size: var(--t-lead); font-weight: var(--w-strong); list-style: none; display: flex; justify-content: space-between; align-items: center; gap: var(--s-4); }

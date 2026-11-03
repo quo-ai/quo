@@ -202,6 +202,23 @@ for (const el of $$('[data-try]')) {
   });
 }
 
+// One-line install: hidden on phones, the visitor's system first; Copy puts the command on the clipboard.
+const installBox = $('.install');
+if (installBox && isMobile) installBox.hidden = true;
+const installMine = os && installBox?.querySelector(`.install-row[data-os~="${os}"]`);
+if (installMine) $('.install-title', installBox).after(installMine);
+for (const button of $$('[data-copy-cmd]')) {
+  button.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(button.parentElement.querySelector('code').textContent);
+      button.textContent = 'Copied';
+      setTimeout(() => { button.textContent = 'Copy'; }, 2000);
+    } catch {
+      getSelection()?.selectAllChildren(button.parentElement.querySelector('code')); // no clipboard: select it to copy by hand
+    }
+  });
+}
+
 $('[data-copy-link]')?.addEventListener('click', async event => {
   const button = event.currentTarget;
   try {
