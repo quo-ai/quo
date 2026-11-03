@@ -66,7 +66,7 @@ export function SignIn({ onDone }: { onDone: () => void }) {
         </>
       ) : (
         <>
-          <Text style={styles.body}>Enter the 6-digit code we sent to {email.trim()}.</Text>
+          <Text style={styles.body}>Enter the 6-digit code we sent to {email.trim()}. Not there in a minute? Look in spam for signin@quo.computer.</Text>
           <TextInput
             style={[styles.input, styles.codeInput]}
             value={code}

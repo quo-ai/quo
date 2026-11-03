@@ -41,7 +41,8 @@ export async function sendLoginCode(email: string, code: string): Promise<void> 
       from: config.emailFrom,
       to: [email],
       subject: `${code} is your Quo sign-in code`,
-      text: `Your Quo sign-in code is ${code}\n\nIt expires in 10 minutes. If you didn't ask for it, you can ignore this email.`,
+      // Who it's from and a link to our own site: a bare code from a new address looks like phishing to spam filters.
+      text: `Your Quo sign-in code is ${code}\n\nIt expires in 10 minutes. If you didn't ask for it, you can ignore this email.\n\n--\nQuo, private AI that works offline\nhttps://quo.computer`,
     }),
   });
   if (!response.ok) throw new Error(`email_failed_${response.status}`);

@@ -100,7 +100,7 @@ function SignIn() {
     return (
       <form className="auth" onSubmit={event => { event.preventDefault(); void verify(); }}>
         <button type="button" className="btn btn-ghost press back" onClick={() => setStep('email')}><ArrowLeft size={15} /> {email}</button>
-        <p className="auth-lede">Enter the 6-digit code we sent to your email.</p>
+        <p className="auth-lede">Enter the 6-digit code we sent to your email. Not there in a minute? Look in spam for signin@quo.computer.</p>
         <input
           className="field code"
           inputMode="numeric"
