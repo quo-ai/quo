@@ -2,6 +2,26 @@
 
 Notable changes to Quo. Quo Web and the desktop app ship together under the desktop version (`desktop-v*` tags); the phone app has its own numbers. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Desktop 1.7.0] - 2026-11-03
+
+### Added
+- **Images made on your computer** — download an image model in Models & storage (Z-Image Turbo, or FLUX.2 klein, which can also change a picture) and offline chats make pictures on this computer: nothing is sent, not even the description. Ask for a change right after a picture ("remove the apple") and Quo makes it. You can also add an image model file of your own: SDXL, Stable Diffusion 1.5, or a Z-Image or FLUX.2 klein fine-tune.
+- **Images** — every picture you've made, across chats, in the sidebar. Click one to see it full size, zoom in and move around.
+- **Tool servers (MCP)** — give models more tools, such as your calendar, GitHub or a database. Add servers to Quo's tool servers file (the same form other apps use) in Models & storage → Code; turning one on shows exactly what it runs, and Quo asks before each of its tools is used.
+- **Documents in a folder** — Quo reads PDF, Word, PowerPoint, Excel and OpenDocument files in a folder you open, so you can ask about a folder of documents. They are read in a sealed-off part of the app.
+- **A local server for other apps** — let editors, scripts and tools on this computer use Quo's offline model through the OpenAI-style API. Off until you turn it on in Models & storage.
+- **Fewer questions in Code mode, if you choose** — for one session, let Quo ask only about risky steps, or about nothing but pushes.
+
+### Improved
+- **Code mode finds things out** — it checks the project and the computer with its tools instead of saying it can't, and with the free model it takes up to 20 steps a reply instead of 8.
+- **Pictures in offline chats** — they're made on this computer once an image model is downloaded; otherwise Quo asks before making one in the cloud. Each picture offers the other place to make it.
+
+### Fixed
+- **The next message after a picture** — the offline model loads again and answers. The same goes after the faster NVIDIA engine is installed, or after an unused model was let go.
+- **Quo's approval window** — released builds showed the system's plain dialog for every approval instead of Quo's own window. It's back.
+- **The Plan button** no longer runs over the note beside it.
+- **Linux one-line install** — the menu entry matches the app, and quo:// links open in it.
+
 ## [Desktop 1.6.0] - 2026-11-03
 
 ### Added
