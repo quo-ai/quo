@@ -198,7 +198,10 @@ function start() {
   } else {
     console.warn('[quo] The native engine is missing; using the in-browser engine. Run "npm run fetch:engine".');
   }
-  if (isSmoke) return runSmoke(createWindow, webRoot);
+  if (isSmoke) {
+    links.start({ enabled: hasEngine, register: false }); // a quo:// link given to the smoke test opens like a real one
+    return runSmoke(createWindow, webRoot);
+  }
 
   buildMenu();
   createWindow();

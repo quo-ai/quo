@@ -63,6 +63,14 @@ describe('how a link reaches the page', () => {
     assert.deepEqual(take(page), { ok: null });
   });
 
+  it('takes a link in the smoke test without making that build the one quo:// opens', () => {
+    const electron = fakeElectron();
+    const links = setupLinks({ getWindow: () => null, focus: () => {}, electron, argv: ['quo', '--smoke', 'quo://models/huggingface/a/b'] });
+    links.start({ enabled: true, register: false });
+    assert.deepEqual(electron.app.registered, []);
+    assert.deepEqual(electron.handlers.get('links:take')(page), { ok: { repo: 'a/b' } });
+  });
+
   it('tells a running app, focuses it, and keeps only links it understands', () => {
     const electron = fakeElectron();
     const sent = [];

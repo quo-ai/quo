@@ -116,6 +116,19 @@ async function runSmoke(createWindow, webRoot) {
     await loaded;
     const result = await win.webContents.executeJavaScript(probe(wasm ? `/assets/${wasm}` : null), true);
     result.documents = await checkDocuments();
+    // A quo:// link given to the smoke test (as Linux and Windows pass one): the page takes it and shows that model.
+    const link = process.argv.find(arg => arg.startsWith('quo://'));
+    if (link) {
+      const name = decodeURIComponent(new URL(link).pathname.split('/').filter(Boolean).at(-1) ?? '');
+      result.link = await win.webContents.executeJavaScript(`(async () => {
+        const started = Date.now();
+        while (Date.now() - started < 20000) {
+          if (document.body.innerText.includes(${JSON.stringify(name)})) return true;
+          await new Promise(resolve => setTimeout(resolve, 250));
+        }
+        return 'the model never appeared';
+      })()`, true);
+    }
     // Quo's own local pages (the approval window): they must load in this build, from the asar.
     result.approvalPage = await (async () => {
       const { BrowserWindow } = require('electron');
@@ -131,7 +144,7 @@ async function runSmoke(createWindow, webRoot) {
         probeWindow.destroy();
       }
     })();
-    const ok = result.documents.pdf === true && result.documents.docx === true && result.approvalPage === true && result.desktop?.toolServers === true &&
+    const ok = (result.link === undefined || result.link === true) && result.documents.pdf === true && result.documents.docx === true && result.approvalPage === true && result.desktop?.toolServers === true &&
       result.crossOriginIsolated && result.sab === 'function' && result.jspi && result.rendered && result.opfs &&
       /Quo/.test(result.title) &&
       result.desktop?.platform === process.platform && result.desktop?.version === app.getVersion() &&

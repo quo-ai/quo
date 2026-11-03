@@ -70,13 +70,14 @@ function setupLinks({ getWindow, focus, electron = { app, ipcMain }, argv = proc
   return {
     fromArgs,
     /** After the window is made. Links open models, so builds without the native engine ignore them. */
-    start({ enabled }) {
+    start({ enabled, register = true }) {
       started = true;
       if (!enabled) {
         pending = null;
         return;
       }
-      if (host.isPackaged) host.setAsDefaultProtocolClient(SCHEME);
+      // The smoke test (register: false) takes links too, but never makes its build the one quo:// opens.
+      if (host.isPackaged && register) host.setAsDefaultProtocolClient(SCHEME);
       ipc.handle('links:take', event => {
         if (!trusted(event)) return { error: { code: 'untrusted', message: 'Not allowed.' } };
         const link = pending;
