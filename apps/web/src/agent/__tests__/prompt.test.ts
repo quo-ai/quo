@@ -8,6 +8,7 @@ describe('the Code mode prompt', () => {
   it('asks for the work to be finished, scoped, checked, and for other people’s changes to be left alone', () => {
     const system = agentSystemPrompt('demo', 'linux', WORKING);
     expect(system).toMatch(/Do the task\. If the user asks for a change, make it and check it/);
+    expect(system).toMatch(/find out with your tools: run a command or read a file\. Do not say you have no access before you try/);
     expect(system).toMatch(/Do only what was asked\. Fix the cause, not the symptom/);
     expect(system).toMatch(/most specific test/);
     expect(system).toMatch(/Never reset, revert or discard them unless the user asks/);
@@ -25,6 +26,9 @@ describe('the Code mode prompt', () => {
     expect(local.length).toBeLessThan(cloud.length);
     expect(local).toMatch(/Never reset, revert or discard them/);
     expect(local).toMatch(/Your memory is small/);
+    // Small models gave up on facts a command finds: the offline prompt keeps the rule to find out with the tools.
+    expect(local).toMatch(/find out with your tools/);
+    expect(local).toMatch(/Do the task/);
     expect(agentSystemPrompt('demo', 'linux', ['read_file'])).not.toMatch(/Do the task/);
   });
 

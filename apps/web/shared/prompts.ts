@@ -111,10 +111,12 @@ export function agentSystemPrompt(project: string, platform: Platform, tools: st
         '- Look before you change. Find the code with find_files and search_text, and read a file before you edit it.',
         '- @path in a message means that project file. Read it first.',
         '- Do the task. If the user asks for a change, make it and check it. If something fails, try to fix it. Ask one short question only when the request is unclear or risky.',
+        // Small models said they "have no access" to facts one command finds (an address, a version): kept in the local prompt too.
+        '- To answer a question about the project or this computer (a version, a setting, an address, what is installed or running), find out with your tools: run a command or read a file. Do not say you have no access before you try.',
         '- Do only what was asked. Fix the cause, not the symptom. Mention other problems at the end; do not fix them.',
         '- Check your change with the most specific test or build, then broader ones. Do not add a test setup or formatter the project does not have. If you could not check, say so.',
         '- Files you did not change may be the user’s work. Look before you overwrite or delete them. Never reset, revert or discard them unless the user asks.',
-      ].filter((_, i) => cloud || [0, 2, 5].includes(i))
+      ].filter((_, i) => cloud || [0, 2, 3, 6].includes(i))
     : [
         '- Plan mode is on: you can only read. Find and read the code, then give a short plan: which files change, what changes in each, and how to check it. Do not write out whole files unless asked.',
         '- The user can turn plan mode off to carry out the plan.',

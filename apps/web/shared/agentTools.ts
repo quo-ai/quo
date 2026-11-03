@@ -106,7 +106,7 @@ export const AGENT_TOOLS: AgentTool[] = [
   },
   {
     name: 'run_command',
-    description: 'Run a shell command in the project folder, such as the tests or the build. The user approves each command. It runs with no terminal and no input. Long output is shortened.',
+    description: 'Run a shell command in the project folder: the tests, the build, or a command that finds something out about the project or this computer (a version, a setting, the network). The user approves each command. It runs with no terminal and no input. Long output is shortened.',
     parameters: {
       type: 'object',
       properties: {
