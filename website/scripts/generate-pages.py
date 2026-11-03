@@ -19,6 +19,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))  # data_pages.py, beside this script
 from data_pages import changelog_page, code_signing_page, models_page  # noqa: E402
 from model_pages import model_pages  # noqa: E402
+from compare_page import compare_page  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent  # website/
 SITE = 'https://quo.computer'
@@ -414,6 +415,7 @@ PAGES = [
     ('refunds/index.html', '/refunds/', 'Refund policy — Quo', 'How to get a refund for Quo Pro, Quo Sync and credit packs.', refunds, 'doc'),
     ('delete-account/index.html', '/delete-account/', 'Delete your Quo account — Quo', 'How to delete your Quo account and the data held for it.', delete_account, 'doc'),
     ('404.html', '/404', 'Page not found — Quo', 'This page doesn’t exist.', not_found, 'not-found'),
+    ('compare/index.html', '/compare/', 'Quo vs LM Studio, Jan, GPT4All and Ollama — Quo', 'How Quo compares with LM Studio, Jan, GPT4All and Ollama for running AI offline: browser, desktop and phone, images, coding agent, sync, licences, and where each is ahead.', compare_page(), 'doc wide'),
     *model_pages(ROOT / 'scripts' / 'models.json'),  # one page per model: model_pages.py
 ]
 for file, path, title, desc, body, main in PAGES:
@@ -440,6 +442,7 @@ urls = ['/'] + [path for _, path, *_ in PAGES if path != '/404']
 - [Android app](https://play.google.com/store/apps/details?id=com.quo.app)
 - [Pricing]({SITE}/pricing/): free on the device; Quo Pro, Quo Sync and credit packs for cloud models
 - [Models]({SITE}/models/): every model Quo runs on a computer, in a browser and on a phone, and what each needs
+- [Compare]({SITE}/compare/): Quo next to LM Studio, Jan, GPT4All and Ollama
 - [What's new]({SITE}/changelog/): every release
 
 ## About

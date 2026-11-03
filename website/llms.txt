@@ -9,6 +9,7 @@
 - [Android app](https://play.google.com/store/apps/details?id=com.quo.app)
 - [Pricing](https://quo.computer/pricing/): free on the device; Quo Pro, Quo Sync and credit packs for cloud models
 - [Models](https://quo.computer/models/): every model Quo runs on a computer, in a browser and on a phone, and what each needs
+- [Compare](https://quo.computer/compare/): Quo next to LM Studio, Jan, GPT4All and Ollama
 - [What's new](https://quo.computer/changelog/): every release
 
 ## About
