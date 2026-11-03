@@ -2,6 +2,20 @@
 
 Notable changes to Quo. Quo Web and the desktop app ship together under the desktop version (`desktop-v*` tags); the phone app has its own numbers. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Desktop 1.6.0] - 2026-11-03
+
+### Added
+- **A new look** — Quo Web and the desktop app have a calmer design with solid surfaces and Atkinson Hyperlegible type, made to be easy to read. Choose Light, Dark or Black, and Quo follows your system's high-contrast setting and e-ink screens. Every reply shows where it ran: on your device or in the cloud.
+- **Edit a message, or go back** — change one of your earlier messages and the chat goes on from there, or go back to an earlier reply (with a few seconds to undo). Quo Sync keeps the change on your other devices.
+- **Make images** — ask a cloud model for a picture, or type `/image` with any model. A few are free every day; after that they use credits, and each image shows what it cost. Images stay on your device.
+- **Files and photos for every model** — documents and photos now go with your message to cloud models and to models you use with your own key too. With an offline model they still never leave your device.
+- **Quo Pro, credit packs and Quo Sync** — on sale in Quo Web and the desktop app, under Plan & credits. New accounts get 25 free credits to try.
+- **Invite friends** — a friend who signs up with your link gets 25 extra credits, and you get 50 when they first buy.
+- **Open a model from Hugging Face in Quo** — links that start with `quo://models/huggingface/` open that model in Models & storage, ready to download.
+
+### Changed
+- **Quo's new address** — Quo Web is at app.quo.computer and the website at quo.computer. The desktop app now uses them; the old address keeps working for a while.
+
 ## [Desktop 1.5.0] - 2026-10-21
 
 ### Added
