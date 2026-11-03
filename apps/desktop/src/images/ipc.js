@@ -61,14 +61,16 @@ function setupImages({ store, engineDirectory, stopChat, ipc = ipcMain, engine =
       if (!event.sender.isDestroyed?.()) event.sender.send('images:event', { type: 'progress', ...update });
     };
     let png;
+    let setAside = false;
     try {
       png = await engine.make({ ...request, dir }, progress);
     } catch (error) {
       if (!(error instanceof ImageError) || error.code !== 'out_of_memory' || !stopChat) throw error;
       await stopChat();
+      setAside = true; // the page says so under the image
       png = await engine.make({ ...request, dir }, progress);
     }
-    return { image: `data:image/png;base64,${png.toString('base64')}`, seed: request.seed };
+    return { image: `data:image/png;base64,${png.toString('base64')}`, seed: request.seed, setAside };
   });
   handle('images:cancel', () => engine.cancel());
 

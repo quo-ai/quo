@@ -20,7 +20,7 @@ export function deviceImageModel(): ImageModel | null {
 /** Whether this computer could make images at all (the desktop app with its image engine). */
 export const canMakeImagesOnDevice = (): boolean => bridge() !== null;
 
-export async function makeOnDevice(ask: { prompt: string; aspect: ImageAspect }, signal: AbortSignal, onProgress: (step: number, steps: number) => void = () => {}): Promise<{ image: string; model: string }> {
+export async function makeOnDevice(ask: { prompt: string; aspect: ImageAspect }, signal: AbortSignal, onProgress: (step: number, steps: number) => void = () => {}): Promise<{ image: string; model: string; setAside: boolean }> {
   const images = bridge();
   const model = deviceImageModel();
   if (!images || !model) throw new NativeError('not_installed', 'Download an image model first.');
@@ -29,7 +29,7 @@ export async function makeOnDevice(ask: { prompt: string; aspect: ImageAspect },
   const off = images.onEvent(event => event.type === 'progress' && onProgress(event.step, event.steps));
   try {
     const made = unwrap(await images.make({ modelId: model.id, prompt: ask.prompt, aspect: ask.aspect, steps: model.steps, cfg: model.cfg }));
-    return { image: made.image, model: model.name };
+    return { image: made.image, model: model.name, setAside: made.setAside === true };
   } finally {
     off();
     signal.removeEventListener('abort', stop);

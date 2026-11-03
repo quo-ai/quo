@@ -10,7 +10,8 @@ vi.mock('../../ui/Toasts', () => ({ toast: () => {} }));
 
 const { DEVICE_IMAGE_MODELS } = await import('../deviceModels');
 const { deviceImageModel, makeOnDevice } = await import('../device');
-const { makeImages } = await import('../make');
+const { makeImages, ASK_FOR_CLOUD } = await import('../make');
+const { setImagePrefs } = await import('../prefs');
 const model = DEVICE_IMAGE_MODELS[0];
 
 let sent: unknown[] = [];
@@ -61,7 +62,7 @@ describe('image models on this computer', () => {
     state.installed.add(model.id);
     const steps: number[] = [];
     const made = await makeOnDevice({ prompt: 'a lighthouse', aspect: '16:9' }, new AbortController().signal, step => steps.push(step));
-    expect(made).toEqual({ image: 'data:image/png;base64,device', model: model.name });
+    expect(made).toEqual({ image: 'data:image/png;base64,device', model: model.name, setAside: false });
     expect(sent).toEqual([{ modelId: model.id, prompt: 'a lighthouse', aspect: '16:9', steps: model.steps, cfg: model.cfg }]);
     expect(steps).toEqual([8]);
     expect(progress).toBeNull(); // stopped listening
@@ -83,20 +84,36 @@ describe('a reply’s images', () => {
   it('in an offline chat with an image model are made here, never in the cloud, a change too', async () => {
     state.installed.add(model.id);
     let images: GeneratedImage[] = [];
-    await makeImages(reply([{}, { edit: true }]), 'r', next => { images = next; }, new AbortController().signal, { onDevice: true });
+    await makeImages(reply([{}, { edit: true }]), 'r', next => { images = next; }, new AbortController().signal, { chat: 'local' });
     expect(state.cloudCalls).toBe(0);
     expect(images.map(image => [image.status, image.where, image.charged, image.model])).toEqual([['done', 'device', 0, model.name], ['done', 'device', 0, model.name]]);
     expect(images.every(image => image.progress === undefined)).toBe(true); // progress is only while it's made
   });
 
-  it('go to the cloud as before in a cloud chat, or offline without an image model', async () => {
+  it('go to the cloud in a cloud chat; an offline chat without an image model asks first, unless told not to', async () => {
     state.installed.add(model.id);
     let images: GeneratedImage[] = [];
-    await makeImages(reply([{}]), 'r', next => { images = next; }, new AbortController().signal);
-    state.installed.clear();
-    await makeImages(reply([{}]), 'r', next => { images = next; }, new AbortController().signal, { onDevice: true });
-    expect(state.cloudCalls).toBe(2);
+    await makeImages(reply([{}]), 'r', next => { images = next; }, new AbortController().signal, { chat: 'cloud' });
     expect(images[0].where).toBe('cloud');
+    state.installed.clear();
+    await makeImages(reply([{}]), 'r', next => { images = next; }, new AbortController().signal, { chat: 'local' });
+    expect(images[0]).toMatchObject({ status: 'failed', choose: true, error: ASK_FOR_CLOUD });
+    expect(state.cloudCalls).toBe(1); // nothing was sent for the offline chat
+    setImagePrefs({ offlineCloud: 'allow' });
+    await makeImages(reply([{}]), 'r', next => { images = next; }, new AbortController().signal, { chat: 'local' });
+    expect(images[0].where).toBe('cloud');
+    setImagePrefs({ offlineCloud: 'ask' });
     expect(sent).toEqual([]);
+  });
+
+  it('follow a choice made on the image, and "every image on this computer"', async () => {
+    state.installed.add(model.id);
+    let images: GeneratedImage[] = [];
+    await makeImages(reply([{ want: 'cloud' }]), 'r', next => { images = next; }, new AbortController().signal, { chat: 'local' });
+    expect(images[0].where).toBe('cloud');
+    setImagePrefs({ everyOnDevice: true });
+    await makeImages(reply([{}]), 'r', next => { images = next; }, new AbortController().signal, { chat: 'cloud' });
+    setImagePrefs({ everyOnDevice: false });
+    expect(images[0].where).toBe('device');
   });
 });

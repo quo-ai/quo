@@ -73,6 +73,12 @@ export interface GeneratedImage {
   charged?: number;
   /** Made on this computer (images/device.ts) or in Quo's cloud. Older images have none: the cloud. */
   where?: 'device' | 'cloud';
+  /** Asked for on the image itself ("Make it in the cloud"), instead of where its chat runs (images/place.ts). */
+  want?: 'device' | 'cloud';
+  /** Not made yet: the person chooses first (an offline chat with no image model). */
+  choose?: boolean;
+  /** Something to know about how it was made (the chat model was set aside to make room). */
+  note?: string;
   /** While it is made on this computer: the step the image engine is on, of how many. */
   progress?: { step: number; steps: number };
   error?: string;

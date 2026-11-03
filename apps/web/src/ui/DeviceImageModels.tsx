@@ -2,6 +2,7 @@ import { Download, Pause, Play, Trash2 } from 'lucide-react';
 import { engineMemoryGB, type DeviceProfile } from '../device';
 import { DEVICE_IMAGE_MODELS, imageModelBytes, type ImageModel } from '../images/deviceModels';
 import { cancelDownload, removeDeviceModel, startDeviceDownload, type DownloadState } from '../storage/downloads';
+import { setImagePrefs, useImagePrefs } from '../images/prefs';
 import { Facts } from './Facts';
 import { downloadErrorText, formatBytes, percent } from './format';
 
@@ -11,10 +12,18 @@ import { downloadErrorText, formatBytes, percent } from './format';
  */
 export function DeviceImageModels({ device, downloads }: { device: DeviceProfile | null; downloads: Record<string, DownloadState> }) {
   const memory = device ? engineMemoryGB(device) : null;
+  const prefs = useImagePrefs();
   return (
     <div className="storage-box">
       <p>Make images on this computer. With an image model downloaded, offline chats make their pictures here: nothing is sent anywhere, and there are no credits or limits.</p>
       {DEVICE_IMAGE_MODELS.map(model => <ImageModelCard key={model.id} model={model} state={downloads[model.id]} slow={memory !== null && memory < model.minMemoryGB} gpu={Boolean(device?.gpu)} />)}
+      <label className="hf-check">
+        <input type="checkbox" checked={prefs.everyOnDevice} onChange={event => setImagePrefs({ everyOnDevice: event.target.checked })} />
+        Make every image on this computer, cloud chats too (when an image model is downloaded)
+      </label>
+      {prefs.offlineCloud === 'allow' && (
+        <p className="note">Offline chats without an image model make their pictures in the cloud without asking. <button className="btn-link" onClick={() => setImagePrefs({ offlineCloud: 'ask' })}>Ask again</button></p>
+      )}
     </div>
   );
 }

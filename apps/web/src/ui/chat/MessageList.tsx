@@ -2,7 +2,7 @@ import { Fragment, useEffect, useMemo, useState, type RefObject, type UIEvent } 
 import { Brain, Check, Copy, CornerUpLeft, Layers, Pencil, RotateCcw, Undo2, Volume2, VolumeX } from 'lucide-react';
 import type { CodeSession } from '../../agent/session';
 import { laterMessages } from '../../chat/rewind';
-import type { Message } from '../../chat/types';
+import type { GeneratedImage, Message } from '../../chat/types';
 import type { ModelChoice } from '../../models';
 import { isClaudeAgent } from '../../providers/claudeAgent';
 import { greeting, pickStarters, type StarterMode } from '../../chat/starters';
@@ -38,6 +38,8 @@ interface MessageListProps {
   onUndo: () => void;
   /** Send an earlier message again, edited: the messages after it go (Chat.tsx). */
   onEdit: (messageId: string, text: string) => void;
+  /** Makes a reply's picture again, on this computer or in the cloud. */
+  onRemakeImage?: (messageId: string, image: GeneratedImage, want: 'device' | 'cloud') => void;
   /** Go back to an earlier reply: the messages after it go, with a moment to undo. */
   onGoBack: (messageId: string) => void;
   /** Code mode could start here (the desktop app, a model that can use tools): starters mix in things to build. */
@@ -63,7 +65,7 @@ function intro(choice: ModelChoice | null, code: CodeSession | null): string {
 }
 
 /** The conversation: a greeting with starters when it's empty, then every message, then a failed turn's next steps. */
-export function MessageList({ conversationId, messages, busy, choice, code, failure, offlineReady, signedIn, undo, scroller, onScroll, onSuggest, onRetry, onUndo, onEdit, onGoBack, canBuild = false, onAction }: MessageListProps) {
+export function MessageList({ conversationId, messages, busy, choice, code, failure, offlineReady, signedIn, undo, scroller, onScroll, onSuggest, onRetry, onUndo, onEdit, onRemakeImage, onGoBack, canBuild = false, onAction }: MessageListProps) {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   useEffect(() => setEditingId(null), [conversationId]);
@@ -172,7 +174,7 @@ export function MessageList({ conversationId, messages, busy, choice, code, fail
             {message.content
               ? <Markdown text={message.content} live={streaming} />
               : streaming && !message.reasoning && !message.images?.length && !message.steps?.some(step => step.status === 'running') && <div className="typing" role="status" aria-label={workingLabel(message) || 'Working'}><span className="bar" /><span className="block" /><span className="typing-label">{workingLabel(message)}</span></div>}
-            {message.images?.length ? <GeneratedImages images={message.images} /> : null}
+            {message.images?.length ? <GeneratedImages images={message.images} actions={onRemakeImage ? { busy, onRemake: (image, want) => onRemakeImage(message.id, image, want), onGetModel: () => onAction('models') } : undefined} /> : null}
             {!streaming && message.sources?.length ? <Sources sources={message.sources} /> : null}
             {!streaming && message.content && (
               <div className="msg-actions">

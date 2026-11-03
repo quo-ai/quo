@@ -133,3 +133,7 @@ code.path { padding: 1px 6px; border-radius: var(--r-inner); background: var(--r
 .viewer-scale { min-width: 5ch; text-align: center; font-size: var(--t-meta); color: var(--ink-2); font-variant-numeric: tabular-nums; }
 .viewer-caption { position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); z-index: 1; max-width: min(720px, 90vw); max-height: 20vh; overflow-y: auto; margin: 0; padding: 8px 14px; border-radius: var(--r-card); background: var(--sheet); border: var(--bw) solid var(--rule); color: var(--ink-2); font-size: var(--t-meta); text-align: center; }
 @media (prefers-reduced-motion: reduce) { .image-viewer, .image-viewer img { animation: none; transition: none; } }
+/* The other place to make a picture, on its card (chat/GeneratedImages.tsx), and how it was made. */
+.gen-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 8px 0 2px; }
+.gen-note { margin: 6px 0 0; font-size: var(--t-meta); color: var(--ink-3); }
+.gen-check { display: inline-flex; align-items: center; gap: 6px; font-size: var(--t-meta); color: var(--ink-2); }

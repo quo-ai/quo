@@ -270,7 +270,7 @@ declare global {
       models?: NativeBridge['models'];
       /** Images made on this computer (apps/desktop/src/images/): a downloaded image model's id, a prompt and a shape. */
       images?: {
-        make: (request: { modelId: string; prompt: string; aspect: string; steps?: number; cfg?: number; seed?: number }) => Promise<NativeResult<{ image: string; seed: number }>>;
+        make: (request: { modelId: string; prompt: string; aspect: string; steps?: number; cfg?: number; seed?: number }) => Promise<NativeResult<{ image: string; seed: number; setAside?: boolean }>>;
         cancel: () => Promise<NativeResult<unknown>>;
         onEvent: (callback: (event: { type: 'progress'; step: number; steps: number }) => void) => () => void;
       };

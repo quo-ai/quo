@@ -1,7 +1,7 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState, type ReactNode } from 'react';
 import { ArrowDown } from 'lucide-react';
 import { titleFrom } from '../chat/store';
-import { newId, type Attachment, type Conversation, type Message } from '../chat/types';
+import { newId, type Attachment, type Conversation, type GeneratedImage, type Message } from '../chat/types';
 import { AGENT_CONTEXT } from '../agent/local';
 import { codePanel } from '../agent/codePanel';
 import { agentRating } from '../agent/capability';
@@ -140,6 +140,26 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
     return () => document.removeEventListener('keydown', onKey);
   }, [busy]);
 
+  /** A picture made again from its prompt, on this computer or in the cloud, beside the first one in the same reply. */
+  async function remakeImage(messageId: string, image: GeneratedImage, want: 'device' | 'cloud') {
+    if (!conversation || busy) return;
+    const again: GeneratedImage = { id: newId(), prompt: image.prompt, aspect: image.aspect, status: 'creating', want };
+    let current: Conversation = { ...conversation, messages: conversation.messages.map(m => (m.id === messageId ? { ...m, images: [...(m.images ?? []).filter(one => !(one.choose && one.id === image.id)), again] } : m)) };
+    onChange(current, true);
+    setStatus('generating');
+    const controller = new AbortController();
+    agentRun.current = controller;
+    try {
+      await makeImages(current.messages, messageId, images => {
+        current = { ...current, messages: current.messages.map(m => (m.id === messageId ? { ...m, images } : m)) };
+        onChange(current, true);
+      }, controller.signal, { chat: choice?.kind ?? 'cloud' });
+    } finally {
+      agentRun.current = null;
+      setStatus('idle');
+    }
+  }
+
   async function run(base: Conversation | null, userText: string, created: boolean, sent: Attachment[] = [], started: CodeSession | null = null) {
     if (!choice) return;
     // A folder added just for this message (it is not in this render's state yet), else the chat's own.
@@ -236,8 +256,8 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
         const controller = new AbortController();
         agentRun.current = controller;
         try {
-          // An offline chat makes them on this computer when it can (images/device.ts).
-          await makeImages(current.messages, assistant.id, images => update({ images }, true), controller.signal, { onDevice: choice.kind === 'local' });
+          // Each where its chat runs, or where the person chose (images/place.ts).
+          await makeImages(current.messages, assistant.id, images => update({ images }, true), controller.signal, { chat: choice.kind });
         } finally {
           agentRun.current = null;
         }
@@ -433,6 +453,7 @@ export const Chat = forwardRef<ChatHandle, ChatProps>(function Chat(
         onRetry={retry}
         onUndo={() => void takeBack()}
         onEdit={editFrom}
+        onRemakeImage={(messageId, image, want) => void remakeImage(messageId, image, want)}
         onGoBack={goBack}
         onAction={onAction}
       />

@@ -149,14 +149,14 @@ describe('the page’s side', () => {
       assert.equal((await handlers.get('images:make')({ senderFrame: { url }, sender: page.sender }, { modelId: 'z', prompt: 'x', aspect: '1:1' })).error.code, 'untrusted');
     }
     const made = await handlers.get('images:make')(page, { modelId: 'z', prompt: 'a cat', aspect: '1:1', seed: 5 });
-    assert.deepEqual(made.ok, { image: 'data:image/png;base64,iVBORw==', seed: 5 });
+    assert.deepEqual(made.ok, { image: 'data:image/png;base64,iVBORw==', seed: 5, setAside: false });
   });
 
   it('sets the chat model aside and tries once more when the card is out of memory; once only', async () => {
     let calls = 0;
     let stopped = 0;
     const handlers = setup({ make: async () => (++calls === 1 ? Promise.reject(new ImageError('out_of_memory')) : Buffer.from('png')), stopChat: async () => stopped++ });
-    assert.ok((await handlers.get('images:make')(page, { modelId: 'z', prompt: 'a cat', aspect: '1:1' })).ok);
+    assert.equal((await handlers.get('images:make')(page, { modelId: 'z', prompt: 'a cat', aspect: '1:1' })).ok.setAside, true);
     assert.deepEqual([calls, stopped], [2, 1]);
     const always = setup({ make: async () => Promise.reject(new ImageError('out_of_memory', 'Not enough graphics memory for this image.')), stopChat: async () => {} });
     assert.equal((await always.get('images:make')(page, { modelId: 'z', prompt: 'a cat', aspect: '1:1' })).error.code, 'out_of_memory');
