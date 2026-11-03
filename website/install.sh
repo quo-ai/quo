@@ -58,7 +58,9 @@ case "$(uname -s)" in
     mkdir -p "$bin" "$data/applications" "$data/icons"
     install -m 755 "$tmp/$file" "$bin/quo"
     curl -fsSL -o "$data/icons/quo.png" https://quo.computer/assets/brand/quo-app-icon-1024.png || true
-    cat > "$data/applications/quo.desktop" <<EOF
+    # Named as the app names itself (its window class), so the taskbar shows Quo's icon and quo:// links open Quo.
+    rm -f "$data/applications/quo.desktop"
+    cat > "$data/applications/quo-desktop.desktop" <<EOF
 [Desktop Entry]
 Type=Application
 Name=Quo
@@ -66,7 +68,11 @@ Comment=Private AI that works offline
 Exec="$bin/quo" %U
 Icon=$data/icons/quo.png
 Categories=Utility;Office;
+StartupWMClass=quo-desktop
+MimeType=x-scheme-handler/quo;
 EOF
+    if command -v update-desktop-database >/dev/null 2>&1; then update-desktop-database "$data/applications" >/dev/null 2>&1 || true; fi
+    if command -v xdg-mime >/dev/null 2>&1; then xdg-mime default quo-desktop.desktop x-scheme-handler/quo >/dev/null 2>&1 || true; fi
     say "Installed $bin/quo, with Quo in your app menu. It updates itself."
     if ! (ldconfig -p 2>/dev/null || true) | grep -q 'libfuse\.so\.2'; then
       say "The AppImage needs FUSE 2 (Ubuntu and Debian: sudo apt install libfuse2t64). Or install the .deb instead: $RELEASES/$deb"
