@@ -51,6 +51,8 @@ Quo runs the model on your device instead:
 | **Android** | [llama.rn](https://github.com/mybigday/llama.rn), with a model built in | [Google Play](https://play.google.com/store/apps/details?id=com.quo.app) |
 | **iPhone and iPad** | llama.rn on Metal | Coming soon |
 
+Windows code signing: free code signing provided by [SignPath.io](https://signpath.io), certificate by [SignPath Foundation](https://signpath.org), from the first release after it accepts Quo ([code signing policy](https://quo.computer/code-signing/)).
+
 **Desktop app in one line.** It picks the right download for your computer, checks it against the release, and installs it for you only (no admin rights):
 
 ```bash
