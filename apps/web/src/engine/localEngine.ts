@@ -66,6 +66,8 @@ export interface InferenceEngine {
   /** `contextSize` asks for a larger window than the model's default (Code mode needs room for files and tool results). */
   load(model: LocalModel, options?: { contextSize?: number }): Promise<void>;
   unload(): Promise<void>;
+  /** Forgets the loaded model without stopping anything, when its engine is known to be gone: the next load starts it again. */
+  forget?(): void;
   info(): EngineInfo | null;
   stop(): Promise<void>;
   generate(

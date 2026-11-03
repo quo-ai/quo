@@ -61,3 +61,42 @@ describe('a model that was let go', () => {
     expect(start.mock.calls.map(call => call[0].contextSize)).toEqual([32768, 32768]);
   });
 });
+
+describe('a reply the engine stopped in', () => {
+  const broken = () => new Response(new ReadableStream<Uint8Array>({ start(controller) { controller.error(new TypeError('network error')); } }), { status: 200 });
+  // Some text, then the connection breaks (a stream that errors drops what it hadn't handed over, so the text goes first).
+  const partly = () => {
+    let sent = false;
+    return new Response(new ReadableStream<Uint8Array>({
+      pull(controller) {
+        if (sent) return controller.error(new TypeError('network error'));
+        sent = true;
+        controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify({ choices: [{ delta: { content: 'Hal' } }] })}\n\n`));
+      },
+    }), { status: 200 });
+  };
+
+  it('loads the model again and asks once more when the engine went before any text came', async () => {
+    const { native, start } = engine();
+    const answers = [broken(), reply('Answered')];
+    vi.stubGlobal('fetch', vi.fn(async () => answers.shift()!));
+    expect((await ask(native)).content).toBe('Answered');
+    expect(start).toHaveBeenCalledTimes(2);
+  });
+
+  it('says plainly that the model stopped when text had already come, and loads it with the next message', async () => {
+    const { native, start } = engine();
+    vi.stubGlobal('fetch', vi.fn(async () => partly()));
+    await expect(ask(native)).rejects.toMatchObject({ code: 'engine_stopped' });
+    expect(native.modelId).toBe(null);
+    vi.stubGlobal('fetch', vi.fn(async () => reply('Next')));
+    expect((await ask(native)).content).toBe('Next');
+    expect(start).toHaveBeenCalledTimes(2);
+  });
+
+  it('shows the engine’s own words when it reports a failure part way', async () => {
+    const { native } = engine();
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(`error: ${JSON.stringify({ error: { code: 500, message: 'Context size has been exceeded.' } })}\n\n`, { status: 200 })));
+    await expect(ask(native)).rejects.toMatchObject({ code: 'generation_failed', message: 'Context size has been exceeded.' });
+  });
+});

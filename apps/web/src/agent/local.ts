@@ -50,19 +50,29 @@ export async function askLocalAgentModel(
   const platform: Platform = options.platform === 'win32' || options.platform === 'darwin' ? options.platform : 'linux';
   const project = options.project.replace(/[^\p{L}\p{N} ._-]/gu, '').trim().slice(0, 60) || 'project';
   const system = options.system ?? agentSystemPrompt(project, platform, options.tools, parseNotes(options.instructions), 'local', 'main', options.environment ?? null);
-  const ask = () => chatWithProvider(
-    LOCAL_PROVIDER,
-    { model: model.id, maxTokens: AGENT_MAX_TOKENS, signal: options.signal, tools: toolDefinitions(options.tools), extra: agentSampling(model), messages: [{ role: 'system', content: system }, ...messages] },
-    partial => options.onText(partial.content),
-    transport,
-  );
+  const ask = async () => {
+    try {
+      return await chatWithProvider(
+        LOCAL_PROVIDER,
+        { model: model.id, maxTokens: AGENT_MAX_TOKENS, signal: options.signal, tools: toolDefinitions(options.tools), extra: agentSampling(model), messages: [{ role: 'system', content: system }, ...messages] },
+        partial => options.onText(partial.content),
+        transport,
+      );
+    } catch (error) {
+      // The reply broke off part way: the engine stopped while it was writing.
+      if (error instanceof ProviderError || options.signal.aborted) throw error;
+      throw new ProviderError(0, 'engine_stopped', 'The offline model stopped before it finished. Send your message again.', LOCAL_PROVIDER.id);
+    }
+  };
   let reply;
   try {
     try {
       reply = await ask();
     } catch (error) {
-      // The engine can stop on its own (out of memory, a crash). Start it again, once.
-      if (!(error instanceof ProviderError) || (error.status !== 503 && error.code !== 'provider_unreachable') || options.signal.aborted) throw error;
+      // The engine can stop on its own (out of memory, a crash) or be switched by Quo (an image needed the memory, a
+      // faster engine was installed). Load the model again, really (what the page knew of it is out of date), and ask once more.
+      if (!(error instanceof ProviderError) || (error.status !== 503 && error.code !== 'provider_unreachable' && error.code !== 'engine_stopped') || options.signal.aborted) throw error;
+      localEngine.forget?.();
       await prepareLocalAgent(model);
       reply = await ask();
     }

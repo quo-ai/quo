@@ -79,6 +79,10 @@ export class NativeEngine implements InferenceEngine {
     }
   }
 
+  forget(): void {
+    this.status = null;
+  }
+
   async unload(): Promise<void> {
     await this.stop();
     this.status = null;
@@ -119,13 +123,19 @@ export class NativeEngine implements InferenceEngine {
       const started = performance.now();
       let firstTokenAt = 0;
 
-      try {
-        let response = await this.request(model, messages, sampling, thinking, maxTokens, controller.signal);
-        if (response.status === 503) {
-          // The server is gone (it crashed or was stopped): load the model again, once, with the same window.
-          this.status = null;
-          await this.open(model, { contextSize: options.contextSize }, false);
-          response = await this.request(model, messages, sampling, thinking, maxTokens, controller.signal);
+      // The server can be gone when a reply starts, or stop part way (out of memory, a crash, or Quo switched it: an image
+      // needed the memory, a faster engine was installed). Load the model again and ask once more, if nothing was shown yet.
+      let again = true;
+      const reload = async () => {
+        again = false;
+        this.status = null;
+        await this.open(model, { contextSize: options.contextSize }, false);
+      };
+      const read = async (): Promise<void> => {
+        const response = await this.request(model, messages, sampling, thinking, maxTokens, controller.signal);
+        if (response.status === 503 && again) {
+          await reload();
+          return read();
         }
         if (!response.ok || !response.body) throw new NativeError('generation_failed', await errorText(response));
 
@@ -136,8 +146,14 @@ export class NativeEngine implements InferenceEngine {
           const events = buffer.split('\n\n');
           buffer = events.pop() ?? '';
           for (const event of events) {
-            const data = event.replace(/^data: /, '').trim();
+            // llama-server reports a failure part way as an `error:` event.
+            const failed = /^error: /.test(event);
+            const data = event.replace(/^(data|error): /, '').trim();
             if (!data || data === '[DONE]') continue;
+            if (failed) {
+              const body = JSON.parse(data) as { error?: { message?: string }; message?: string };
+              throw new NativeError('generation_failed', body.error?.message ?? body.message ?? 'The model stopped.');
+            }
             const chunk = JSON.parse(data) as {
               choices?: { delta?: { content?: string | null; reasoning_content?: string | null } }[];
               timings?: { predicted_n?: number; predicted_per_second?: number };
@@ -158,8 +174,23 @@ export class NativeEngine implements InferenceEngine {
             options.onUpdate({ content, reasoning });
           }
         }
+      };
+
+      try {
+        try {
+          await read();
+        } catch (error) {
+          // Not an answer from the server: the connection to it broke (it stopped). Again, once, if nothing was shown.
+          if (controller.signal.aborted || error instanceof NativeError || !again || content || reasoning) throw error;
+          await reload();
+          await read();
+        }
       } catch (error) {
-        if (!controller.signal.aborted) throw error;
+        if (!controller.signal.aborted) {
+          if (error instanceof NativeError) throw error;
+          this.status = null;
+          throw new NativeError('engine_stopped', 'The offline model stopped before it finished. Send your message again.');
+        }
       }
 
       if (!tokens) tokens = content.length ? Math.ceil((content.length + reasoning.length) / 4) : 0;

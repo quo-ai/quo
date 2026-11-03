@@ -65,7 +65,7 @@ describe('llama-server output', () => {
     await assert.rejects(engine.start({ modelId: 'x', modelPath: 'x', contextSize: 2048 }), { code: 'engine_missing' });
   });
 
-  it('says when it lets a model go on its own (idle, or for an image), so the page loads it again', async () => {
+  it('says when it lets a model go on its own (idle, an image, another engine build), so the page loads it again', async () => {
     const engine = new LlamaEngine({ directory: temp() });
     const said = [];
     engine.on('unloaded', event => said.push(event));
@@ -75,6 +75,10 @@ describe('llama-server output', () => {
     assert.deepEqual(engine.status(), { running: false });
     await engine.unload('idle'); // nothing loaded: nothing to say
     assert.equal(said.length, 1);
+    engine.current = { modelId: 'qwen35-9b' }; // and a switch to another build (the CUDA engine installed or turned off)
+    await engine.useDirectory(temp());
+    assert.deepEqual(said.at(-1), { modelId: 'qwen35-9b', reason: 'engine' });
+    assert.equal(engine.status().running, false);
   });
 
   it('does not kill an unrelated process left in the pid file', async () => {

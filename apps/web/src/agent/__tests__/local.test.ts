@@ -9,7 +9,8 @@ import { codeSupport } from '../support';
 
 installLocalStorage();
 const load = vi.fn(async () => {});
-vi.mock('../../engine/localEngine', () => ({ localEngine: { load: (...args: unknown[]) => load(...(args as [])) } }));
+const forget = vi.fn();
+vi.mock('../../engine/localEngine', () => ({ localEngine: { load: (...args: unknown[]) => load(...(args as [])), forget: () => forget() } }));
 
 const model = (patch: Partial<LocalModel> = {}): LocalModel => ({
   id: 'qwen35-9b', name: 'Qwen3.5 9B', description: '', files: [], contextSize: 16384, maxTokens: 4096, supportsThinking: true, minMemoryGB: 12,
@@ -23,6 +24,7 @@ const options = { tools: ['list_directory', 'read_file', 'find_files', 'search_t
 beforeEach(() => {
   localStorage.clear();
   load.mockClear();
+  forget.mockClear();
   vi.resetModules();
 });
 
@@ -57,6 +59,21 @@ describe('an offline model as a coding agent', () => {
     expect(load).toHaveBeenCalledWith(expect.objectContaining({ id: 'qwen35-9b' }), { contextSize: AGENT_CONTEXT });
     const dead: Transport = { send: async () => ({ status: 503, ok: false, body: streamOf('') }) };
     await expect(askLocalAgentModel(model(), [{ role: 'user', content: 'x' }], options, dead)).rejects.toMatchObject({ status: 503 });
+  });
+
+  it('loads the model again for real when Quo let it go (the page’s note of it is out of date), and when a reply broke off part way', async () => {
+    let calls = 0;
+    const transport: Transport = { send: async () => (++calls === 1 ? { status: 503, ok: false, body: streamOf('') } : { status: 200, ok: true, body: streamOf(reply('Back.')) }) };
+    await askLocalAgentModel(model(), [{ role: 'user', content: 'x' }], options, transport);
+    expect(forget.mock.invocationCallOrder[0]).toBeLessThan(load.mock.invocationCallOrder[0]);
+
+    // The engine stopped while it was writing: the stream ends in an error, not an answer.
+    const broken = () => new ReadableStream<Uint8Array>({ start(controller) { controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify({ choices: [{ delta: { content: 'Hal' } }] })}\n\n`)); controller.error(new TypeError('network error')); } });
+    calls = 0;
+    const cut: Transport = { send: async () => (++calls === 1 ? { status: 200, ok: true, body: broken() } : { status: 200, ok: true, body: streamOf(reply('Whole answer.')) }) };
+    expect((await askLocalAgentModel(model(), [{ role: 'user', content: 'x' }], options, cut)).content).toBe('Whole answer.');
+    const always: Transport = { send: async () => ({ status: 200, ok: true, body: broken() }) };
+    await expect(askLocalAgentModel(model(), [{ role: 'user', content: 'x' }], options, always)).rejects.toMatchObject({ code: 'engine_stopped', message: expect.stringMatching(/stopped before it finished/) });
   });
 
   it('says in words when the conversation no longer fits', async () => {

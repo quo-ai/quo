@@ -175,11 +175,14 @@ class LlamaEngine extends EventEmitter {
   useDirectory(directory) {
     return this._exclusive(async () => {
       if (directory === this.directory) return;
+      // A model running in the old build is stopped; say so, so the page loads it again in the new one.
+      const had = this.current?.modelId ?? null;
       await this._stop();
       this.directory = directory;
       this.binary = binaryIn(directory);
       this.devicesCache = null;
       this.deviceCount = null;
+      if (had) this.emit('unloaded', { modelId: had, reason: 'engine' });
     });
   }
 
