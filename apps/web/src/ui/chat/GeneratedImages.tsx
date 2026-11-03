@@ -21,7 +21,7 @@ export function GeneratedImages({ images }: { images: GeneratedImage[] }) {
             <img src={image.dataUrl} alt={image.prompt} style={{ aspectRatio: ratio(image.aspect) }} />
           ) : (
             <div className="gen-frame" style={{ aspectRatio: ratio(image.aspect) }} role={image.status === 'creating' ? 'status' : undefined}>
-              {image.status === 'creating' ? <><span className="bar" /> {image.edit ? 'Changing the image…' : 'Creating an image…'}</> : <><ImageOff size={18} /> {image.error ?? 'The image couldn’t be made.'}</>}
+              {image.status === 'creating' ? <><span className="bar" /> {image.edit ? 'Changing the image…' : 'Creating an image…'}{image.progress ? ` Step ${image.progress.step} of ${image.progress.steps}` : ''}</> : <><ImageOff size={18} /> {image.error ?? 'The image couldn’t be made.'}</>}
             </div>
           )}
           <figcaption>

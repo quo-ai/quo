@@ -73,6 +73,8 @@ export interface GeneratedImage {
   charged?: number;
   /** Made on this computer (images/device.ts) or in Quo's cloud. Older images have none: the cloud. */
   where?: 'device' | 'cloud';
+  /** While it is made on this computer: the step the image engine is on, of how many. */
+  progress?: { step: number; steps: number };
   error?: string;
 }
 

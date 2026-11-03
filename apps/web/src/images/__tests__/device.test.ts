@@ -86,6 +86,7 @@ describe('a reply’s images', () => {
     await makeImages(reply([{}, { edit: true }]), 'r', next => { images = next; }, new AbortController().signal, { onDevice: true });
     expect(state.cloudCalls).toBe(0);
     expect(images.map(image => [image.status, image.where, image.charged, image.model])).toEqual([['done', 'device', 0, model.name], ['done', 'device', 0, model.name]]);
+    expect(images.every(image => image.progress === undefined)).toBe(true); // progress is only while it's made
   });
 
   it('go to the cloud as before in a cloud chat, or offline without an image model', async () => {

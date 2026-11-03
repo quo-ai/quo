@@ -27,8 +27,12 @@ export async function makeImages(messages: Message[], replyId: string, update: (
     const last = [...earlier, ...images.slice(0, index)].filter(one => one.status === 'done' && one.dataUrl).at(-1);
     try {
       if (onDevice) {
-        const made = await makeOnDevice({ prompt: image.prompt, aspect: image.aspect }, signal);
-        images = images.map((one, i) => (i === index ? { ...one, status: 'done', dataUrl: made.image, model: made.model, charged: 0, where: 'device' } : one));
+        const shown = (step: number, steps: number) => {
+          images = images.map((one, i) => (i === index ? { ...one, progress: { step, steps } } : one));
+          update(images);
+        };
+        const made = await makeOnDevice({ prompt: image.prompt, aspect: image.aspect }, signal, shown);
+        images = images.map((one, i) => (i === index ? { ...one, status: 'done', dataUrl: made.image, model: made.model, charged: 0, where: 'device', progress: undefined } : one));
         update(images);
         continue;
       }
@@ -41,7 +45,7 @@ export async function makeImages(messages: Message[], replyId: string, update: (
       }
     } catch (error) {
       const message = signal.aborted ? 'Stopped.' : error instanceof ApiError || error instanceof NativeError ? error.message : 'The image couldn’t be made. Try again.';
-      images = images.map((one, i) => (i === index ? { ...one, status: 'failed', error: message } : one));
+      images = images.map((one, i) => (i === index ? { ...one, status: 'failed', error: message, progress: undefined } : one));
     }
     update(images);
   }
