@@ -7,7 +7,7 @@ Quo's promise is that your conversations stay on your device, so we take securit
 Please **don't open a public issue**. Instead, either:
 
 - use GitHub's [private vulnerability reporting](https://github.com/quo-ai/quo/security/advisories/new), or
-- email **astralabsltd@gmail.com** with "Security" in the subject.
+- email **hello@quo.computer** with "Security" in the subject.
 
 Include what you found, how to reproduce it, and what an attacker could do with it. We'll reply within 3 working days, keep you updated while we fix it, and credit you in the release notes if you'd like.
 

@@ -126,7 +126,7 @@ linux:
   # Electron's Wayland app_id / WM_CLASS, so windows get the right taskbar icon.
   syncDesktopName: true
   category: Utility
-  maintainer: Astra Labs Ltd <astralabsltd@gmail.com>
+  maintainer: Astra Labs Ltd <hello@quo.computer>
   vendor: Astra Labs Ltd
   synopsis: Private AI that runs on your computer
   description: Quo is a private, offline-first AI assistant. Models run on your own computer, on the GPU when available.

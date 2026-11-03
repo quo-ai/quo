@@ -11,4 +11,4 @@ export const TERMS_URL = Platform.OS === 'ios'
   ? 'https://www.apple.com/legal/internet-services/itunes/dev/stdeula/'
   : `${SITE_URL}/terms/`;
 
-export const CONTACT_EMAIL = 'astralabsltd@gmail.com';
+export const CONTACT_EMAIL = 'hello@quo.computer';

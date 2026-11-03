@@ -15,4 +15,4 @@
 - [Source code](https://github.com/quo-ai/quo): Apache 2.0
 - [Privacy Policy](https://quo.computer/privacy/): what stays on the device and what is sent when you choose a cloud model
 - [Terms](https://quo.computer/terms/), [Refunds](https://quo.computer/refunds/), [Support](https://quo.computer/support/), [Brand assets](https://quo.computer/brand/)
-- Contact: astralabsltd@gmail.com
+- Contact: hello@quo.computer

@@ -21,7 +21,7 @@ from data_pages import changelog_page, code_signing_page, models_page  # noqa: E
 
 ROOT = Path(__file__).resolve().parent.parent  # website/
 SITE = 'https://quo.computer'
-EMAIL = 'astralabsltd@gmail.com'
+EMAIL = 'hello@quo.computer'
 COMPANY = 'Astra Labs Ltd'
 COMPANY_DETAILS = ('a company registered in England and Wales (company number 16558481), '
                    'registered office 82 James Carter Road, Mildenhall, IP28 7DE, United Kingdom')
@@ -338,7 +338,7 @@ brand = '''<h1>Brand assets</h1>
 </ul>
 
 <h2>Contact</h2>
-<p>Press and partnerships: <a href="mailto:astralabsltd@gmail.com">astralabsltd@gmail.com</a>.</p>'''
+<p>Press and partnerships: <a href="mailto:hello@quo.computer">hello@quo.computer</a>.</p>'''
 
 delete_account = f'''<h1>Delete your Quo account</h1>
 <p class="meta">Last updated {UPDATED}</p>

@@ -56,7 +56,7 @@ const SECRET_PATTERNS = [
 const PATH_PATTERN = /(?:\/home\/|\/Users\/|[A-Za-z]:\\+Users\\+)(?!(?:user|runner|node|app|dev|me|you|name|username|your-?name|<[^>]*>|\$|\{|\*|runneradmin|%)\b)[A-Za-z][\w.-]{2,}/;
 const EMAIL_PATTERN = /[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}/g;
 const OUR_EMAILS = new Set(['astralabsltd@gmail.com']);
-// Placeholders and our own sending domains: quo.computer (the sign-in sender) and quoai.app (the placeholder sender before
+// Placeholders and our own domains: quo.computer (hello@ and the sign-in sender) and quoai.app (the placeholder sender before
 // it, still in the history that CI scans).
 const HARMLESS_EMAIL_DOMAINS = /(^|\.)(example\.(com|org|net)|users\.noreply\.github\.com|localhost|quo\.computer|quoai\.app)$/i;
 // Lockfiles list package authors' emails, and aren't worth reading for the rest.
