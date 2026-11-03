@@ -35,7 +35,7 @@ export function CodeChip({ starting, disabled, session, plan, onTogglePlan, onSw
     <>
       <ProjectMenu project={session?.project ?? null} info={session?.info ?? null} disabled={disabled} starting={starting} onPick={onSwitchProject} onBrowse={onChooseFolder} onRemove={onRemove} />
       {session && (
-        <button type="button" className="chip press" aria-pressed={plan} disabled={disabled} onClick={onTogglePlan} title="Plan mode: Quo only reads, and suggests a plan. Nothing is changed or run.">
+        <button type="button" className="chip press plan-chip" aria-pressed={plan} disabled={disabled} onClick={onTogglePlan} title="Plan mode: Quo only reads, and suggests a plan. Nothing is changed or run.">
           <ListChecks size={14} /> Plan
         </button>
       )}
