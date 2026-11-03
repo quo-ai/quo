@@ -116,5 +116,24 @@
         ]
       }
     }
+  },
+  "images": {
+    "_note": "stable-diffusion.cpp for making images on the device (src/images/), bundled like llama.cpp into engine/<target>/images/ and checked against these SHA-256s. Only sd-cli and its libraries ship. No build for Intel Macs or Linux on ARM.",
+    "release": "master-1044-f8ea2e1",
+    "source": "https://github.com/leejet/stable-diffusion.cpp/releases",
+    "assets": {
+      "mac-arm64": {
+        "file": "sd-master-f8ea2e1-bin-Darwin-macOS-26.6.2-arm64.zip",
+        "sha256": "33758e7431298e5e3d2ab0c26224702cfddf576b9b21bc5a437b2767463f0b7b"
+      },
+      "win-x64": {
+        "file": "sd-master-f8ea2e1-bin-win-vulkan-x64.zip",
+        "sha256": "62d862f7133f22decd5b15d8f54f816ce2cc3d1a605c01162415b756a265a14f"
+      },
+      "linux-x64": {
+        "file": "sd-master-f8ea2e1-bin-Linux-Ubuntu-26.04-x86_64-vulkan.zip",
+        "sha256": "8b91c1e2d1524223cfc4d9a5808da80480a7f5abc44a5f2a815f024809dd4b57"
+      }
+    }
   }
 }

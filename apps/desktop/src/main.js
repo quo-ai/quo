@@ -9,7 +9,8 @@ const { setupAgent } = require('./agent/ipc');
 const { setupClaude } = require('./claude/ipc');
 const { setupProviders } = require('./providers/ipc');
 const { setupWeb } = require('./web/ipc');
-const { engineAvailable, setupEngine } = require('./engine/ipc');
+const { engineAvailable, engineDirectory, setupEngine } = require('./engine/ipc');
+const { setupImages } = require('./images/ipc');
 const { MIN_SIZE, loadWindowState, trackWindowState } = require('./windowState');
 const { buildMenu } = require('./menu');
 const { initAutoUpdates } = require('./updater');
@@ -48,8 +49,9 @@ if (process.env.QUO_PROFILE_DIR) {
 }
 
 let mainWindow = null;
-// Whether this build includes the native llama.cpp engine (see engine.lock.json).
+// Whether this build includes the native llama.cpp engine (see engine.lock.json), and the image engine beside it.
 let hasEngine = false;
+let hasImages = false;
 
 function createWindow({ hidden = false } = {}) {
   const state = loadWindowState();
@@ -68,7 +70,7 @@ function createWindow({ hidden = false } = {}) {
       contextIsolation: true,
       sandbox: true,
       nodeIntegration: false,
-      additionalArguments: [`--quo-version=${app.getVersion()}`, ...(hasEngine ? ['--quo-engine=1'] : []), ...(claudeAgentOffered(app.isPackaged) ? ['--quo-claude=1'] : [])],
+      additionalArguments: [`--quo-version=${app.getVersion()}`, ...(hasEngine ? ['--quo-engine=1'] : []), ...(hasImages ? ['--quo-images=1'] : []), ...(claudeAgentOffered(app.isPackaged) ? ['--quo-claude=1'] : [])],
     },
   });
   if (!hidden) {
@@ -173,7 +175,9 @@ function start() {
   if (claudeAgentOffered(app.isPackaged)) setupClaude();
   hasEngine = engineAvailable();
   if (hasEngine) {
-    const { engine } = setupEngine();
+    const { engine, store } = setupEngine();
+    // Images made on this computer (images/): only with the engine, from models it downloaded.
+    hasImages = setupImages({ store, engineDirectory: engineDirectory(), stopChat: () => engine.stop() }).available;
     setEngineTarget(() => engine.target(), { started: () => engine.requestStarted(), ended: () => engine.requestEnded() });
   } else {
     console.warn('[quo] The native engine is missing; using the in-browser engine. Run "npm run fetch:engine".');

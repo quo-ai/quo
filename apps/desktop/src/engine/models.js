@@ -42,6 +42,30 @@ const sleep = (ms, signal) =>
 
 const sizeOf = file => fsp.stat(file).then(stat => (stat.isFile() ? stat.size : 0), () => 0);
 
+/**
+ * Whether a file starts like a safetensors file (an image model's decoder): an 8-byte little-endian length of its JSON
+ * header, a sensible one, then the header's opening brace. Like GGUF, it is data only: nothing in it runs.
+ */
+async function hasSafetensorsHeader(file) {
+  let handle;
+  try {
+    handle = await fsp.open(file, 'r');
+    const header = Buffer.alloc(9);
+    const { bytesRead } = await handle.read(header, 0, 9, 0);
+    if (bytesRead !== 9) return false;
+    const length = header.readBigUInt64LE(0);
+    return length >= 2n && length <= 100_000_000n && header[8] === 0x7b;
+  } catch {
+    return false;
+  } finally {
+    await handle?.close();
+  }
+}
+
+/** A model file is GGUF, or safetensors when its name says so (`name`: the file it will be, for a .part being checked). */
+const hasModelHeader = (file, name = file) => (name.endsWith('.safetensors') ? hasSafetensorsHeader(file) : hasGgufHeader(file));
+const MODEL_FILE = /\.(gguf|safetensors)$/;
+
 async function hasGgufHeader(file) {
   let handle;
   try {
@@ -98,7 +122,7 @@ class ModelStore {
       downloaded += whole ? file.sizeBytes : Math.min(done || part, file.sizeBytes);
       if (!whole) complete = false;
     }
-    if (complete && files.length) complete = await hasGgufHeader(this.filePath(modelId, files[0].name));
+    if (complete && files.length) complete = await hasModelHeader(this.filePath(modelId, files[0].name));
     return { installed: complete, downloadedBytes: complete ? total : downloaded, totalBytes: total };
   }
 
@@ -120,6 +144,7 @@ class ModelStore {
     if (this.active.has(modelId)) return;
     for (const file of files) {
       this.filePath(modelId, file.name);
+      if (!MODEL_FILE.test(file.name)) throw new ModelError('bad_file_name');
       let url;
       try {
         url = new URL(file.url);
@@ -174,7 +199,7 @@ class ModelStore {
   }
 
   async downloadFile(file, target, signal, hooks) {
-    if ((await sizeOf(target)) === file.sizeBytes && (await hasGgufHeader(target))) return;
+    if ((await sizeOf(target)) === file.sizeBytes && (await hasModelHeader(target))) return;
     const part = `${target}.part`;
     let attempt = 0;
     let lastEmit = 0;
@@ -232,7 +257,7 @@ class ModelStore {
 
     hooks.progress(file.sizeBytes);
     hooks.verifying();
-    if (!(await hasGgufHeader(part))) {
+    if (!(await hasModelHeader(part, target))) {
       await fsp.rm(part, { force: true });
       throw new ModelError('not_gguf');
     }
@@ -375,4 +400,4 @@ async function walk(root, depth) {
   return out;
 }
 
-module.exports = { ModelStore, ModelError, hasGgufHeader, findProjector };
+module.exports = { ModelStore, ModelError, hasGgufHeader, hasSafetensorsHeader, hasModelHeader, findProjector };

@@ -7,6 +7,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 const arg = name => process.argv.find(value => value.startsWith(`--${name}=`))?.slice(name.length + 3);
 const version = arg('quo-version') ?? '';
 const hasEngine = arg('quo-engine') === '1';
+const hasImages = arg('quo-images') === '1';
 // Claude Agent: development builds only, until Anthropic approves it for releases (src/claude/release.js).
 const hasClaude = arg('quo-claude') === '1';
 
@@ -113,6 +114,14 @@ contextBridge.exposeInMainWorld('quoDesktop', {
         remove: id => invoke('models:custom:remove', { id }),
       },
     },
+    // Images made on this computer (images/ipc.js): the page gives a downloaded model's id, a prompt and a shape.
+    ...(hasImages && {
+      images: {
+        make: request => invoke('images:make', { modelId: request?.modelId, prompt: request?.prompt, aspect: request?.aspect, steps: request?.steps, cfg: request?.cfg, seed: request?.seed }),
+        cancel: () => invoke('images:cancel'),
+        onEvent: callback => subscribe('images:event', callback),
+      },
+    }),
     // quo:// links from outside (links.js): the page is only told that one came, and takes the model main checked.
     links: {
       take: () => invoke('links:take'),

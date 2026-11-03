@@ -110,10 +110,44 @@ async function fetchTarget(target) {
   console.log(`engine/${target}: ${lock.release} ready`);
 }
 
+// The image engine (stable-diffusion.cpp, src/images/) goes in engine/<target>/images/, after llama.cpp (which empties the
+// folder when it's unpacked again). Only sd-cli, its libraries and the licence files ship.
+const IMAGES_KEEP = /^(sd-cli(\.exe)?|.*\.(so(\.\d+)*|dylib|dll)|ggml\.txt|stable-diffusion\.cpp\.txt)$/;
+async function fetchImages(target) {
+  const images = lock.images;
+  const asset = images?.assets?.[target];
+  if (!asset) return console.log(`engine/${target}/images: no image engine for this target`);
+  const destination = path.join(root, 'engine', target, 'images');
+  const stamp = path.join(destination, '.release');
+  const wanted = `${images.release} ${asset.sha256}`;
+  if (fs.existsSync(stamp) && fs.readFileSync(stamp, 'utf8') === wanted) return console.log(`engine/${target}/images: ${images.release} already in place`);
+  fs.mkdirSync(cacheDir, { recursive: true });
+  const archive = path.join(cacheDir, asset.file);
+  const cached = fs.existsSync(archive) && crypto.createHash('sha256').update(fs.readFileSync(archive)).digest('hex') === asset.sha256;
+  if (!cached) {
+    console.log(`engine/${target}/images: downloading ${asset.file}`);
+    const actual = await download(`${images.source}/download/${images.release}/${asset.file}`, archive);
+    if (actual !== asset.sha256) {
+      fs.rmSync(archive, { force: true });
+      throw new Error(`Checksum mismatch for ${asset.file}\n  expected ${asset.sha256}\n  got      ${actual}`);
+    }
+  }
+  extract(archive, destination);
+  for (const name of fs.readdirSync(destination)) if (!IMAGES_KEEP.test(name)) fs.rmSync(path.join(destination, name), { recursive: true, force: true });
+  const binary = path.join(destination, target.startsWith('win') ? 'sd-cli.exe' : 'sd-cli');
+  if (!fs.existsSync(binary)) throw new Error(`${binary} is missing after unpacking`);
+  if (!target.startsWith('win')) fs.chmodSync(binary, 0o755);
+  fs.writeFileSync(stamp, wanted);
+  console.log(`engine/${target}/images: ${images.release} ready`);
+}
+
 (async () => {
   const args = process.argv.slice(2);
   const targets = args.includes('--all') ? Object.keys(lock.assets) : args.filter(a => !a.startsWith('--'));
-  for (const target of targets.length ? targets : [currentTarget()]) await fetchTarget(target);
+  for (const target of targets.length ? targets : [currentTarget()]) {
+    await fetchTarget(target);
+    await fetchImages(target);
+  }
 })().catch(error => {
   console.error(error.message);
   process.exit(1);
