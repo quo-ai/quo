@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { chatProject, CodeSession, createWorkspace, lastProjectId, pickProject, recentProjects } from '../../agent/session';
 import type { CodeSupport } from '../../agent/support';
 import { codeSettings } from '../../codeSettings';
-import { NativeError, type CodeProject } from '../../native';
+import { NativeError, type Autonomy, type CodeProject } from '../../native';
 import { toast } from '../Toasts';
 
 /**
@@ -15,6 +15,7 @@ export function useCodeMode({ support, conversationId, modelId }: { support: Cod
   const [code, setCode] = useState<CodeSession | null>(null);
   const [starting, setStarting] = useState(false);
   const [plan, setPlan] = useState(false);
+  const [autonomy, setAutonomy] = useState<Autonomy>('ask');
   // An offline model that isn't expected to do this well: ask first, once.
   const [caution, setCaution] = useState(false);
   const afterCaution = useRef<(() => Promise<void>) | null>(null);
@@ -51,6 +52,7 @@ export function useCodeMode({ support, conversationId, modelId }: { support: Cod
     const session = await CodeSession.start(project, { autoReadOnly: settings.autoReadOnly, compact, creditQuo: settings.creditQuo, allowPush: settings.allowPush, confirm });
     if (settings.startInPlan) await session.setPlan(true);
     setPlan(session.plan);
+    setAutonomy(session.autonomy); // every session starts asking
     setCode(session);
     return session;
   }
@@ -170,6 +172,16 @@ export function useCodeMode({ support, conversationId, modelId }: { support: Cod
     }
   }
 
+  /** A looser level is confirmed by the person in the desktop app's own window; the answer may keep it as it was. */
+  async function chooseAutonomy(level: Autonomy) {
+    if (!code) return;
+    try {
+      setAutonomy(await code.setAutonomy(level));
+    } catch (error) {
+      toast(error instanceof NativeError ? error.message : 'Couldn’t change how Quo asks.');
+    }
+  }
+
   /** "Turn it on anyway": remembered for this model, which can be changed in Models & storage → Code. */
   async function confirmCaution() {
     gate?.allow();
@@ -179,7 +191,7 @@ export function useCodeMode({ support, conversationId, modelId }: { support: Cod
     await action?.();
   }
 
-  return { code, available, unavailableReason: reason ?? null, gate, caution, dismissCaution: () => { afterCaution.current = null; setCaution(false); }, confirmCaution, starting, plan, toggle, resume, openProject, changeFolder, switchProject, togglePlan, end };
+  return { code, available, unavailableReason: reason ?? null, gate, caution, dismissCaution: () => { afterCaution.current = null; setCaution(false); }, confirmCaution, starting, plan, autonomy, toggle, resume, openProject, changeFolder, switchProject, togglePlan, chooseAutonomy, end };
 }
 
 export type CodeMode = ReturnType<typeof useCodeMode>;

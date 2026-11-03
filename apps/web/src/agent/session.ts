@@ -1,5 +1,5 @@
 import { WEB_TOOLS } from '../../shared/agentTools';
-import { agentBridge, NativeError, unwrap, type CodeProject, type CodeSessionInfo, type DesktopAgent, type FileChange, type FileView, type FolderListing, type UndoResult } from '../native';
+import { agentBridge, NativeError, unwrap, type Autonomy, type CodeProject, type CodeSessionInfo, type DesktopAgent, type FileChange, type FileView, type FolderListing, type UndoResult } from '../native';
 import type { ToolResult } from './types';
 
 /** The project a person last used, so turning Code mode on again needs no dialog. */
@@ -47,6 +47,8 @@ const remember = (id: string) => {
 export class CodeSession {
   /** Plan mode: only reading. The desktop app enforces it too, so this is what the model is offered, not the rule. */
   plan = false;
+  /** The approval level (native Autonomy): every session starts asking. */
+  autonomy: Autonomy = 'ask';
   /** The settings let models search (and the computer is online): the web tools are offered to the model only then. */
   webOn = true;
 
@@ -56,6 +58,13 @@ export class CodeSession {
   get tools(): string[] {
     const tools = this.plan ? this.info.planTools : this.info.tools;
     return this.webOn ? tools : tools.filter(name => !WEB_TOOLS.includes(name));
+  }
+
+  /** Asks the desktop app to change the approval level; it asks the person first, so the level may stay as it was. */
+  async setAutonomy(level: Autonomy): Promise<Autonomy> {
+    if (!this.bridge.autonomy) throw new NativeError('unavailable', 'Update the Quo app to choose this.');
+    this.autonomy = unwrap(await this.bridge.autonomy(this.info.sessionId, level));
+    return this.autonomy;
   }
 
   async setPlan(plan: boolean): Promise<void> {

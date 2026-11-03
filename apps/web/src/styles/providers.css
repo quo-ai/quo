@@ -74,8 +74,8 @@
 .composer-bar .chip { white-space: nowrap; flex: 0 1 auto; min-width: 0; }
 .chip-name { max-width: 15ch; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .composer-bar > .send, .composer-bar > .icon-btn, .composer-bar > .ctx { flex: none; }
-/* A chip with a short label and no ellipsis (Plan) keeps its size: shrunk, its label ran over the note beside it. */
-.composer-bar > .chip.plan-chip { flex: none; }
+/* A chip with a short label and no ellipsis (the mode: Plan, Ask first…) keeps its size: shrunk, its label ran over the note beside it. */
+.composer-bar .chip.plan-chip { flex: none; }
 /* The menus' anchors around the chips may shrink too (their chips carry the ellipsis). */
 .composer-bar > .picker-anchor, .composer-bar > .ctx-anchor, .composer-bar > div:not(.ctx) { min-width: 0; flex: 0 1 auto; }
 .composer-bar .picker-anchor > .chip, .composer-bar div > .chip { max-width: 100%; }

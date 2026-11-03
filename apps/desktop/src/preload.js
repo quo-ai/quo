@@ -37,6 +37,8 @@ contextBridge.exposeInMainWorld('quoDesktop', {
     start: (projectId, options) => invoke('agent:start', { projectId, autoReadOnly: options?.autoReadOnly, compact: options?.compact, creditQuo: options?.creditQuo, allowPush: options?.allowPush, confirm: options?.confirm }),
     tool: (sessionId, name, args) => invoke('agent:tool', { sessionId, name, args }),
     mode: (sessionId, mode) => invoke('agent:mode', { sessionId, mode }),
+    // How much runs without asking (agent/autonomy.js): main asks the person in its own window before loosening it.
+    autonomy: (sessionId, level) => invoke('agent:autonomy', { sessionId, level }),
     files: (sessionId, query) => invoke('agent:files', { sessionId, query }),
     undo: (sessionId, count) => invoke('agent:undo', { sessionId, count }),
     browse: (sessionId, path) => invoke('agent:browse', { sessionId, path }),

@@ -13,6 +13,7 @@ const { whereIs } = require('./location');
 const { readInstructions } = require('./instructions');
 const { createApproved } = require('./workspace');
 const { AgentSession, PLAN_TOOLS, TOOL_NAMES } = require('./session');
+const { DESCRIPTIONS } = require('./autonomy');
 
 /**
  * Connects the web app's Code mode to the agent. Everything is reachable only from
@@ -199,6 +200,30 @@ function setupAgent({ web = null } = {}) {
   handle('agent:files', ({ sessionId, query }, event) => owned(sessionId, event).session.suggestFiles(query));
 
   handle('agent:mode', ({ sessionId, mode }, event) => owned(sessionId, event).session.setMode(mode));
+  // The approval level (autonomy.js). Back to "ask" at once; anything looser only after the person agrees in a window the
+  // page can't draw or click, and only for this session.
+  handle('agent:autonomy', async ({ sessionId, level }, event) => {
+    const { session } = owned(sessionId, event);
+    if (level === 'ask') {
+      session.setAutonomy('ask');
+      return 'ask';
+    }
+    const about = Object.hasOwn(DESCRIPTIONS, level) ? DESCRIPTIONS[level] : null;
+    if (!about) throw new AgentError('bad_args', 'The approval level is ask, risky or all.');
+    const window = BrowserWindow.fromWebContents(event.sender) ?? undefined;
+    const choice = await dialog.showMessageBox(window, {
+      type: 'warning',
+      title: 'Quo Code',
+      message: about.message,
+      detail: `In the project ${session.name}\n\n${about.detail}\n\nYou can go back to asking at any time.`,
+      buttons: [about.button, 'Keep asking'],
+      defaultId: 1, // Enter keeps asking.
+      cancelId: 1,
+      noLink: true,
+    }).catch(() => ({ response: 1 }));
+    if (choice.response === 0) session.setAutonomy(level);
+    return session.autonomy;
+  });
 
   // The file panel: the person looking at their project. Reading only, with the rules the agent's own reading has.
   handle('agent:browse', ({ sessionId, path: input }, event) => owned(sessionId, event).session.browse(typeof input === 'string' ? input : '.'));

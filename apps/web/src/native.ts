@@ -11,6 +11,9 @@ import type { ChatReply } from './providers/wire';
  * `unwrap` turns that into a value or a thrown NativeError.
  */
 
+/** Code mode's approval levels: ask every time, ask only for risky steps, or don't ask (pushes always ask). */
+export type Autonomy = 'ask' | 'risky' | 'all';
+
 export interface NativeFailure {
   code: string;
   message: string;
@@ -235,6 +238,8 @@ export interface DesktopAgent {
   start: (projectId: string, options?: { autoReadOnly?: boolean; compact?: boolean; creditQuo?: boolean; allowPush?: boolean; confirm?: boolean }) => Promise<NativeResult<CodeSessionInfo>>;
   tool: (sessionId: string, name: string, args: Record<string, unknown>) => Promise<NativeResult<{ ok: boolean; text: string; display?: Record<string, unknown> }>>;
   mode: (sessionId: string, mode: 'work' | 'plan') => Promise<NativeResult<unknown>>;
+  /** How much runs without asking (desktop agent/autonomy.js); main asks the person before loosening it. Older apps lack it. */
+  autonomy?: (sessionId: string, level: Autonomy) => Promise<NativeResult<Autonomy>>;
   /** Files in the project matching part of a name, best first. */
   files: (sessionId: string, query: string) => Promise<NativeResult<string[]>>;
   undo: (sessionId: string, count: number) => Promise<NativeResult<UndoResult>>;

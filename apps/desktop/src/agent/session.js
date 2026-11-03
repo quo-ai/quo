@@ -3,6 +3,7 @@
 const fs = require('node:fs');
 const files = require('./files');
 const { hideSecretDiffs, isReadOnlyCommand } = require('./commands');
+const { LEVELS, needsAsking } = require('./autonomy');
 const { runCommand } = require('./exec');
 const commits = require('./commit');
 const pushes = require('./push');
@@ -67,11 +68,18 @@ class AgentSession {
     this.allowedCommands = new Set();
     this.calls = 0;
     this.mode = 'work'; // or 'plan': read-only
+    this.autonomy = 'ask'; // how much runs without asking (autonomy.js); only the person changes it (ipc.js)
     this.log = new ChangeLog();
     this.background = new BackgroundCommands({ cwd: this.rootReal, env: this.env }); // commands left running (run_command with background: true)
-    this.external = new ExternalReads({ rootReal: this.rootReal, approve: request => this.approve(request), context: () => ({ ...(this.compact ? COMPACT_LIMITS : {}) }) }); // reading outside the project, folder by approved folder
+    this.external = new ExternalReads({ rootReal: this.rootReal, approve: request => (needsAsking(this.autonomy, 'external') ? this.approve(request) : 'once'), context: () => ({ ...(this.compact ? COMPACT_LIMITS : {}) }) }); // reading outside the project, folder by approved folder
     this.plan = []; // the agent's own checklist for the task (update_plan): shown to the person, changes nothing
     this.notesSeen = new Set(); // folders whose own AGENTS.md / CLAUDE.md has already come with a result
+  }
+
+  /** The approval level (autonomy.js). ipc.js calls this only after the person agreed in a native window. */
+  setAutonomy(level) {
+    if (!LEVELS.includes(level)) throw new AgentError('bad_args', 'The approval level is ask, risky or all.');
+    this.autonomy = level;
   }
 
   setMode(mode) {
@@ -180,7 +188,7 @@ class AgentSession {
   async openTarget(input) {
     if (!this.openExternal) throw new AgentError('unavailable', 'Opening a browser isn’t available here.');
     const plan = planOpen(this.ctx, input);
-    let answer = this.allowOpen ? 'once' : 'ask';
+    let answer = this.allowOpen || !needsAsking(this.autonomy, 'open') ? 'once' : 'ask';
     if (answer === 'ask') {
       answer = await this.approve({
         kind: 'open',
@@ -228,7 +236,7 @@ class AgentSession {
 
   /** Shows an edit or a new file to the user, and writes it only if they agree. */
   async change(plan) {
-    let answer = this.allowEdits ? 'once' : 'ask';
+    let answer = this.allowEdits || !needsAsking(this.autonomy, 'edit') ? 'once' : 'ask';
     if (answer === 'ask') {
       const verb = plan.kind === 'create' ? 'Create' : plan.kind === 'overwrite' ? 'Replace' : 'Edit';
       answer = await this.approve({
@@ -257,7 +265,8 @@ class AgentSession {
     if (background) this.background.assertRoom();
     const warning = checkGitCommand(command, { allowPush: this.allowPush }); // commits and pushes have their own tools
     const readOnly = !background && this.autoReadOnly && isReadOnlyCommand(command);
-    let answer = readOnly || this.allowedCommands.has(command) ? 'once' : 'ask';
+    const unasked = !needsAsking(this.autonomy, 'command', { command }); // the person's approval level (autonomy.js)
+    let answer = readOnly || unasked || this.allowedCommands.has(command) ? 'once' : 'ask';
     if (answer === 'ask') {
       answer = await this.approve({
         kind: 'command',
@@ -278,13 +287,13 @@ class AgentSession {
     const status = result.aborted ? 'was stopped' : result.timedOut ? `timed out after ${timeoutMs / 1000}s` : `exited with code ${result.exitCode ?? result.signal}`;
     const output = readOnly ? hideSecretDiffs(result.output) : result.output;
     const text = redactSecrets(`$ ${command}\n${output.trimEnd() || '(no output)'}\n[${status}]`);
-    return { ok: true, text, display: { kind: 'command', command, exitCode: result.exitCode, timedOut: result.timedOut, aborted: result.aborted, ...(readOnly ? { auto: true } : {}), output: clip(redactSecrets(output.trimEnd()), 4000) } };
+    return { ok: true, text, display: { kind: 'command', command, exitCode: result.exitCode, timedOut: result.timedOut, aborted: result.aborted, ...(readOnly || unasked ? { auto: true } : {}), output: clip(redactSecrets(output.trimEnd()), 4000) } };
   }
 
-  /** Shows the commit (message, files, who it's by) to the user, and makes it only if they agree. Every commit asks. */
+  /** Shows the commit (message, files, who it's by) to the user, and makes it only if they agree. Every commit asks, unless the person chose "all" for the session. */
   async commit(args) {
     const plan = await commits.planCommit({ rootReal: this.rootReal, env: this.env, credit: this.creditQuo }, args);
-    const answer = await this.approve({
+    const answer = !needsAsking(this.autonomy, 'commit') ? 'once' : await this.approve({
       kind: 'commit',
       title: `Commit ${plan.files.length} ${plan.files.length === 1 ? 'file' : 'files'} to ${plan.branch}?`,
       detail: `In the project ${this.name}\nBy ${plan.author}\n\n${plan.files.join('\n')}\n\n${plan.text}\n\n${plan.credit ? 'The last line credits Quo as co-author. You can turn that off in Models & storage → Code.' : 'Nothing is pushed.'}`,

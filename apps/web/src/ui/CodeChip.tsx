@@ -1,6 +1,7 @@
-import { FolderLock, ListChecks } from 'lucide-react';
+import { FolderLock } from 'lucide-react';
 import type { CodeSession } from '../agent/session';
-import type { CodeProject } from '../native';
+import type { Autonomy, CodeProject } from '../native';
+import { ModeMenu } from './chat/ModeMenu';
 import { ProjectMenu } from './chat/ProjectMenu';
 
 interface CodeChipProps {
@@ -11,6 +12,9 @@ interface CodeChipProps {
   /** Plan mode: only reading. */
   plan: boolean;
   onTogglePlan: () => void;
+  /** How much runs without asking (chat/ModeMenu.tsx). */
+  autonomy: Autonomy;
+  onAutonomy: (level: Autonomy) => void;
   onSwitchProject: (project: CodeProject) => void;
   onChooseFolder: () => void;
   onRemove: () => void;
@@ -23,7 +27,7 @@ interface CodeChipProps {
  * Code mode on: adding a folder is what makes it available, and the model uses it when the request needs it. Sending a
  * message that is about the project adds the folder used last by itself (useCodeMode.autoStart).
  */
-export function CodeChip({ starting, disabled, session, plan, onTogglePlan, onSwitchProject, onChooseFolder, onRemove, unavailable }: CodeChipProps) {
+export function CodeChip({ starting, disabled, session, plan, onTogglePlan, autonomy, onAutonomy, onSwitchProject, onChooseFolder, onRemove, unavailable }: CodeChipProps) {
   if (unavailable) {
     return (
       <button type="button" className="chip empty" aria-disabled="true" title={unavailable} onClick={event => event.preventDefault()}>
@@ -35,9 +39,7 @@ export function CodeChip({ starting, disabled, session, plan, onTogglePlan, onSw
     <>
       <ProjectMenu project={session?.project ?? null} info={session?.info ?? null} disabled={disabled} starting={starting} onPick={onSwitchProject} onBrowse={onChooseFolder} onRemove={onRemove} />
       {session && (
-        <button type="button" className="chip press plan-chip" aria-pressed={plan} disabled={disabled} onClick={onTogglePlan} title="Plan mode: Quo only reads, and suggests a plan. Nothing is changed or run.">
-          <ListChecks size={14} /> Plan
-        </button>
+        <ModeMenu plan={plan} autonomy={autonomy} disabled={disabled} onTogglePlan={onTogglePlan} onAutonomy={onAutonomy} />
       )}
     </>
   );

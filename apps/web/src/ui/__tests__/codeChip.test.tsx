@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import type { CodeSession } from '../../agent/session';
 import { CodeChip } from '../CodeChip';
 
-const base = { starting: false, disabled: false, plan: false, onTogglePlan: () => {}, onSwitchProject: () => {}, onChooseFolder: () => {}, onRemove: () => {} };
+const base = { starting: false, disabled: false, plan: false, onTogglePlan: () => {}, autonomy: 'ask' as const, onAutonomy: () => {}, onSwitchProject: () => {}, onChooseFolder: () => {}, onRemove: () => {} };
 const session = { project: { id: 'p1', name: 'my-app', hint: '~/work' }, info: { git: { branch: 'main', changed: 3 }, hint: '~/work' } } as unknown as CodeSession;
 
 describe('the folder next to the message box', () => {
@@ -12,6 +12,7 @@ describe('the folder next to the message box', () => {
     const html = renderToStaticMarkup(createElement(CodeChip, { ...base, session: null }));
     expect(html).toContain('No folder');
     expect(html).not.toContain('Plan');
+    expect(html).not.toContain('Ask first');
     expect(html).not.toMatch(/>Code</);
   });
 
@@ -20,8 +21,16 @@ describe('the folder next to the message box', () => {
     expect(html).toContain('my-app');
     expect(html).toContain('main');
     expect(html).toContain('+3');
-    expect(html).toContain('Plan');
+    expect(html).toContain('Ask first'); // the mode menu, which also holds plan mode
     expect(html).not.toContain('No folder');
+  });
+
+  it('shows plan mode, or how much Quo does without asking, on the mode chip', () => {
+    expect(renderToStaticMarkup(createElement(CodeChip, { ...base, session, plan: true }))).toContain('Plan');
+    expect(renderToStaticMarkup(createElement(CodeChip, { ...base, session, autonomy: 'risky' }))).toContain('Ask if risky');
+    const all = renderToStaticMarkup(createElement(CodeChip, { ...base, session, autonomy: 'all' }));
+    expect(all).toContain('Don’t ask');
+    expect(all).toContain('aria-pressed="true"');
   });
 });
 

@@ -224,6 +224,8 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
               onSwitchProject={project => void codeMode.switchProject(project)}
               onChooseFolder={() => void codeMode.changeFolder()}
               onTogglePlan={() => void codeMode.togglePlan()}
+              autonomy={codeMode.autonomy}
+              onAutonomy={level => void codeMode.chooseAutonomy(level)}
               onRemove={codeMode.end}
             />
           )}
