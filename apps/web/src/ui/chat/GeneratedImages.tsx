@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { Download, ImageOff } from 'lucide-react';
 import type { GeneratedImage } from '../../chat/types';
 import { Facts } from '../Facts';
+import { ImageViewer } from '../ImageViewer';
 
 const ratio = (aspect: string) => aspect.replace(':', ' / ');
 /** What an image cost, as replies show it: free, or the credits with up to two decimals. */
@@ -13,12 +15,17 @@ const extension = (dataUrl: string) => /^data:image\/(png|jpeg|webp)/.exec(dataU
  * model downloaded) or in Quo's cloud from the prompt alone.
  */
 export function GeneratedImages({ images }: { images: GeneratedImage[] }) {
+  const [viewing, setViewing] = useState<number | null>(null);
+  const shown = viewing === null ? null : images[viewing];
   return (
     <div className="gen-images">
+      {shown?.dataUrl && <ImageViewer src={shown.dataUrl} alt={shown.prompt} caption={shown.prompt} fileName={`quo-image-${(viewing ?? 0) + 1}.${extension(shown.dataUrl)}`} onClose={() => setViewing(null)} />}
       {images.map((image, index) => (
         <figure key={image.id} className={`gen-image ${image.status}`}>
           {image.status === 'done' && image.dataUrl ? (
-            <img src={image.dataUrl} alt={image.prompt} style={{ aspectRatio: ratio(image.aspect) }} />
+            <button type="button" className="image-open" onClick={() => setViewing(index)} title="See it full size" aria-label={`See full size: ${image.prompt}`}>
+              <img src={image.dataUrl} alt={image.prompt} style={{ aspectRatio: ratio(image.aspect) }} />
+            </button>
           ) : (
             <div className="gen-frame" style={{ aspectRatio: ratio(image.aspect) }} role={image.status === 'creating' ? 'status' : undefined}>
               {image.status === 'creating' ? <><span className="bar" /> {image.edit ? 'Changing the image…' : 'Creating an image…'}{image.progress ? ` Step ${image.progress.step} of ${image.progress.steps}` : ''}</> : <><ImageOff size={18} /> {image.error ?? 'The image couldn’t be made.'}</>}

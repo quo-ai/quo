@@ -1,7 +1,8 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Download, MessageSquare, X } from 'lucide-react';
 import type { Conversation, GeneratedImage } from '../chat/types';
 import { Facts } from './Facts';
+import { ImageViewer } from './ImageViewer';
 
 export interface MadeImage {
   image: GeneratedImage & { dataUrl: string };
@@ -29,18 +30,21 @@ const extension = (dataUrl: string) => /^data:image\/(png|jpeg|webp)/.exec(dataU
 export function ImagesSheet({ conversations, onOpenChat, onClose }: { conversations: Conversation[]; onOpenChat: (id: string) => void; onClose: () => void }) {
   const sheet = useRef<HTMLDivElement>(null);
   const images = imagesIn(conversations);
+  const [viewing, setViewing] = useState<number | null>(null);
+  const shown = viewing === null ? null : images[viewing];
 
   useEffect(() => {
     sheet.current?.focus();
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
+      if (event.key === 'Escape' && viewing === null) onClose(); // Esc closes the full-size image first
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [onClose]);
+  }, [onClose, viewing]);
 
   return (
     <div className="scrim" onPointerDown={event => { if (event.target === event.currentTarget) onClose(); }}>
+      {shown && <ImageViewer src={shown.image.dataUrl} alt={shown.image.prompt} caption={shown.image.prompt} fileName={`quo-image-${(viewing ?? 0) + 1}.${extension(shown.image.dataUrl)}`} onClose={() => setViewing(null)} />}
       <div className="sheet glass thick images-sheet" role="dialog" aria-modal="true" aria-labelledby="images-title" tabIndex={-1} ref={sheet}>
         <div className="sheet-head">
           <h2 id="images-title">Images</h2>
@@ -54,7 +58,9 @@ export function ImagesSheet({ conversations, onOpenChat, onClose }: { conversati
             <div className="image-grid">
               {images.map(({ image, chat }, index) => (
                 <figure key={`${chat.id}-${image.id}`} className="image-tile">
-                  <img src={image.dataUrl} alt={image.prompt} loading="lazy" />
+                  <button type="button" className="image-open" onClick={() => setViewing(index)} title="See it full size" aria-label={`See full size: ${image.prompt}`}>
+                    <img src={image.dataUrl} alt={image.prompt} loading="lazy" />
+                  </button>
                   <figcaption>
                     <span className="image-prompt" title={image.prompt}>{image.prompt}</span>
                     <span className="image-facts"><Facts items={[image.model ?? null, image.where === 'device' ? 'On this computer' : 'In the cloud']} /></span>

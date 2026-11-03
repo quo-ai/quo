@@ -122,3 +122,14 @@ code.path { padding: 1px 6px; border-radius: var(--r-inner); background: var(--r
 .image-facts { color: var(--ink-3); }
 .image-actions { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
 .images-empty { color: var(--ink-3); }
+
+/* An image full screen (ui/ImageViewer.tsx): fitted first, then zoomed and moved. */
+.image-open { display: block; width: 100%; padding: 0; border: 0; background: none; cursor: zoom-in; border-radius: inherit; }
+.image-viewer { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center; background: var(--ground); overflow: hidden; touch-action: none; outline: none; animation: rise var(--d-medium) var(--e-out); }
+.image-viewer img { max-width: 94vw; max-height: 86vh; object-fit: contain; transform-origin: center; cursor: zoom-in; user-select: none; -webkit-user-drag: none; transition: transform var(--d-micro) var(--e-out); }
+.image-viewer img.zoomed { cursor: grab; transition: none; }
+.image-viewer img.zoomed:active { cursor: grabbing; }
+.viewer-bar { position: absolute; top: 12px; right: 12px; z-index: 1; display: flex; align-items: center; gap: 4px; padding: 4px; border-radius: var(--r-pill); background: var(--sheet); border: var(--bw) solid var(--rule); }
+.viewer-scale { min-width: 5ch; text-align: center; font-size: var(--t-meta); color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.viewer-caption { position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); z-index: 1; max-width: min(720px, 90vw); max-height: 20vh; overflow-y: auto; margin: 0; padding: 8px 14px; border-radius: var(--r-card); background: var(--sheet); border: var(--bw) solid var(--rule); color: var(--ink-2); font-size: var(--t-meta); text-align: center; }
+@media (prefers-reduced-motion: reduce) { .image-viewer, .image-viewer img { animation: none; transition: none; } }
