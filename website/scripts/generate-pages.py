@@ -221,7 +221,7 @@ terms = f'''<h1>Terms of Use</h1>
 <h2>Accounts, Quo Pro and Quo Sync</h2>
 <p>You don’t need an account to use Quo. An account (an email address, confirmed with a code) is needed for Quo Sync, and for Quo Pro and paid cloud models. Keep your sign-in secure: you’re responsible for what is done with your account. You can delete your account yourself at any time (<strong>Settings → Sync</strong> in the Android app, <strong>Plan &amp; credits</strong> in Quo Web and the desktop app), once any running plan has been cancelled.</p>
 <h3>Buying a plan or credits</h3>
-<p>Quo Pro, Quo Sync and credit packs are bought on the web or in the desktop app and are sold through Link, Stripe’s merchant of record service, which takes the payment and handles tax. The price, renewal and cancellation terms are shown at checkout. Cancelling stops renewal; the plan runs to the end of the period you paid for. Refunds are explained in our <a href="/refunds/">refund policy</a>.</p>
+<p>Quo Pro, Quo Sync and credit packs are bought on the web or in the desktop app and are sold through Link, Stripe’s merchant of record service, which takes the payment and handles tax. The price, renewal and cancellation terms are shown at checkout. Credits are ready to use as soon as you pay; by agreeing to these terms at checkout you ask for that, and you agree that a refund within 14 days leaves out the credits you have already used. Cancelling stops renewal; the plan runs to the end of the period you paid for. Refunds are explained in our <a href="/refunds/">refund policy</a>.</p>
 <h3>Quo Pro and credits</h3>
 <p>Paid cloud models and making images use credits. Each model shows what a typical message costs before you choose it. Credits come from:</p>
 <ul>
@@ -371,10 +371,11 @@ refunds = f'''<h1>Refund policy</h1>
 
 <h2>14 days to change your mind</h2>
 <ul>
-<li><strong>Quo Pro and Quo Sync.</strong> Ask within 14 days of your first payment, or of a renewal, and we refund that payment in full. The plan then ends.</li>
-<li><strong>Credit packs.</strong> Ask within 14 days of buying a pack and we refund the credits you haven’t used. If you haven’t used any, that is the full price.</li>
+<li><strong>Quo Pro.</strong> Ask within 14 days of a payment (your first, or a renewal) and we refund it, less the credits you have already used from it. Each used credit counts as $0.012, the price of a credit in the 1,000-credit pack. The plan then ends.</li>
+<li><strong>Credit packs.</strong> Ask within 14 days of buying a pack and we refund the credits you haven’t used, at the price you paid for them. If you haven’t used any, that is the full price.</li>
+<li><strong>Quo Sync on its own.</strong> Ask within 14 days of a payment and we refund it in full. The plan then ends.</li>
 </ul>
-<p>When a payment is refunded, the credits still unused from it are removed from your account.</p>
+<p>Credits are ready to use as soon as you pay, and they cost us money when you use them. That is why a refund leaves out the credits already used; you agree to this when you accept our terms at checkout. When a payment is refunded, the credits still unused from it are removed from your account.</p>
 
 <h2>How to ask</h2>
 <ul>

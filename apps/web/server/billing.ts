@@ -111,6 +111,8 @@ export function checkoutParams(product: ProductId, priceId: string, userId: stri
     mode: plan ? 'subscription' : 'payment',
     line_items: [{ price: priceId, quantity: 1 }],
     managed_payments: { enabled: true },
+    // The buyer agrees to the terms, which say credits are ready at once and a refund leaves out the ones used.
+    consent_collection: { terms_of_service: 'required' },
     client_reference_id: userId,
     metadata: tags,
     ...(plan ? { subscription_data: { metadata: tags } } : { payment_intent_data: { metadata: tags } }),

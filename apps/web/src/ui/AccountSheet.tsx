@@ -4,6 +4,7 @@ import {
   ApiError, checkout, deleteAccount, openBillingPortal, signOut, signOutEverywhere, startSignIn, verifySignIn, type Account, type ProductId,
 } from '../cloud/account';
 import { PRICES } from '../cloud/prices';
+import { REFUNDS_URL } from '../platform';
 import { ProPerks } from './ProPerks';
 import { disableSync } from '../sync';
 import { toast } from './Toasts';
@@ -241,6 +242,7 @@ function SignedIn({ account, onClose }: { account: Account; onClose: () => void 
         ))}
       </div>
       <p className="note">Credits from packs last 12 months. Monthly Pro credits reset each month.</p>
+      <p className="note">Credits are ready as soon as you pay, so a refund within 14 days leaves out the credits you’ve used. <a href={REFUNDS_URL} target="_blank" rel="noreferrer noopener">Refund policy</a></p>
 
       <InviteFriends />
 

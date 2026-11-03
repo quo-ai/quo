@@ -120,6 +120,6 @@ it('a returning buyer is named by their customer only; a new one by email, and a
   expect(checkoutParams('pack_1000', 'price_1', 'u', tags, 'a@example.com', 'cus_1')).not.toHaveProperty('customer_creation');
   expect(checkoutParams('pack_1000', 'price_1', 'u', tags, 'a@example.com', null)).toMatchObject({ customer_email: 'a@example.com', customer_creation: 'always', payment_intent_data: { metadata: tags } });
   const plan = checkoutParams('pro_monthly', 'price_2', 'u', tags, 'a@example.com', null);
-  expect(plan).toMatchObject({ mode: 'subscription', customer_email: 'a@example.com', subscription_data: { metadata: tags }, managed_payments: { enabled: true } });
+  expect(plan).toMatchObject({ mode: 'subscription', customer_email: 'a@example.com', subscription_data: { metadata: tags }, managed_payments: { enabled: true }, consent_collection: { terms_of_service: 'required' } });
   expect(plan).not.toHaveProperty('customer_creation');
 });

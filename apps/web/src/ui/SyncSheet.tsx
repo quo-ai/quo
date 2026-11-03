@@ -5,6 +5,7 @@ import { newRecoveryKey } from '../sync/crypto';
 import { createSync, deleteCloudCopy, disableSync, getCloudStatus, joinSync, JoinError, syncNow, useSyncStatus } from '../sync';
 import { formatBytes, percent, timeAgo } from './format';
 import { toast } from './Toasts';
+import { REFUNDS_URL } from '../platform';
 
 type Cloud = Awaited<ReturnType<typeof getCloudStatus>>;
 
@@ -120,7 +121,7 @@ function GetPlan() {
         <button className="btn btn-primary press" disabled={Boolean(busy)} onClick={() => void buy('sync_yearly')}>Quo Sync, $24 a year</button>
         <button className="btn btn-soft press" disabled={Boolean(busy)} onClick={() => void buy('pro_yearly')}>Quo Pro, $99 a year</button>
       </div>
-      <p className="note" style={{ marginTop: 10 }}>Your chats stay on your device and work offline either way. Sync is only for keeping them in step.</p>
+      <p className="note" style={{ marginTop: 10 }}>Your chats stay on your device and work offline either way. Sync is only for keeping them in step. <a href={REFUNDS_URL} target="_blank" rel="noreferrer noopener">Refund policy</a></p>
     </div>
   );
 }
