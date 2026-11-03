@@ -1,5 +1,6 @@
 import cluster, { type Worker } from 'node:cluster';
 import { readFileSync, unwatchFile, watchFile, writeFileSync } from 'node:fs';
+import { parseEnv } from 'node:util';
 
 /**
  * Deploys without dropping a request. With QUO_RELOAD_FILE set, serve.ts runs this supervisor: it holds the port and
@@ -8,6 +9,9 @@ import { readFileSync, unwatchFile, watchFile, writeFileSync } from 'node:fs';
  * the new code started) and tells the old worker to drain: no new requests, finish the ones it has (a chat stream, an
  * image), then exit, within DRAIN_MS. A new worker that fails to start leaves the old one serving. A worker that dies
  * on its own is replaced. Stopping the service (Ctrl+C) drains every worker the same way before exiting.
+ *
+ * Each new worker gets the settings file (node's --env-file) as it is now, so a changed or removed setting goes live
+ * with a reload too, not only with a restart.
  */
 export const DRAIN_MS = 120_000;
 
@@ -19,9 +23,28 @@ const readToken = (file: string) => {
   }
 };
 
+const readSettings = (file: string): Record<string, string> | null => {
+  try {
+    return parseEnv(readFileSync(file, 'utf8')) as Record<string, string>;
+  } catch {
+    return null; // unreadable for a moment: keep the settings the workers have
+  }
+};
+
+/** Puts the settings file's values into env, removes the ones it no longer has, and returns the keys it now holds. */
+export function refreshSettings(env: NodeJS.ProcessEnv, previous: string[], fresh: Record<string, string> | null): string[] {
+  if (!fresh) return previous;
+  for (const key of previous) if (!(key in fresh)) delete env[key];
+  Object.assign(env, fresh);
+  return Object.keys(fresh);
+}
+
 export function runReloadable(reloadFile: string, ackFile?: string): void {
   let current: Worker | null = null;
   let stopping = false;
+  // Workers inherit the supervisor's environment, which node filled from the settings file when the service started.
+  const settingsFile = process.execArgv.find(arg => arg.startsWith('--env-file='))?.slice('--env-file='.length);
+  let settingsKeys = settingsFile ? Object.keys(readSettings(settingsFile) ?? {}) : [];
 
   const drain = (worker: Worker) => {
     if (!worker.isConnected()) return;
@@ -31,6 +54,7 @@ export function runReloadable(reloadFile: string, ackFile?: string): void {
   };
 
   const start = (token: string) => {
+    if (settingsFile && token) settingsKeys = refreshSettings(process.env, settingsKeys, readSettings(settingsFile));
     const worker = cluster.fork();
     let listening = false;
     worker.once('listening', () => {
