@@ -140,3 +140,8 @@ code.path { padding: 1px 6px; border-radius: var(--r-inner); background: var(--r
 /* A labelled choice in a settings box (Picture size, ui/DeviceImageModels.tsx). */
 .field-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; font-size: var(--t-small); color: var(--ink-2); }
 .field-row .segmented { margin: 0; flex: 0 1 240px; }
+
+/* Tool servers (MCP) in Code settings: the example entry, and the file's buttons. */
+.tool-server-example { margin: 4px 0 0; padding: 10px 12px; }
+.tool-server-actions { margin-top: 12px; }
+.tool-server-problem { color: var(--caution); }

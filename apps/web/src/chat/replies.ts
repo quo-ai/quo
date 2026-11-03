@@ -9,6 +9,7 @@ import type { ThinkChoice, ThinkLevel } from '../../shared/thinking';
 import { wireThinking } from './thinking';
 import { openProjectTool, type FolderOpener } from '../agent/folder';
 import { runSubagent, TASK_TOOL } from '../agent/subagent';
+import { isToolServerTool, runToolServerTool, toolServersFor } from '../agent/toolServers';
 import type { CodeSession } from '../agent/session';
 import type { AgentMessage, StepReply } from '../agent/types';
 import { applyUsage } from '../cloud/account';
@@ -78,6 +79,8 @@ export async function replyWithAgent(choice: CloudChoice | OwnChoice | LocalChoi
   const light = choice.kind === 'cloud' && choice.model.free && !choice.model.agent;
   // Helpers (the task tool) are for models with room to spare: not offline ones, whose window is small, nor the free one.
   const toolsNow = () => (!session ? [FOLDER_TOOL, ...(webBefore ? WEB_TOOLS : [])] : choice.kind === 'local' || light ? session.tools : [...session.tools, TASK_TOOL]);
+  // Tools from tool servers the person turned on (desktop), beside Quo's own; not for the free model, whose tokens Quo pays.
+  const toolServers = light ? [] : await toolServersFor(choice.kind === 'local');
   // Web search turned on or off since this chat's last message: say so, or the model may repeat what it said before.
   const conversation: AgentMessage[] = noteWebChange(prior.filter(m => modelText(m)).map(m => ({ role: m.role, content: modelText(m) })), chatId, toolsNow().includes('web_search'));
   const platform = session?.info.platform ?? (typeof window !== 'undefined' ? window.quoDesktop?.platform : undefined) ?? 'linux';
@@ -93,6 +96,7 @@ export async function replyWithAgent(choice: CloudChoice | OwnChoice | LocalChoi
       signal,
       onText,
       ...(extra.role === 'summarize' ? {} : { environment: environmentFor(choice) }),
+      ...(extra.role ? {} : { toolServers }),
       ...extra,
     };
   };
@@ -128,6 +132,8 @@ export async function replyWithAgent(choice: CloudChoice | OwnChoice | LocalChoi
         return opened.result;
       }
       if (!session && webBefore && WEB_TOOLS.includes(name)) return runWebTool(folder!.webSessionId!, name, args, choice.kind === 'local');
+      // A tool server's tool: through the Code session's approvals, or the chat's own (asked about in the same window).
+      if (isToolServerTool(name)) return session ? session.run(name, args) : runToolServerTool(chatId ?? 'chat', name, args, signal);
       if (!session) return { ok: false, text: 'No folder is open yet. Call open_project first if the request needs the person’s files.', display: { kind: 'error' } };
       const active = session;
       return name === TASK_TOOL

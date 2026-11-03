@@ -162,6 +162,36 @@ describe('the helper behind the task tool', () => {
   });
 });
 
+describe('tools from tool servers the person added (desktop)', () => {
+  const serverTool = (name: string, parameters: unknown = { type: 'object', properties: { q: { type: 'string' } } }) => ({ name, description: `The ${name} tool.`, parameters });
+
+  it('go beside Quo’s own tools after a check, and leave the prompt as it is', async () => {
+    const token = await signIn('agent-mcp@example.com');
+    const requests = stubUpstream([{ choices: [{ delta: { content: 'ok' }, finish_reason: 'stop' }] }, { choices: [{ delta: { content: 'ok' }, finish_reason: 'stop' }] }]);
+    await (await step(token, { agent: { tools: ALL_TOOLS, project: 'demo' } })).text();
+    await (await step(token, { agent: { tools: ALL_TOOLS, project: 'demo', toolServers: [
+      serverTool('mcp__github__list_issues'),
+      serverTool('read_file'), // not a tool server's name: can't replace Quo's own
+      serverTool('mcp__bad name'),
+      serverTool('mcp__shapeless', { type: 'string' }),
+      serverTool('mcp__huge', { type: 'object', properties: { q: { type: 'string', description: 'x'.repeat(20_000) } } }),
+      serverTool('mcp__github__list_issues'), // twice
+    ] } })).text();
+    const names = (n: number) => (requests[n].body.tools as { function: { name: string } }[]).map(t => t.function.name);
+    expect(names(1)).toEqual([...names(0), 'mcp__github__list_issues']);
+    expect((requests[1].body.messages as { content: string }[])[0].content).toBe((requests[0].body.messages as { content: string }[])[0].content);
+  });
+
+  it('never reach a helper or the summariser', async () => {
+    const token = await signIn('agent-mcp2@example.com');
+    const requests = stubUpstream([{ choices: [{ delta: { content: 'ok' }, finish_reason: 'stop' }] }, { choices: [{ delta: { content: 'ok' }, finish_reason: 'stop' }] }]);
+    await (await step(token, { agent: { tools: ALL_TOOLS, project: 'demo', role: 'explore', toolServers: [serverTool('mcp__github__list_issues')] } })).text();
+    await (await step(token, { agent: { tools: [], project: 'demo', role: 'summarize', toolServers: [serverTool('mcp__github__list_issues')] } })).text();
+    expect((requests[0].body.tools as { function: { name: string } }[]).map(t => t.function.name)).toEqual(READ_TOOLS);
+    expect(JSON.stringify(requests[1].body.tools ?? [])).not.toMatch(/mcp__/);
+  });
+});
+
 describe('tool calls coming back', () => {
   it('are put together from the pieces they arrive in, then sent on before done, and billed', async () => {
     const token = await signIn('agent-stream@example.com');

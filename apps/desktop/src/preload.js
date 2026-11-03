@@ -27,6 +27,18 @@ contextBridge.exposeInMainWorld('quoDesktop', {
   version,
   // Light, dark or the system's: every window follows it, the approval window too.
   appearance: { set: (mode, look) => invoke('app:theme', { mode, look }) },
+  // Tool servers (MCP, mcp/): added only in the person's own file; turning one on shows what it runs in a native dialog,
+  // and each tool call is approved in Quo's approval window. The page sees names, states and tools, never a command.
+  toolServers: {
+    state: () => invoke('mcp:state'),
+    tools: () => invoke('mcp:tools'),
+    set: (name, on) => invoke('mcp:set', { name: String(name), on: on === true }),
+    reload: () => invoke('mcp:reload'),
+    edit: () => invoke('mcp:edit'),
+    call: (chatId, name, args) => invoke('mcp:call', { chatId: String(chatId), name: String(name), args }),
+    abort: chatId => invoke('mcp:abort', { chatId: String(chatId) }),
+    onEvent: callback => subscribe('mcp:event', callback),
+  },
   // Code mode: the project folder is chosen in a native dialog and edits and commands
   // are approved in native dialogs, so none of this takes a path or an approval from the page.
   agent: {

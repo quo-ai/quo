@@ -247,6 +247,40 @@ export function toolDefinitions(names: string[]) {
   return AGENT_TOOLS.filter(tool => names.includes(tool.name)).map(tool => ({ type: 'function' as const, function: { name: tool.name, description: tool.description, parameters: tool.parameters } }));
 }
 
+/**
+ * A tool from a tool server (MCP) the person added in the desktop app: named `mcp__<server>__<tool>`, described and
+ * shaped by that server. The desktop app runs it after asking the person; the server and the app pass these on only
+ * after `toolServerTools` checked them, beside (never instead of) Quo's own tools.
+ */
+export interface ToolServerTool {
+  name: string;
+  description: string;
+  parameters: Record<string, unknown>;
+}
+
+export const TOOL_SERVER_PREFIX = 'mcp__';
+export const MAX_TOOL_SERVER_TOOLS = 40;
+const TOOL_SERVER_NAME = /^mcp__[A-Za-z0-9_-]{1,59}$/;
+
+/** The tool-server tools in `input` that may go to a model: well named, described briefly, a small object schema. */
+export function toolServerTools(input: unknown): ToolServerTool[] {
+  if (!Array.isArray(input)) return [];
+  const seen = new Set<string>();
+  const tools: ToolServerTool[] = [];
+  for (const raw of input.slice(0, MAX_TOOL_SERVER_TOOLS)) {
+    const tool = raw as { name?: unknown; description?: unknown; parameters?: unknown };
+    if (typeof tool?.name !== 'string' || !TOOL_SERVER_NAME.test(tool.name) || seen.has(tool.name)) continue;
+    const parameters = tool.parameters as Record<string, unknown> | undefined;
+    if (!parameters || typeof parameters !== 'object' || Array.isArray(parameters) || parameters.type !== 'object' || JSON.stringify(parameters).length > 16_000) continue;
+    seen.add(tool.name);
+    tools.push({ name: tool.name, description: typeof tool.description === 'string' ? tool.description.slice(0, 1200) : '', parameters });
+  }
+  return tools;
+}
+
+export const toolServerDefinitions = (tools: ToolServerTool[]) =>
+  tools.map(tool => ({ type: 'function' as const, function: { name: tool.name, description: tool.description, parameters: tool.parameters } }));
+
 export type Platform = 'win32' | 'darwin' | 'linux';
 
 /** The notes a project keeps for coding agents, as the desktop app read them: only these two files are looked at. */

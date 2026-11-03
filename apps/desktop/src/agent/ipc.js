@@ -8,6 +8,7 @@ const { trusted } = require('../trust');
 const { AgentError, checkProjectRoot, resolveInside } = require('./safety');
 const { RepoCache } = require('./repos');
 const { askInApp } = require('../approval/window');
+const { callWithApproval } = require('../mcp/approve');
 const { findRepoRoot, gitInfo } = require('./git');
 const { whereIs } = require('./location');
 const { readInstructions } = require('./instructions');
@@ -64,7 +65,7 @@ class Projects {
 /** What the page may know about a project: an id, a name and roughly where it is, never the path itself. */
 const publicProject = project => ({ id: project.id, name: project.name, hint: whereIs(project.path) });
 
-function setupAgent({ web = null } = {}) {
+function setupAgent({ web = null, mcp = null } = {}) {
   const userData = app.getPath('userData');
   const projects = new Projects(path.join(userData, 'code-projects.json'));
   const repos = new RepoCache({ directory: path.join(userData, 'code-repos') });
@@ -191,7 +192,7 @@ function setupAgent({ web = null } = {}) {
     if (sessions.size >= MAX_SESSIONS) throw new AgentError('busy', 'Too many Code sessions are open. Close one first.');
     const id = crypto.randomBytes(8).toString('hex');
     const window = BrowserWindow.fromWebContents(event.sender) ?? undefined;
-    const session = new AgentSession({ root: real, name: project.name, repos, web, webSession: id, autoReadOnly: autoReadOnly !== false, compact: compact === true, creditQuo: creditQuo !== false, allowPush: allowPush !== false, openExternal: url => shell.openExternal(url), approve: request => ask(window, request) });
+    const session = new AgentSession({ root: real, name: project.name, repos, web, webSession: id, autoReadOnly: autoReadOnly !== false, compact: compact === true, creditQuo: creditQuo !== false, allowPush: allowPush !== false, openExternal: url => shell.openExternal(url), approve: request => ask(window, request), mcp });
     sessions.set(id, { session, owner: event.sender.id, project: project.id, controllers: new Set() });
     event.sender.once('destroyed', () => endSession(id));
     return { sessionId: id, name: project.name, platform: process.platform, tools: TOOL_NAMES.filter(name => !(compact === true && name === 'update_plan') && !(allowPush === false && name === 'git_push')), planTools: compact === true ? PLAN_TOOLS.filter(name => name !== 'update_plan') : PLAN_TOOLS, instructions: await readInstructions(real), hint: whereIs(real), git: await gitInfo(real) };
@@ -266,6 +267,33 @@ function setupAgent({ web = null } = {}) {
   });
 
   handle('agent:clear-repos', () => repos.clear());
+
+  // A tool server's tool in a chat without a folder: asked about in the same window as in a Code session ("in this chat"
+  // instead of "for this session"), always at the "ask" level. The page names the tool and passes the model's arguments.
+  const chatTools = new Map(); // `${window}:${chat}` → { allowed, controllers }
+  const chatEntry = (chatId, event) => {
+    const key = `${event.sender.id}:${String(chatId ?? '').slice(0, 80)}`;
+    if (!chatTools.has(key)) {
+      if (chatTools.size >= 50) chatTools.delete(chatTools.keys().next().value);
+      chatTools.set(key, { allowed: new Set(), controllers: new Set() });
+    }
+    return chatTools.get(key);
+  };
+  handle('mcp:call', async ({ chatId, name, args }, event) => {
+    if (typeof args !== 'object' || args === null || Array.isArray(args)) throw new AgentError('bad_args', 'The arguments must be an object.');
+    const chat = chatEntry(chatId, event);
+    const controller = new AbortController();
+    chat.controllers.add(controller);
+    const window = BrowserWindow.fromWebContents(event.sender) ?? undefined;
+    try {
+      return await callWithApproval({ mcp, name: String(name), args, signal: controller.signal, approve: request => ask(window, request), allowed: chat.allowed, rememberLabel: tool => `Allow ${tool} in this chat` });
+    } finally {
+      chat.controllers.delete(controller);
+    }
+  });
+  handle('mcp:abort', ({ chatId }, event) => {
+    for (const controller of chatEntry(chatId, event).controllers) controller.abort();
+  });
 
   function endSession(id) {
     const entry = sessions.get(id);

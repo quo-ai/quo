@@ -18,9 +18,15 @@ const host = (url: string) => {
   }
 };
 const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? '' : 's'}`;
+/** A tool server's tool (`mcp__<server>__<tool>`), as the person knows it: the tool's name and its server. */
+const serverTool = (name: string) => {
+  const [server, ...rest] = name.slice('mcp__'.length).split('__');
+  return `${rest.join('__') || server} from ${server}`;
+};
 const place = (args: Args) => (args.repo ? `${text(args.repo)}/${text(args.path, '')}`.replace(/\/$/, '') : text(args.path, 'the project'));
 
 export function describeRunning(tool: string, args: Args): string {
+  if (tool.startsWith('mcp__')) return `Using ${serverTool(tool)}…`;
   switch (tool) {
     case 'list_directory': return `Looking in ${place(args)}…`;
     case 'read_file': return `Reading ${place(args)}…`;
@@ -47,6 +53,7 @@ export function describeRunning(tool: string, args: Args): string {
 export function describeDone(tool: string, args: Args, result: ToolResult): Pick<AgentStep, 'title' | 'status' | 'detail'> {
   const display = result.display ?? {};
   if (display.denied) {
+    if (display.kind === 'tool') return { status: 'declined', title: `You declined ${serverTool(tool)}` };
     return { status: 'declined', title: tool === 'run_command' ? `You declined: ${clip(text(display.command), 60)}${args.background ? ' (background)' : ''}` : tool === 'git_commit' ? 'You declined the commit' : tool === 'git_push' ? 'You declined the push' : tool === 'open_in_browser' ? `You declined opening ${clip(text(display.target), 50)}` : `You declined the change to ${text(display.path)}` };
   }
   if (!result.ok) return { status: 'failed', title: `${verb(tool, args)} didn’t work: ${clip(result.text.split('\n')[0], 110)}` };
@@ -76,6 +83,7 @@ export function describeDone(tool: string, args: Args, result: ToolResult): Pick
       return { status: 'done', title: `Pushed ${plural(Number(display.count ?? 0), 'commit')} to ${text(display.target)}${display.newBranch ? ' (new branch)' : ''}`, detail: body ? { kind: 'output', body } : undefined };
     }
     case 'repo': return { status: 'done', title: `Opened ${text(display.repo)}` };
+    case 'tool': return { status: 'done', title: `Used ${serverTool(tool)}`, detail: result.text ? { kind: 'output', body: clip(result.text, 4000) } : undefined };
     case 'web_search': {
       const results = Array.isArray(display.results) ? display.results as { title?: string; url?: string }[] : [];
       return { status: 'done', title: `Searched the web for “${clip(text(display.query), 40)}”: ${plural(results.length, 'result')}`, detail: results.length ? { kind: 'output', body: results.map(r => `${text(r.title)}\n${text(r.url)}`).join('\n\n') } : undefined };
@@ -96,6 +104,7 @@ export function describeDone(tool: string, args: Args, result: ToolResult): Pick
 const diffOf = (display: Record<string, unknown>): AgentStep['detail'] => (text(display.diff) ? { kind: 'diff', body: text(display.diff) } : undefined);
 
 function verb(tool: string, args: Args): string {
+  if (tool.startsWith('mcp__')) return `Using ${serverTool(tool)}`;
   switch (tool) {
     case 'list_directory': return `Looking in ${place(args)}`;
     case 'read_file': return `Reading ${place(args)}`;

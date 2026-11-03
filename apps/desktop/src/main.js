@@ -6,6 +6,7 @@ const path = require('node:path');
 const { app, BrowserWindow, dialog, nativeTheme, session, shell, systemPreferences } = require('electron');
 const { APP_HOST, APP_URL, API_ORIGIN, registerScheme, handleAppProtocol, setEngineTarget } = require('./protocol');
 const { setupAgent } = require('./agent/ipc');
+const { setupToolServers } = require('./mcp/ipc');
 const { setupClaude } = require('./claude/ipc');
 const { setupProviders } = require('./providers/ipc');
 const { setupWeb } = require('./web/ipc');
@@ -172,7 +173,8 @@ function start() {
   setupTheme(matchWindow);
   nativeTheme.on('updated', matchWindow);
   const { keys } = setupProviders();
-  setupAgent({ web: setupWeb({ keys }) });
+  // Tool servers (MCP) the person added in mcp.json: off until turned on in a native dialog (mcp/).
+  setupAgent({ web: setupWeb({ keys }), mcp: setupToolServers() });
   // Left out of released builds until Anthropic approves (claude/release.js).
   if (claudeAgentOffered(app.isPackaged)) setupClaude();
   hasEngine = engineAvailable();

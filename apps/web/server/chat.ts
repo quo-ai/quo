@@ -10,7 +10,7 @@ import { freeSubject, identify } from './identity.js';
 import { defaultLevel, isLevel, levelFromLegacy, reasoningParam, type ThinkLevel } from '../shared/thinking.js';
 import { FREE_CODE_CHARS, FREE_CODE_STEPS, WEB_TOOLS, isFolderless } from '../shared/agentTools.js';
 import { validOffset, type Environment } from '../shared/environment.js';
-import { agentSystemPrompt, AGENT_TOOL_NAMES, parseNotes, READ_ONLY_TOOLS, toolDefinitions, type Platform } from '../shared/agentTools.js';
+import { agentSystemPrompt, AGENT_TOOL_NAMES, parseNotes, READ_ONLY_TOOLS, toolDefinitions, toolServerDefinitions, toolServerTools, type Platform } from '../shared/agentTools.js';
 import { streamChat, UpstreamError, type ChatMessage, type ToolCall } from './openrouter.js';
 import { IMAGE_DATA_URL, IMAGE_TOKENS, imagesOf, MAX_IMAGE_CHARS, MAX_REMOTE_IMAGES, textOfContent, type ContentPart } from '../shared/content.js';
 import { FREE_SEARCHES_PER_REPLY, PAID_SEARCHES_PER_REPLY, SEARCH_FEE_USD, SEARCH_INPUT_TOKENS } from './webSearch.js';
@@ -52,7 +52,7 @@ interface ChatRequest {
   /** A level (off, quick, auto, deep), or, from an older app, true or false. */
   thinking?: unknown;
   web?: boolean;
-  agent?: { tools?: unknown; project?: unknown; platform?: unknown; instructions?: unknown; role?: unknown; environment?: unknown };
+  agent?: { tools?: unknown; project?: unknown; platform?: unknown; instructions?: unknown; role?: unknown; environment?: unknown; toolServers?: unknown };
 }
 
 const MAX_AGENT_MESSAGES = 600;
@@ -334,7 +334,9 @@ function parseAgent(input: NonNullable<ChatRequest['agent']>, model: NonNullable
   if (role !== 'summarize' && !folderless && !READ_ONLY_TOOLS.every(name => names.includes(name))) throw new HttpError(400, 'bad_tools', 'Code mode needs at least the tools that read files.');
   const platform: Platform = input.platform === 'win32' || input.platform === 'darwin' ? input.platform : 'linux';
   const project = (typeof input.project === 'string' ? input.project : '').replace(/[^\p{L}\p{N} ._-]/gu, '').trim().slice(0, 60) || 'project';
-  const tools = toolDefinitions(names);
+  // Tools from tool servers the person added in the desktop app (checked, beside Quo's own): never for helpers or summaries.
+  const servers = role === 'main' && !light ? toolServerTools(input.toolServers) : [];
+  const tools = [...toolDefinitions(names), ...toolServerDefinitions(servers)];
   const env = role === 'summarize' ? null : serverEnvironment(input.environment, model);
   return { role, light, folderless, tools, toolChars: JSON.stringify(tools).length, prompt: agentSystemPrompt(project, platform, names, parseNotes(input.instructions), 'cloud', role, env) };
 }

@@ -9,6 +9,7 @@ import { agentBridge, hasNativeEngine, unwrap, type CodeProject } from '../nativ
 import type { DownloadState } from '../storage/downloads';
 import { toast } from './Toasts';
 import { Toggle } from './Toggle';
+import { ToolServers, hasToolServers } from './ToolServers';
 
 /** How Code mode behaves, and the folders and downloads it remembers. Nothing here lets it do more without your OK. */
 export function CodeSettings({ downloads }: { downloads: Record<string, DownloadState> }) {
@@ -62,6 +63,12 @@ export function CodeSettings({ downloads }: { downloads: Record<string, Download
                 {offline.map(model => <Toggle key={model.id} label={model.name} detail={ratingNote(model)} on={isLocalCodeAllowed(model)} onChange={on => setLocalCodeAllowed(model, on)} />)}
               </div>
             )}
+        </>
+      )}
+      {hasToolServers() && (
+        <>
+          <div className="sheet-section-title">Tool servers (MCP)</div>
+          <ToolServers />
         </>
       )}
       <div className="sheet-section-title">Most steps in one reply</div>

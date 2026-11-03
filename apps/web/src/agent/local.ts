@@ -1,5 +1,5 @@
 import type { Environment } from '../../shared/environment';
-import { agentSystemPrompt, parseNotes, toolDefinitions, type Platform } from '../../shared/agentTools';
+import { agentSystemPrompt, parseNotes, toolDefinitions, toolServerDefinitions, toolServerTools, type Platform, type ToolServerTool } from '../../shared/agentTools';
 import type { LocalModel } from '../catalog';
 import { localEngine } from '../engine/localEngine';
 import { LOCAL_PROVIDER, localTransport } from '../engine/localTransport';
@@ -44,7 +44,7 @@ export const prepareLocalAgent = (model: LocalModel): Promise<void> => localEngi
 export async function askLocalAgentModel(
   model: LocalModel,
   messages: AgentMessage[],
-  options: { tools: string[]; project: string; platform: string; instructions?: { file: string; text: string } | null; /** Told to the model: the date, the program, what it can do. */ environment?: Environment; /** Replaces the Code mode rules (a chat that only searches the web). */ system?: string; signal: AbortSignal; onText: (text: string) => void },
+  options: { tools: string[]; project: string; platform: string; instructions?: { file: string; text: string } | null; /** Told to the model: the date, the program, what it can do. */ environment?: Environment; /** Replaces the Code mode rules (a chat that only searches the web). */ system?: string; signal: AbortSignal; onText: (text: string) => void; /** From tool servers the person added (desktop). */ toolServers?: ToolServerTool[] },
   transport: Transport = localTransport,
 ): Promise<StepReply> {
   const platform: Platform = options.platform === 'win32' || options.platform === 'darwin' ? options.platform : 'linux';
@@ -54,7 +54,7 @@ export async function askLocalAgentModel(
     try {
       return await chatWithProvider(
         LOCAL_PROVIDER,
-        { model: model.id, maxTokens: AGENT_MAX_TOKENS, signal: options.signal, tools: toolDefinitions(options.tools), extra: agentSampling(model), messages: [{ role: 'system', content: system }, ...messages] },
+        { model: model.id, maxTokens: AGENT_MAX_TOKENS, signal: options.signal, tools: [...toolDefinitions(options.tools), ...toolServerDefinitions(toolServerTools(options.toolServers))], extra: agentSampling(model), messages: [{ role: 'system', content: system }, ...messages] },
         partial => options.onText(partial.content),
         transport,
       );

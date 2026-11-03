@@ -17,6 +17,15 @@ export type Autonomy = 'ask' | 'risky' | 'all';
 /** The local server for other apps: whether it's on, where, and the key to give them. */
 export interface LocalServerState { on: boolean; port: number; address: string; key: string }
 
+/** A tool server (MCP) from the person's own file, as main describes it: never what it runs or its settings. */
+export interface ToolServer {
+  name: string;
+  state: 'off' | 'starting' | 'on' | 'error' | 'changed' | 'disabled' | 'problem';
+  message?: string;
+  tools: { name: string; description: string }[];
+}
+export interface ToolServersState { servers: ToolServer[]; problem?: string }
+
 /** An image model file the person added in the desktop app, as main describes it (no path). */
 export interface OwnImageModel { id: string; name: string; family: string; label: string; steps: number; cfg: number; edits: boolean; needs?: string }
 
@@ -275,6 +284,16 @@ declare global {
       engine?: NativeBridge['engine'];
       models?: NativeBridge['models'];
       /** The local server for other apps (apps/desktop/src/server/localApi.js). Older apps lack it. */
+      toolServers?: {
+        state: () => Promise<NativeResult<ToolServersState>>;
+        tools: () => Promise<NativeResult<unknown>>;
+        set: (name: string, on: boolean) => Promise<NativeResult<ToolServersState>>;
+        reload: () => Promise<NativeResult<ToolServersState>>;
+        edit: () => Promise<NativeResult<boolean>>;
+        call: (chatId: string, name: string, args: Record<string, unknown>) => Promise<NativeResult<{ ok: boolean; text: string; display?: Record<string, unknown> & { kind?: string } }>>;
+        abort: (chatId: string) => Promise<NativeResult<unknown>>;
+        onEvent: (callback: (state: ToolServersState) => void) => () => void;
+      };
       localServer?: {
         state: () => Promise<NativeResult<LocalServerState>>;
         set: (on: boolean) => Promise<NativeResult<LocalServerState>>;

@@ -14,6 +14,8 @@ const { ExternalReads } = require('./external');
 const { planOpen } = require('./open');
 const { ChangeLog } = require('./history');
 const { AgentError, redactSecrets, scrubbedEnv } = require('./safety');
+const { callWithApproval } = require('../mcp/approve');
+const { PREFIX: MCP_PREFIX } = require('../mcp/manager');
 
 /**
  * One Code-mode session: a project folder (chosen by the user in a native dialog),
@@ -35,6 +37,7 @@ const PLAN_STATUSES = ['pending', 'in_progress', 'completed'];
 const MAX_PLAN_ITEMS = 12;
 const CHANGING_TOOLS = new Set(['edit_file', 'write_file', 'run_command', 'git_commit', 'git_push', 'open_in_browser']);
 const MAX_CALLS = 500;
+const PLAN_MODE = 'Plan mode is on, so nothing can be changed or run. Describe the plan instead, and the user can switch it off to carry it out.';
 const COMMAND_CHARS = 4000;
 // What a small context window can afford for one tool result (about 4,000 tokens at most).
 const COMPACT_LIMITS = { readLines: 150, outputChars: 10_000, listEntries: 120, findResults: 80, searchResults: 40 };
@@ -48,7 +51,9 @@ const preview = diff => {
 };
 
 class AgentSession {
-  constructor({ root, name, approve, repos, web = null, webSession = 'code', env = process.env, autoReadOnly = true, compact = false, creditQuo = true, allowPush = true, openExternal = null }) {
+  constructor({ root, name, approve, repos, web = null, webSession = 'code', env = process.env, autoReadOnly = true, compact = false, creditQuo = true, allowPush = true, openExternal = null, mcp = null }) {
+    this.mcp = mcp; // the tool servers the person added and turned on (mcp/manager.js), or none
+    this.allowedTools = new Set(); // tool-server tools allowed for this session
     this.openExternal = openExternal; // hands an address to the system's browser (the app supplies it; none here means this can't open anything)
     this.allowOpen = false; // "Allow opening pages for this session"
     this.creditQuo = creditQuo; // add Quo as co-author to commits made with git_commit (a setting, on by default)
@@ -140,8 +145,13 @@ class AgentSession {
     if (++this.calls > MAX_CALLS) return fail('limit', 'This session has used its limit of tool calls. Start a new one.');
     if (typeof args !== 'object' || args === null || Array.isArray(args)) return fail('bad_args', 'The arguments must be an object.');
     try {
+      // A tool server's tool: Quo can't know what it changes, so plan mode refuses it and every level but "all" asks first.
+      if (name.startsWith(MCP_PREFIX)) {
+        if (this.mode === 'plan') throw new AgentError('plan_mode', PLAN_MODE);
+        return await callWithApproval({ mcp: this.mcp, name, args, signal, approve: this.approve, allowed: this.allowedTools, level: this.autonomy, project: this.name, maxChars: this.compact ? COMPACT_LIMITS.outputChars : undefined });
+      }
       if (!TOOL_NAMES.includes(name)) throw new AgentError('unknown_tool', `There’s no tool called ${name}.`);
-      if (CHANGING_TOOLS.has(name) && this.mode === 'plan') throw new AgentError('plan_mode', 'Plan mode is on, so nothing can be changed or run. Describe the plan instead, and the user can switch it off to carry it out.');
+      if (CHANGING_TOOLS.has(name) && this.mode === 'plan') throw new AgentError('plan_mode', PLAN_MODE);
       if (CHANGING_TOOLS.has(name) && args.repo) throw new AgentError('read_only', 'Reference repositories are read-only. Changes go in the project folder.');
       switch (name) {
         case 'list_directory': return await this.reading(args, (ctx, a) => files.listDirectory(ctx, a));

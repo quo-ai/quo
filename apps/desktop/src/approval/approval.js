@@ -13,6 +13,7 @@ const ICONS = {
   read: ['M6 14l1.5-2.4A2 2 0 0 1 9.2 10H20a2 2 0 0 1 1.9 2.6l-1.6 5.2a2 2 0 0 1-1.9 1.4H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.7.9l.8 1.2a2 2 0 0 0 1.7.9H18a2 2 0 0 1 2 2v1'],
   folder: ['M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.7-.9l-.8-1.2A2 2 0 0 0 7.9 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z', 'M12 10v6', 'M9 13h6'],
   open: ['M15 3h6v6', 'M10 14 21 3', 'M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6'],
+  tool: ['M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.8-3.8a6 6 0 0 1-7.9 7.9l-6.9 6.9a2.1 2.1 0 0 1-3-3l6.9-6.9a6 6 0 0 1 7.9-7.9l-3.8 3.8Z'],
 };
 
 function el(tag, className, text) {
@@ -113,6 +114,13 @@ function body(request) {
     chips.appendChild(el('span', 'chip', view.target));
     box.appendChild(chips);
     box.appendChild(el('p', 'note', view.what === 'url' ? 'This address is on your own computer (a server Quo started). It opens in your default browser.' : 'It opens in your default browser or viewer. Pages can run scripts in the browser, so only open it if you expect it.'));
+  } else if (view.kind === 'tool') {
+    const chips = el('div', 'chips');
+    chips.appendChild(el('span', 'chip', view.server));
+    chips.appendChild(el('span', 'chip', view.tool));
+    box.appendChild(chips);
+    if (view.args && view.args !== '{}') box.appendChild(el('pre', 'cmd', view.args));
+    box.appendChild(el('p', 'note', 'A tool server you added does this on your computer, and Quo can’t see what it changes. What it returns goes to the model. Allow it only if you expect it.'));
   }
   return box;
 }
