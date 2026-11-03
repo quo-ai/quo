@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { createHmac, randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, beforeEach, expect, it } from 'vitest';
-import { applyStripeEvent, billingMode, handleStripeWebhook, stripeForm, type StripeEvent } from '../billing.js';
+import { applyStripeEvent, billingMode, checkoutParams, handleStripeWebhook, stripeForm, type StripeEvent } from '../billing.js';
 import { ensureMonthlyGrant, getBalance, MILLI } from '../credits.js';
 import { createTestDb, getDb, type Db } from '../db.js';
 import { config } from '../env.js';
@@ -111,4 +111,15 @@ it('a test key on the production server lets only the listed testers buy; a live
     config.stripe.secretKey = saved.key;
     config.stripe.testers = saved.testers;
   }
+});
+
+it('a returning buyer is named by their customer only; a new one by email, and a pack makes them a customer', () => {
+  const tags = { user_id: 'u', product: 'pack_1000', purchase: 'p' };
+  // Stripe refuses customer together with customer_creation: a second pack used to fail.
+  expect(checkoutParams('pack_1000', 'price_1', 'u', tags, 'a@example.com', 'cus_1')).toMatchObject({ customer: 'cus_1' });
+  expect(checkoutParams('pack_1000', 'price_1', 'u', tags, 'a@example.com', 'cus_1')).not.toHaveProperty('customer_creation');
+  expect(checkoutParams('pack_1000', 'price_1', 'u', tags, 'a@example.com', null)).toMatchObject({ customer_email: 'a@example.com', customer_creation: 'always', payment_intent_data: { metadata: tags } });
+  const plan = checkoutParams('pro_monthly', 'price_2', 'u', tags, 'a@example.com', null);
+  expect(plan).toMatchObject({ mode: 'subscription', customer_email: 'a@example.com', subscription_data: { metadata: tags }, managed_payments: { enabled: true } });
+  expect(plan).not.toHaveProperty('customer_creation');
 });

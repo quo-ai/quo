@@ -95,20 +95,33 @@ export async function handleCheckout(request: Request): Promise<Response> {
   if (!user || billingMode(user.email) === 'off') throw new HttpError(503, 'setup_required', SETUP_MESSAGES.billing);
   // Our own id for this purchase: the credits it gives are filed under it, so a refund of it finds them.
   const tags = { user_id: userId, product, purchase: randomUUID() };
+  const session = await createCheckout(product, priceId, userId, tags, user.email, user.stripe_customer_id).catch(async error => {
+    // A customer Stripe doesn't know (made with a test key, or deleted): forget it and start from the email address.
+    if (!user.stripe_customer_id || !/No such customer/i.test(String(error))) throw error;
+    await db.query('update users set stripe_customer_id = null where id = $1', [userId]);
+    return createCheckout(product, priceId, userId, tags, user.email, null);
+  });
+  return json({ url: session.url });
+}
+
+/** The Checkout Session request: a returning buyer is named by their customer, a new one by email (and a pack makes them a customer). */
+export function checkoutParams(product: ProductId, priceId: string, userId: string, tags: Record<string, string>, email: string, customer: string | null): Record<string, unknown> {
   const plan = !isPack(product);
-  const session = await stripe<{ url: string }>('POST', '/checkout/sessions', {
+  return {
     mode: plan ? 'subscription' : 'payment',
     line_items: [{ price: priceId, quantity: 1 }],
     managed_payments: { enabled: true },
     client_reference_id: userId,
     metadata: tags,
-    ...(plan ? { subscription_data: { metadata: tags } } : { payment_intent_data: { metadata: tags }, customer_creation: 'always' }),
-    ...(user.stripe_customer_id ? { customer: user.stripe_customer_id } : { customer_email: user.email }),
+    ...(plan ? { subscription_data: { metadata: tags } } : { payment_intent_data: { metadata: tags } }),
+    // Stripe takes one of customer or customer_creation; plans always make a customer.
+    ...(customer ? { customer } : { customer_email: email, ...(plan ? {} : { customer_creation: 'always' }) }),
     success_url: `${config.appUrl}/?checkout=success&product=${product}`,
     cancel_url: `${config.appUrl}/?checkout=cancelled`,
-  });
-  return json({ url: session.url });
+  };
 }
+
+const createCheckout = (...args: Parameters<typeof checkoutParams>) => stripe<{ url: string }>('POST', '/checkout/sessions', checkoutParams(...args));
 
 /** Sandbox only: completes a purchase immediately. */
 export async function handleDevComplete(request: Request): Promise<Response> {
