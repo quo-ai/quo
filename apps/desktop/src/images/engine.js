@@ -27,7 +27,9 @@ const SHAPES = {
 const MAX_PROMPT = 4000;
 const TIME_LIMIT_MS = 10 * 60_000;
 const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
-const OUT_OF_MEMORY = /out of (device )?memory|ErrorOutOfDeviceMemory|failed to allocate|cudaMalloc failed|alloc.*fail/i;
+// How sd-cli says the graphics card is full (ggml's allocators, Vulkan, CUDA, and its own model manager).
+const OUT_OF_MEMORY = /out of (device )?memory|ErrorOutOfDeviceMemory|failed to allocate|cudaMalloc failed|alloc\w* (of size \d+ )?fail|cannot make enough memory available|not enough (device |video )?memory/i;
+const isOutOfMemory = text => OUT_OF_MEMORY.test(String(text));
 
 class ImageError extends Error {
   constructor(code, message) {
@@ -114,7 +116,10 @@ class ImageEngine {
         let failure = null;
         try {
           if (code !== 0) {
-            if (OUT_OF_MEMORY.test(tail)) throw new ImageError('out_of_memory', 'Not enough graphics memory for this image.');
+            // Its error lines (not the prompt) go to the log, so a failure can be understood later.
+            const errors = tail.split(/[\r\n]+/).filter(line => line.startsWith('[E]')).slice(-4).map(line => line.slice(0, 200));
+            if (errors.length) console.warn('[images] sd-cli:', errors.join(' | '));
+            if (isOutOfMemory(tail)) throw new ImageError('out_of_memory', 'Not enough graphics memory for this image.');
             throw new ImageError(signal ? 'stopped' : 'failed', signal ? 'Stopped.' : 'The image couldn’t be made.');
           }
           image = await fsp.readFile(output);
@@ -131,4 +136,4 @@ class ImageEngine {
   }
 }
 
-module.exports = { ImageEngine, ImageError, IMAGE_FILES, SHAPES, MAX_PROMPT, cleanPrompt, imageArgs, parseProgress, binaryIn };
+module.exports = { ImageEngine, ImageError, IMAGE_FILES, SHAPES, MAX_PROMPT, cleanPrompt, imageArgs, parseProgress, isOutOfMemory, binaryIn };

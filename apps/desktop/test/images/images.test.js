@@ -8,7 +8,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const { describe, it } = require('node:test');
-const { ImageEngine, ImageError, SHAPES, cleanPrompt, imageArgs, parseProgress } = require('../../src/images/engine');
+const { ImageEngine, ImageError, SHAPES, cleanPrompt, imageArgs, isOutOfMemory, parseProgress } = require('../../src/images/engine');
 const { checkRequest, modelFolder, setupImages } = require('../../src/images/ipc');
 const { ModelStore, ModelError, hasSafetensorsHeader } = require('../../src/engine/models');
 const { tempDir } = require('../tempdir');
@@ -59,6 +59,14 @@ describe('what the page may ask for', () => {
     assert.equal(args[args.indexOf('-p') + 1], 'a cat; rm -rf / && echo');
     assert.deepEqual([args[args.indexOf('-W') + 1], args[args.indexOf('-H') + 1]], SHAPES['3:2'].map(String));
     for (const [width, height] of Object.values(SHAPES)) assert.ok(width % 64 === 0 && height % 64 === 0 && width * height <= 1_100_000);
+  });
+
+  it('knows a full graphics card in each way sd-cli says it', () => {
+    // As sd-cli said it on an 8 GB card with a chat model loaded (its model manager), and as Vulkan and CUDA say it.
+    assert.equal(isOutOfMemory('[W] model manager cannot make enough memory available on Vulkan0: need 2131.86 MB device / 1619.86 MB budget'), true);
+    assert.equal(isOutOfMemory('ggml_vulkan: Device memory allocation of size 2147483648 failed.\nErrorOutOfDeviceMemory'), true);
+    assert.equal(isOutOfMemory('CUDA error: out of memory'), true);
+    assert.equal(isOutOfMemory('[E] generate failed --- main.cpp:926'), false);
   });
 
   it('reads the progress bar', () => {
