@@ -207,6 +207,13 @@ const installBox = $('.install');
 if (installBox && isMobile) installBox.hidden = true;
 const installMine = os && installBox?.querySelector(`.install-row[data-os~="${os}"]`);
 if (installMine) $('.install-title', installBox).after(installMine);
+const installLine = $('[data-install-line]');
+const installCommand = installMine && $('code', installMine).textContent;
+if (installLine && installCommand && !isMobile) {
+  $('code', installLine).textContent = installCommand;
+  $('[data-install-where]', installLine).textContent = os === 'windows' ? 'In PowerShell' : 'In Terminal';
+  installLine.hidden = false;
+}
 for (const button of $$('[data-copy-cmd]')) {
   button.addEventListener('click', async () => {
     try {

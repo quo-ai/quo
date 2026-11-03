@@ -134,6 +134,11 @@ main > section { scroll-margin-top: 4rem; }
 .install-row .btn { grid-area: copy; }
 /* The whole command stays visible: it wraps at a space on a narrow screen rather than hiding its end. */
 .install-row code { grid-area: code; color: var(--code-ink); font-size: 0.875rem; overflow-wrap: anywhere; }
+/* The hero's line: the visitor's command only, on computers (site.js fills and shows it). */
+.install-line { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2) var(--s-3); width: fit-content; max-width: 100%; margin-top: var(--s-4); padding: var(--s-1) var(--s-1) var(--s-1) var(--s-4); border-radius: var(--r-card); background: var(--code-bg); border: var(--bw) solid var(--rule); }
+.install-line[hidden] { display: none; }
+.install-line-where { font-size: var(--t-small); color: var(--syn-comment); }
+.install-line code { color: var(--code-ink); font-size: 0.875rem; overflow-wrap: anywhere; }
 
 .faq details, .doc details { border-top: var(--bw) solid var(--rule); padding: var(--s-4) 0; }
 .faq details:last-child, .doc details:last-of-type { border-bottom: var(--bw) solid var(--rule); }
