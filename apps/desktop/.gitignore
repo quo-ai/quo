@@ -3,10 +3,11 @@ dist/
 out/
 *.log
 
-# build/ holds electron-builder resources; only the icons are source files.
+# build/ holds electron-builder resources; these are source files (test/packaging.test.js checks each named one is kept).
 build/*
 !build/icon.png
 !build/icon-mac.png
+!build/installer-notice.txt
 
 # llama.cpp builds fetched by scripts/fetch-engine.js (pinned in engine.lock.json)
 /engine/

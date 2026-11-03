@@ -1,0 +1,15 @@
+Quo: private AI that works offline
+
+Quo runs AI models on this computer. What you type stays on it, unless you choose a cloud model or a model you reach with your own account. Every reply shows where it ran.
+
+What Quo contacts without being asked:
+- GitHub, once when Quo starts, to check for a new version. Turn this off in the Help menu: Check for Updates at Start-up.
+- Quo's server (app.quo.computer), for the list of cloud models, and for your account if you sign in.
+
+AI models are downloaded from Hugging Face only when you choose one.
+
+Privacy policy: https://quo.computer/privacy/
+Code signing policy: https://quo.computer/code-signing/
+Source code: https://github.com/quo-ai/quo (Apache 2.0)
+
+To uninstall Quo, use Settings > Apps > Installed apps in Windows. Your downloaded models stay in your profile folder unless you delete them.
