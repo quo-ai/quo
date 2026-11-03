@@ -156,7 +156,7 @@ export async function handlePortal(request: Request): Promise<Response> {
     return json({ url: session.url });
   } catch (error) {
     console.error('[billing] portal', error instanceof Error ? error.message : error);
-    return json({ url: null, message: 'Manage your plan from the receipt Stripe emailed you, or at link.com with the email you paid with.' });
+    return json({ url: null, message: 'Manage your plan from the receipt Link emailed you, or at link.com with the email you paid with.' });
   }
 }
 
