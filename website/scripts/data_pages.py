@@ -25,7 +25,8 @@ def _table(models, columns):
 
 def models_page(path: Path) -> str:
     data = json.loads(path.read_text())
-    name = ('Model', lambda m: f'<strong>{esc(m["name"])}</strong>')
+    from model_pages import model_href
+    name = ('Model', lambda m: f'<strong><a href="{model_href(m["name"])}">{esc(m["name"])}</a></strong>')
     good = ('Good at', lambda m: esc(m['description']))
     size = ('Download', lambda m: f'{m["downloadGB"]:g} GB')
     memory = ('Memory it needs', lambda m: f'{m["memoryGB"]} GB')
