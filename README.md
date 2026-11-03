@@ -101,7 +101,7 @@ In a browser, use Chrome or Edge on a computer: Firefox and Safari run on the pr
 
 † Part of the optional one-time Premium upgrade on the phone.<br>
 ‡ With cloud models or your own API key; the offline models in the browser read text.<br>
-§ Opens soon, with Quo Pro or a Quo Sync plan.
+§ With Quo Pro or a Quo Sync plan.
 
 ## Models
 
@@ -127,7 +127,7 @@ The desktop app can also search Hugging Face and run almost any GGUF model. Full
 
 Everything on your device is free: every offline model, with no account and no limits. In the cloud, one model is free every day (GPT-6 Luna, 20 messages).
 
-The most powerful cloud models use credits, from **Quo Pro** ($12 a month or $99 a year, with 1,000 credits a month and Quo Sync) or a **credit pack** (from $12). **Quo Sync** on its own is $24 a year. These open soon.
+The most powerful cloud models use credits, from **Quo Pro** ($12 a month or $99 a year, with 1,000 credits a month and Quo Sync) or a **credit pack** (from $12). **Quo Sync** on its own is $24 a year. Buy them in Quo Web or the desktop app (Plan & credits); prices include tax.
 
 On the phone, a one-time **Premium** upgrade (from $9.99) unlocks every model, thinking, voice, and unlimited chats and memories. Full details: [quo.computer/pricing](https://quo.computer/pricing/).
 
