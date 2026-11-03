@@ -15,6 +15,7 @@ Notable changes to Quo. Quo Web and the desktop app ship together under the desk
 
 ### Changed
 - **Quo's new address** — Quo Web is at app.quo.computer and the website at quo.computer. The desktop app now uses them; the old address keeps working for a while.
+- **Updates on a Mac** — the Mac app can't install updates by itself yet (it isn't signed by Apple), so instead of downloading them it now tells you once when a new version is out, with a button to download it.
 
 ## [Desktop 1.5.0] - 2026-10-21
 
