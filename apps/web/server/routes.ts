@@ -1,6 +1,6 @@
 import { handleAccountDelete, handleMe } from './account.js';
 import { handleAuthStart, handleAuthVerify, handleSignOut, handleSignOutEverywhere } from './auth.js';
-import { handleBillingConfig, handleCheckout, handleDevComplete, handlePaddleWebhook, handlePortal } from './billing.js';
+import { handleBillingConfig, handleCheckout, handleDevComplete, handlePortal, handleStripeWebhook } from './billing.js';
 import { handleReferral } from './referrals.js';
 import { handleChat } from './chat.js';
 import { handleImage } from './images.js';
@@ -31,7 +31,7 @@ const ROUTES: Record<string, Handler> = {
   'POST billing/checkout': handleCheckout,
   'GET billing/dev-complete': handleDevComplete,
   'POST billing/portal': handlePortal,
-  'POST paddle/webhook': handlePaddleWebhook,
+  'POST stripe/webhook': handleStripeWebhook,
   'GET referral': handleReferral,
   'GET cron/sync-cleanup': handleCronSyncCleanup,
   'GET sync/status': handleSyncStatus,
@@ -46,8 +46,8 @@ export async function handleApi(request: Request, path: string): Promise<Respons
   try {
     if (!route) throw new HttpError(404, 'not_found', 'Not found.');
     // State-changing requests must come from this site (CSRF guard; the
-    // Paddle webhook is server-to-server and signed instead).
-    if (request.method !== 'GET' && request.method !== 'HEAD' && path !== 'paddle/webhook') {
+    // Stripe webhook is server-to-server and signed instead).
+    if (request.method !== 'GET' && request.method !== 'HEAD' && path !== 'stripe/webhook') {
       const site = request.headers.get('sec-fetch-site');
       if (site && site !== 'same-origin' && site !== 'none') throw new HttpError(403, 'forbidden', 'Cross-site request blocked.');
     }

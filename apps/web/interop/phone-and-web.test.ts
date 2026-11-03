@@ -22,7 +22,7 @@ import type { Conversation as PhoneConversation } from '../../mobile/types/chat'
  */
 
 vi.stubEnv('OPENROUTER_API_KEY', '');
-vi.stubEnv('PADDLE_API_KEY', '');
+vi.stubEnv('STRIPE_SECRET_KEY', '');
 vi.stubEnv('RESEND_API_KEY', '');
 
 let handleApi: typeof import('../server/routes.js').handleApi;

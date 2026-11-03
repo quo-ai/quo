@@ -1,14 +1,14 @@
 // @vitest-environment node
 import { randomUUID } from 'node:crypto';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
-import { applyPaddleEvent } from '../billing.js';
+import { applyStripeEvent } from '../billing.js';
 import { getBalance, MILLI } from '../credits.js';
 import { createTestDb, getDb, type Db } from '../db.js';
 import { claimReferral, CODE_PATTERN, MAX_REWARDS, referralCode, rewardReferrer } from '../referrals.js';
 
 // Sandbox: sign-in codes come back in the answer, purchases are simulated.
 vi.stubEnv('OPENROUTER_API_KEY', '');
-vi.stubEnv('PADDLE_API_KEY', '');
+vi.stubEnv('STRIPE_SECRET_KEY', '');
 vi.stubEnv('RESEND_API_KEY', '');
 
 const user = async (db: Db) => {
@@ -43,7 +43,7 @@ describe('invites, on their own', () => {
     expect(await rewardReferrer(db, friend, 'txn_1')).toBe(true);
     expect(await rewardReferrer(db, friend, 'txn_2')).toBe(false); // a second payment
     expect(await credits(db, inviter)).toBe(50);
-    await applyPaddleEvent(db, { event_id: randomUUID(), event_type: 'adjustment.updated', data: { id: 'adj_1', action: 'refund', status: 'approved', transaction_id: 'txn_1' } as never });
+    await applyStripeEvent(db, { id: randomUUID(), type: 'charge.refunded', data: { object: { id: 'ch_1', payment_intent: 'pi_1' } } }, async () => 'txn_1');
     expect(await credits(db, inviter)).toBe(0);
 
     for (let i = 0; i < MAX_REWARDS + 2; i++) {

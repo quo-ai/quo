@@ -24,9 +24,9 @@ const webRoot = app.isPackaged
   ? path.join(process.resourcesPath, 'web')
   : path.resolve(process.env.QUO_WEB_DIR || path.join(__dirname, '../../web/dist'));
 
-// App pages that only work on the hosted site. Paddle's checkout can't run in
-// a cross-origin isolated page, so it opens in the browser.
-const HOSTED_PAGES = ['/checkout.html'];
+// App pages that only work on the hosted site, opened there instead. None today: checkout is
+// Stripe's own page, a web address the app opens in the browser.
+const HOSTED_PAGES = [];
 const EXTERNAL_PROTOCOLS = ['http:', 'https:', 'mailto:'];
 
 // No Chromium switches needed: WebGPU (Metal / D3D12 / Vulkan) and JSPI are on

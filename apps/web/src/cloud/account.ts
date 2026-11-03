@@ -83,7 +83,7 @@ export async function signOut(): Promise<void> {
 }
 
 /**
- * Sends the browser to checkout (Paddle, or the sandbox's simulated purchase).
+ * Sends the browser to checkout (Stripe's page, or the sandbox's simulated purchase).
  * The desktop app opens it in the system browser instead; the purchase is tied
  * to the account server-side, and the app refreshes the balance on focus.
  */

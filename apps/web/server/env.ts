@@ -5,13 +5,13 @@
  *   DATABASE_URL unset        → embedded PGlite (PGLITE_DIR to persist)
  *   OPENROUTER_API_KEY unset  → a stand-in model that streams a test reply
  *   RESEND_API_KEY unset      → sign-in codes are printed to the server log
- *   PADDLE_API_KEY unset      → purchases are simulated (dev only)
+ *   STRIPE_SECRET_KEY unset   → purchases are simulated (dev only)
  *
  * In production (QUO_ENV=production) SESSION_SECRET and DATABASE_URL are
  * required. Services that aren't configured yet (see `features`) stay visible
  * in the app but answer with a `setup_required` error when used: no OpenRouter
  * key means no cloud models, no Resend key means no sign-in or paid models,
- * and no Paddle key means no purchases. Nothing is simulated in production.
+ * and no Stripe key means no purchases. Nothing is simulated in production.
  */
 
 const env = process.env;
@@ -65,18 +65,17 @@ export const config = {
   resendKey: env.RESEND_API_KEY || null,
   emailFrom: env.EMAIL_FROM || 'Quo <signin@quo.computer>',
 
-  paddle: {
-    apiKey: env.PADDLE_API_KEY || null,
-    webhookSecret: env.PADDLE_WEBHOOK_SECRET || null,
-    clientToken: env.PADDLE_CLIENT_TOKEN || null,
-    sandbox: env.PADDLE_ENV !== 'production',
+  /** Stripe with Managed Payments (server/billing.ts): a live key (sk_live_) takes real money, a test key test cards. */
+  stripe: {
+    secretKey: env.STRIPE_SECRET_KEY || null,
+    webhookSecret: env.STRIPE_WEBHOOK_SECRET || null,
     prices: {
-      pro_monthly: env.PADDLE_PRICE_PRO_MONTHLY || null,
-      pro_yearly: env.PADDLE_PRICE_PRO_YEARLY || null,
-      sync_yearly: env.PADDLE_PRICE_SYNC_YEARLY || null,
-      pack_1000: env.PADDLE_PRICE_PACK_1000 || null,
-      pack_2750: env.PADDLE_PRICE_PACK_2750 || null,
-      pack_6000: env.PADDLE_PRICE_PACK_6000 || null,
+      pro_monthly: env.STRIPE_PRICE_PRO_MONTHLY || null,
+      pro_yearly: env.STRIPE_PRICE_PRO_YEARLY || null,
+      sync_yearly: env.STRIPE_PRICE_SYNC_YEARLY || null,
+      pack_1000: env.STRIPE_PRICE_PACK_1000 || null,
+      pack_2750: env.STRIPE_PRICE_PACK_2750 || null,
+      pack_6000: env.STRIPE_PRICE_PACK_6000 || null,
     },
   },
 };
@@ -95,9 +94,9 @@ export const features = {
   get accounts() {
     return !config.production || Boolean(config.resendKey);
   },
-  /** Purchases: needs Paddle in production (and accounts, to buy as someone). */
+  /** Purchases: needs Stripe in production (and accounts, to buy as someone). */
   get billing() {
-    return features.accounts && (!config.production || Boolean(config.paddle.apiKey));
+    return features.accounts && (!config.production || Boolean(config.stripe.secretKey));
   },
   /** Quo Sync: encrypted chat sync for signed-in subscribers, so it needs accounts. */
   get sync() {

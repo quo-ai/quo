@@ -4,7 +4,7 @@ import { beforeAll, describe, expect, it, vi } from 'vitest';
 
 // Sandbox: no OpenRouter key, so a stand-in picture; two free images a day.
 vi.stubEnv('OPENROUTER_API_KEY', '');
-vi.stubEnv('PADDLE_API_KEY', '');
+vi.stubEnv('STRIPE_SECRET_KEY', '');
 vi.stubEnv('RESEND_API_KEY', '');
 vi.stubEnv('FREE_DAILY_IMAGES', '2');
 vi.stubEnv('FREE_DAILY_IMAGES_PER_IP', '50');

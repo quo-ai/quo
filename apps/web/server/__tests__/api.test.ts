@@ -4,17 +4,17 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
 // Sandbox configuration: stand-in model, logged codes, simulated purchases.
 vi.stubEnv('OPENROUTER_API_KEY', '');
-vi.stubEnv('PADDLE_API_KEY', '');
+vi.stubEnv('STRIPE_SECRET_KEY', '');
 vi.stubEnv('RESEND_API_KEY', '');
 vi.stubEnv('FREE_DAILY_MESSAGES', '2');
 vi.stubEnv('FREE_DAILY_MESSAGES_PER_IP', '50');
 
 let handleApi: typeof import('../routes.js').handleApi;
-let verifyPaddleSignature: typeof import('../billing.js').verifyPaddleSignature;
+let verifyStripeSignature: typeof import('../billing.js').verifyStripeSignature;
 
 beforeAll(async () => {
   ({ handleApi } = await import('../routes.js'));
-  ({ verifyPaddleSignature } = await import('../billing.js'));
+  ({ verifyStripeSignature } = await import('../billing.js'));
   vi.spyOn(console, 'log').mockImplementation(() => {});
 });
 
@@ -100,13 +100,15 @@ describe('API (sandbox)', () => {
     expect(response.status).toBe(403);
   });
 
-  it('verifies Paddle webhook signatures', () => {
-    const body = '{"event_id":"evt_1"}';
+  it('verifies Stripe webhook signatures', () => {
+    const body = '{"id":"evt_1"}';
     const ts = Math.floor(Date.now() / 1000);
-    const h1 = createHmac('sha256', 'secret').update(`${ts}:${body}`).digest('hex');
-    expect(verifyPaddleSignature(`ts=${ts};h1=${h1}`, body, 'secret')).toBe(true);
-    expect(verifyPaddleSignature(`ts=${ts};h1=${h1}`, body + ' ', 'secret')).toBe(false);
-    expect(verifyPaddleSignature(`ts=${ts - 600};h1=${h1}`, body, 'secret')).toBe(false);
+    const v1 = createHmac('sha256', 'secret').update(`${ts}.${body}`).digest('hex');
+    expect(verifyStripeSignature(`t=${ts},v1=${v1}`, body, 'secret')).toBe(true);
+    expect(verifyStripeSignature(`t=${ts},v1=wrong,v1=${v1}`, body, 'secret')).toBe(true); // one of several matches
+    expect(verifyStripeSignature(`t=${ts},v1=${v1}`, body + ' ', 'secret')).toBe(false);
+    expect(verifyStripeSignature(`t=${ts - 600},v1=${v1}`, body, 'secret')).toBe(false);
+    expect(verifyStripeSignature(null, body, 'secret')).toBe(false);
   });
 });
 
@@ -118,7 +120,7 @@ describe('API (production, services not set up yet)', () => {
     ({ config } = await import('../env.js'));
     config.production = true;
     config.resendKey = null;
-    config.paddle.apiKey = null;
+    config.stripe.secretKey = null;
     config.openRouterKey = 'test-key';
   });
   afterAll(() => {

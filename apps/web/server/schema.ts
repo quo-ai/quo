@@ -17,6 +17,7 @@ const STATEMENTS = [
     id uuid primary key,
     email text unique not null,
     paddle_customer_id text,
+    stripe_customer_id text,
     created_at timestamptz not null default now()
   )`,
   `create table if not exists login_codes (
@@ -97,7 +98,9 @@ const STATEMENTS = [
   `create table if not exists processed_events (
     id text primary key,
     created_at timestamptz not null default now()
-  )`,  `create table if not exists trial_claims (
+  )`,  // Added after the table was first made: Stripe's customer for the account (billing.ts).
+  `alter table users add column if not exists stripe_customer_id text`,
+  `create table if not exists trial_claims (
     email_hash text primary key,
     claimed_at timestamptz not null default now()
   )`,  `create table if not exists referral_codes (

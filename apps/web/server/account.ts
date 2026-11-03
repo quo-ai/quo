@@ -6,6 +6,7 @@ import { HttpError, json, readJson } from './http.js';
 import { freeSubject, identify, type Identity } from './identity.js';
 import { clearSessionCookie } from './session.js';
 import { SYNC_PLANS } from './sync.js';
+import { billingLive } from './billing.js';
 
 export interface AccountSummary {
   user: { email: string } | null;
@@ -24,7 +25,7 @@ export interface AccountSummary {
 export async function accountSummary(db: Db, identity: Identity): Promise<AccountSummary> {
   const limits = { perSubject: config.freeDailyMessages, perIp: config.freeDailyMessagesPerIp };
   const free = { limit: config.freeDailyMessages, remaining: await freeRemaining(db, { subject: freeSubject(identity), ip: identity.ip }, limits) };
-  const billing = { live: Boolean(config.paddle.apiKey) };
+  const billing = { live: billingLive() };
   const offered = { cloud: features.cloud, accounts: features.accounts, billing: features.billing };
   const signedOut: AccountSummary = { user: null, plan: 'free', sync: false, subscription: null, credits: null, free, billing, features: offered };
   if (!identity.userId) return signedOut;
@@ -60,7 +61,7 @@ export async function handleMe(request: Request): Promise<Response> {
  * Deletes the signed-in account and everything held for it: its synced chats and
  * memories, credits and their history, plan records and any pending sign-in code.
  * Refused while a plan is still running (cancel it first, so nobody keeps paying
- * for something that no longer exists). Purchase and tax records live with Paddle,
+ * for something that no longer exists). Purchase and tax records live with Stripe,
  * the merchant of record, under its own retention rules.
  */
 export async function handleAccountDelete(request: Request): Promise<Response> {

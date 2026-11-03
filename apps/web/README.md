@@ -38,7 +38,7 @@ The app is static (`dist/`) and must be served with cross-origin isolation heade
 | `APP_URL` | production | Public URL, e.g. `https://app.quo.computer` |
 | `OPENROUTER_API_KEY` | for cloud models | Without it, cloud models are hidden |
 | `RESEND_API_KEY`, `EMAIL_FROM` | for sign-in | Emails sign-in codes; needs a verified sending domain. Without it, sign-in, paid models and Quo Sync answer `setup_required` |
-| `PADDLE_*` (incl. `PADDLE_PRICE_SYNC_YEARLY`) | for purchases | Paddle merchant of record; without it, purchases answer `setup_required` |
+| `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_*` (one per product, incl. `STRIPE_PRICE_SYNC_YEARLY`) | for purchases | Stripe Managed Payments as merchant of record (a `sk_test_` key takes test cards); its webhook is `/api/stripe/webhook`. Without a key, purchases answer `setup_required` |
 | `SYNC_LIMIT_MB` | optional | Most encrypted data one account may keep (default 250) |
 | `CRON_SECRET` | for Quo Sync clean-up | Lets Vercel Cron call `/api/cron/sync-cleanup` (daily, see `vercel.json`); without it that route doesn't exist and nothing is ever cleaned up. The standalone server runs the clean-up on a timer instead |
 | `DEFAULT_CLOUD_MODEL`, `FREE_DAILY_MESSAGES`, `FREE_DAILY_MESSAGES_PER_IP` | optional | Free tier (defaults: GPT-6 Luna, 20 per device, 60 per IP, per day) |
@@ -106,7 +106,7 @@ Optional, and never chosen for the user (see below).
 - **Free tier:** a daily allowance of messages on the default cloud model, counted per account or device and per IP address (`server/freeTier.ts`).
 - **Guardrails:** credits are reserved before each request (at the maximum output) and settled after, so balances never go negative; rates can change without a release; history sent to cloud models is compacted to cap input cost per message.
 - **Providers:** routed through Quo's API (`server/`), which counts tokens and stores no message content; zero-data-retention providers only.
-- **Payments:** Paddle as merchant of record (handles VAT and sales tax).
+- **Payments:** Stripe Managed Payments as merchant of record (handles VAT and sales tax); checkout is Stripe's own page.
 
 ## Code mode (the coding agent)
 
@@ -161,7 +161,7 @@ End-to-end encrypted sync of chats and memories between a user's devices (Quo We
 1. **Local core** (in progress): catalog, resumable downloads, OPFS storage, engine, chat. ✔ first version.
 2. **Local polish:** chats saved in IndexedDB, markdown rendering, offline app shell (PWA, install prompt), device check and model recommendation, "keep models in a folder" (Chromium), split hosting for > 2 GiB models, export/import.
 3. **Deploy** ✔ Live at https://app.quo.computer with the API and a Neon database, on Quo's own server (see Hosting).
-4. **Accounts and billing:** passwordless sign-in, Paddle subscription + packs, credit ledger.
+4. **Accounts and billing:** passwordless sign-in, Stripe subscriptions + packs, credit ledger.
 5. **Cloud models:** gateway proxy (OpenRouter + direct providers where cheaper), metering, model picker with "Cloud" labelling, trial credits.
 6. **Done:** local documents, images (desktop) and voice input; end-to-end encrypted sync (needs sign-in and purchases switched on).
 7. **Later:** sync on the phone apps (the format in SYNC.md is meant for it), memories, attachments in sync.

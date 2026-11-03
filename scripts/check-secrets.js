@@ -44,6 +44,8 @@ const SECRET_PATTERNS = [
   [/\bxox[abprs]-[A-Za-z0-9-]{10,}/, 'a Slack token'],
   [/\bAIza[0-9A-Za-z_-]{35}\b/, 'a Google API key'],
   [/\b(?:pdl_|apikey_)[A-Za-z0-9_]{20,}/, 'a Paddle key'],
+  [/\b(?:sk|rk)_(?:live|test)_[A-Za-z0-9]{20,}/, 'a Stripe key'],
+  [/\bwhsec_[A-Za-z0-9]{20,}/, 'a Stripe webhook secret'],
   [/\bre_[A-Za-z0-9]{24,}\b/, 'a Resend key'],
   [/\b(?:vercel_|vcp_)[A-Za-z0-9]{20,}/, 'a Vercel token'],
   [/postgres(?:ql)?:\/\/[^:\s/@]+:[^@\s]{6,}@/i, 'a database URL with a password'],

@@ -7,7 +7,7 @@ import { getDb } from '../db.js';
 // Sandbox sign-in (codes come back in the answer), no free images (set below), and a stand-in OpenRouter for images.
 // Before any import reads the settings (imports run first): sandbox sign-in, never a real email or purchase.
 vi.hoisted(() => {
-  for (const name of ['OPENROUTER_API_KEY', 'PADDLE_API_KEY', 'RESEND_API_KEY']) process.env[name] = '';
+  for (const name of ['OPENROUTER_API_KEY', 'STRIPE_SECRET_KEY', 'RESEND_API_KEY']) process.env[name] = '';
 });
 
 let handleApi: typeof import('../routes.js').handleApi;

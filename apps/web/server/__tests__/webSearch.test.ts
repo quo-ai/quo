@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 
 vi.stubEnv('OPENROUTER_API_KEY', '');
-vi.stubEnv('PADDLE_API_KEY', '');
+vi.stubEnv('STRIPE_SECRET_KEY', '');
 vi.stubEnv('RESEND_API_KEY', '');
 vi.stubEnv('FREE_DAILY_MESSAGES', '20');
 vi.stubEnv('FREE_DAILY_MESSAGES_PER_IP', '50');

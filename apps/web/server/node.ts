@@ -7,9 +7,8 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
  */
 
 // Cross-origin isolation enables SharedArrayBuffer, which wllama needs for
-// multi-threaded CPU inference. The Paddle checkout page is exempt: it embeds
-// Paddle's checkout, which can't run cross-origin isolated.
-export const ISOLATION_EXEMPT = ['/checkout.html'];
+// multi-threaded CPU inference. No page is exempt: checkout is Stripe's own page.
+export const ISOLATION_EXEMPT: string[] = [];
 
 export function setIsolationHeaders(path: string, res: ServerResponse): void {
   if (ISOLATION_EXEMPT.includes(path)) return;

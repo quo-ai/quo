@@ -81,7 +81,7 @@ export default defineConfig({
     // Offline app shell: the service worker precaches the app, styles and
     // the wllama wasm, so Quo opens and runs with no connection (models are
     // already in OPFS). New versions install in the background and apply on
-    // the next visit. The API and checkout always go to the network.
+    // the next visit. The API always goes to the network.
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.png', 'apple-touch-icon.png'],
@@ -114,7 +114,7 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,wasm,png,svg,ttf}'],
         // Voice input, PDF reading and wllama's build for older browsers load on demand; they're cached when first used
         // (below). So do code colours (one file per language) and maths (KaTeX and its fonts).
-        globIgnores: ['checkout.html', 'screenshots/**', '**/ort-wasm-*', '**/pdf.worker*', '**/pdf-*.js', '**/wllama-compat-*', '**/lang-*', '**/math-*'],
+        globIgnores: ['screenshots/**', '**/ort-wasm-*', '**/pdf.worker*', '**/pdf-*.js', '**/wllama-compat-*', '**/lang-*', '**/math-*'],
         runtimeCaching: [{
           urlPattern: ({ url }: { url: URL }) => /\/assets\/(ort-wasm-|pdf|wllama-compat-)/.test(url.pathname),
           handler: 'CacheFirst',
@@ -127,7 +127,7 @@ export default defineConfig({
         // The wllama wasm is ~9 MB.
         maximumFileSizeToCacheInBytes: 20 * 1024 * 1024,
         navigateFallback: '/index.html',
-        navigateFallbackDenylist: [/^\/api\//, /^\/checkout/],
+        navigateFallbackDenylist: [/^\/api\//],
         cleanupOutdatedCaches: true,
       },
     }),

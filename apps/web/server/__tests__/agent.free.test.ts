@@ -4,7 +4,7 @@ import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { ALL_TOOLS, AGENT_MODEL, call, ctx, events, loadServer, signIn, step, stubUpstream } from './agentHelpers.js';
 
 vi.stubEnv('OPENROUTER_API_KEY', '');
-vi.stubEnv('PADDLE_API_KEY', '');
+vi.stubEnv('STRIPE_SECRET_KEY', '');
 vi.stubEnv('RESEND_API_KEY', '');
 
 beforeAll(loadServer);

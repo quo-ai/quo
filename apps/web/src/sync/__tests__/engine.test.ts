@@ -10,7 +10,7 @@ import type { WireChat, WireMemory } from '../wire';
 
 // The real server code and database (in memory), so the client and server are tested against each other.
 vi.stubEnv('OPENROUTER_API_KEY', '');
-vi.stubEnv('PADDLE_API_KEY', '');
+vi.stubEnv('STRIPE_SECRET_KEY', '');
 vi.stubEnv('RESEND_API_KEY', '');
 
 let handleApi: typeof import('../../../server/routes.js').handleApi;

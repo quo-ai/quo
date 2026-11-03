@@ -5,7 +5,7 @@ import { readEvents } from '../../src/cloud/sse';
 
 // Sandbox configuration, with a model that takes a long time before its first word.
 vi.stubEnv('OPENROUTER_API_KEY', '');
-vi.stubEnv('PADDLE_API_KEY', '');
+vi.stubEnv('STRIPE_SECRET_KEY', '');
 vi.stubEnv('RESEND_API_KEY', '');
 
 const slow = vi.hoisted(() => ({ waiting: false, answer: () => {} }));

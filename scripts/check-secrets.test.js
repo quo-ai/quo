@@ -17,6 +17,8 @@ const fake = {
   anthropic: `${'sk'}-${'ant'}-${'c'.repeat(40)}`,
   slack: `${'xo'}${'xb-'}${'1'.repeat(12)}`,
   google: `${'AI'}${'za'}${'d'.repeat(35)}`,
+  stripe: `${'sk'}_${'live'}_${'e'.repeat(24)}`,
+  stripeHook: `${'wh'}${'sec'}_${'f'.repeat(32)}`,
   database: `${'post'}${'gres://'}admin:${'hunter2hunter2'}@db.example.com/app`,
 };
 const rules = text => scanText(text, 'a.txt').map(finding => finding.rule);
@@ -49,6 +51,8 @@ describe('secrets inside files', () => {
     assert.deepEqual(rules(`k ${fake.anthropic}`), ['an API key (OpenAI, Anthropic or OpenRouter)']);
     assert.deepEqual(rules(`t ${fake.slack}`), ['a Slack token']);
     assert.deepEqual(rules(`k ${fake.google}`), ['a Google API key']);
+    assert.deepEqual(rules(`k ${fake.stripe}`), ['a Stripe key']);
+    assert.deepEqual(rules(`k ${fake.stripeHook}`), ['a Stripe webhook secret']);
     assert.deepEqual(rules(`DATABASE_URL=${fake.database}`), ['a database URL with a password']);
     const finding = scanText(`line one\nline two ${fake.github}`, 'a.txt')[0];
     assert.deepEqual(Object.keys(finding).sort(), ['line', 'rule']);

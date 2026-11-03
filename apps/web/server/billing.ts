@@ -7,15 +7,15 @@ import { HttpError, json, readJson } from './http.js';
 import { identify } from './identity.js';
 
 /**
- * Billing through Paddle (merchant of record: handles VAT / sales tax).
+ * Billing through Stripe, with Managed Payments: Stripe is the merchant of record (it handles VAT, sales tax, fraud and
+ * disputes), and the checkout is Stripe's own page.
  *
- * Checkout: the server creates a Paddle transaction tagged with the user's
- * id and sends the browser to /checkout.html?_ptxn=…, a page outside the
- * app's cross-origin isolation where Paddle.js opens the checkout. Paddle
- * then calls the webhook, which grants packs and records subscriptions.
+ * Checkout: the server makes a Checkout Session for one product, tagged with the user's id and a purchase id of its own,
+ * and the app sends the person there (the desktop app opens it in the browser). Stripe comes back to the app with
+ * ?checkout=success and calls the webhook, which grants packs, records plans and takes back what a refund refunds.
  *
- * Without Paddle keys (sandbox), checkout completes instantly through
- * /api/billing/dev-complete so the whole flow can be tested.
+ * Without a Stripe key (the sandbox), checkout completes at once through /api/billing/dev-complete, so the whole flow
+ * can be tried. A test-mode key (sk_test_) takes test cards, and the app says purchases are only a test.
  */
 
 export const PRODUCTS = {
@@ -28,18 +28,32 @@ export const PRODUCTS = {
 } as const;
 export type ProductId = keyof typeof PRODUCTS;
 
+/** The API version every request and the webhook use (Managed Payments needs 2025-03-31.basil or later). */
+export const STRIPE_VERSION = '2025-03-31.basil';
+
 const isProduct = (value: unknown): value is ProductId => typeof value === 'string' && value in PRODUCTS;
 const isPack = (product: ProductId): product is PackId => product in PACK_CREDITS;
-const paddleApi = () => (config.paddle.sandbox ? 'https://sandbox-api.paddle.com' : 'https://api.paddle.com');
 
-async function paddle<T>(path: string, body?: unknown): Promise<T> {
-  const response = await fetch(`${paddleApi()}${path}`, {
-    method: body ? 'POST' : 'GET',
-    headers: { authorization: `Bearer ${config.paddle.apiKey}`, 'content-type': 'application/json' },
-    body: body ? JSON.stringify(body) : undefined,
+/** Stripe's form encoding: nested objects and arrays as key[sub][0]=value. */
+export function stripeForm(params: Record<string, unknown>, prefix = ''): string[] {
+  return Object.entries(params).flatMap(([key, value]) => {
+    const name = prefix ? `${prefix}[${key}]` : key;
+    if (value === undefined || value === null) return [];
+    if (Array.isArray(value)) return value.flatMap((item, i) => (typeof item === 'object' && item !== null ? stripeForm(item as Record<string, unknown>, `${name}[${i}]`) : [`${encodeURIComponent(`${name}[${i}]`)}=${encodeURIComponent(String(item))}`]));
+    if (typeof value === 'object') return stripeForm(value as Record<string, unknown>, name);
+    return [`${encodeURIComponent(name)}=${encodeURIComponent(String(value))}`];
   });
-  if (!response.ok) throw new Error(`paddle_${response.status}: ${(await response.text()).slice(0, 200)}`);
-  return ((await response.json()) as { data: T }).data;
+}
+
+async function stripe<T>(method: 'GET' | 'POST', path: string, params?: Record<string, unknown>): Promise<T> {
+  const response = await fetch(`https://api.stripe.com/v1${path}`, {
+    method,
+    headers: { authorization: `Bearer ${config.stripe.secretKey}`, 'stripe-version': STRIPE_VERSION, ...(params ? { 'content-type': 'application/x-www-form-urlencoded' } : {}) },
+    body: params ? stripeForm(params).join('&') : undefined,
+  });
+  const body = (await response.json().catch(() => ({}))) as T & { error?: { message?: string } };
+  if (!response.ok) throw new Error(`stripe_${response.status}: ${String(body.error?.message ?? '').slice(0, 200)}`);
+  return body;
 }
 
 async function requireUser(request: Request): Promise<string> {
@@ -48,12 +62,11 @@ async function requireUser(request: Request): Promise<string> {
   return userId;
 }
 
+/** Real money only with a live key; a test key takes test cards. */
+export const billingLive = () => Boolean(config.stripe.secretKey?.startsWith('sk_live_'));
+
 export function handleBillingConfig(): Response {
-  return json({
-    live: Boolean(config.paddle.apiKey),
-    paddle: config.paddle.clientToken ? { clientToken: config.paddle.clientToken, sandbox: config.paddle.sandbox } : null,
-    products: Object.entries(PRODUCTS).map(([id, product]) => ({ id, ...product })),
-  });
+  return json({ live: billingLive(), products: Object.entries(PRODUCTS).map(([id, product]) => ({ id, ...product })) });
 }
 
 export async function handleCheckout(request: Request): Promise<Response> {
@@ -62,24 +75,31 @@ export async function handleCheckout(request: Request): Promise<Response> {
   const { product } = await readJson<{ product?: string }>(request);
   if (!isProduct(product)) throw new HttpError(400, 'unknown_product', 'Unknown product.');
 
-  if (!config.paddle.apiKey) return json({ url: `/api/billing/dev-complete?product=${product}` }); // development only
-  const priceId = config.paddle.prices[product];
+  if (!config.stripe.secretKey) return json({ url: `/api/billing/dev-complete?product=${product}` }); // development only
+  const priceId = config.stripe.prices[product];
   if (!priceId) throw new HttpError(503, 'setup_required', SETUP_MESSAGES.billing);
   const db = await getDb();
-  const [user] = await db.query<{ email: string; paddle_customer_id: string | null }>(
-    'select email, paddle_customer_id from users where id = $1', [userId],
-  );
-  const transaction = await paddle<{ id: string }>('/transactions', {
-    items: [{ price_id: priceId, quantity: 1 }],
-    custom_data: { user_id: userId },
-    ...(user?.paddle_customer_id ? { customer_id: user.paddle_customer_id } : {}),
+  const [user] = await db.query<{ email: string; stripe_customer_id: string | null }>('select email, stripe_customer_id from users where id = $1', [userId]);
+  // Our own id for this purchase: the credits it gives are filed under it, so a refund of it finds them.
+  const tags = { user_id: userId, product, purchase: randomUUID() };
+  const plan = !isPack(product);
+  const session = await stripe<{ url: string }>('POST', '/checkout/sessions', {
+    mode: plan ? 'subscription' : 'payment',
+    line_items: [{ price: priceId, quantity: 1 }],
+    managed_payments: { enabled: true },
+    client_reference_id: userId,
+    metadata: tags,
+    ...(plan ? { subscription_data: { metadata: tags } } : { payment_intent_data: { metadata: tags }, customer_creation: 'always' }),
+    ...(user?.stripe_customer_id ? { customer: user.stripe_customer_id } : { customer_email: user?.email }),
+    success_url: `${config.appUrl}/?checkout=success&product=${product}`,
+    cancel_url: `${config.appUrl}/?checkout=cancelled`,
   });
-  return json({ url: `/checkout.html?_ptxn=${encodeURIComponent(transaction.id)}` });
+  return json({ url: session.url });
 }
 
 /** Sandbox only: completes a purchase immediately. */
 export async function handleDevComplete(request: Request): Promise<Response> {
-  if (config.production || config.paddle.apiKey) throw new HttpError(404, 'not_found');
+  if (config.production || config.stripe.secretKey) throw new HttpError(404, 'not_found');
   const userId = await requireUser(request);
   const product = new URL(request.url).searchParams.get('product');
   if (!isProduct(product)) throw new HttpError(400, 'unknown_product');
@@ -97,113 +117,133 @@ export async function handleDevComplete(request: Request): Promise<Response> {
   return new Response(null, { status: 302, headers: { location: `/?checkout=success&product=${product}` } });
 }
 
+/** "Manage subscription": Stripe's customer portal, back to the app afterwards. */
 export async function handlePortal(request: Request): Promise<Response> {
   if (!features.billing) throw new HttpError(503, 'setup_required', SETUP_MESSAGES.billing);
   const userId = await requireUser(request);
-  if (!config.paddle.apiKey) return json({ url: null, message: 'Subscription management is available once billing is live.' });
+  if (!config.stripe.secretKey) return json({ url: null, message: 'Subscription management is available once billing is live.' });
   const db = await getDb();
-  const [user] = await db.query<{ paddle_customer_id: string | null }>('select paddle_customer_id from users where id = $1', [userId]);
-  if (!user?.paddle_customer_id) throw new HttpError(404, 'no_customer', 'No purchases on this account yet.');
-  const subs = await db.query<{ id: string }>(`select id from subscriptions where user_id = $1 and status <> 'canceled'`, [userId]);
-  const session = await paddle<{ urls: { general: { overview: string } } }>(
-    `/customers/${user.paddle_customer_id}/portal-sessions`,
-    { subscription_ids: subs.map(s => s.id) },
-  );
-  return json({ url: session.urls.general.overview });
+  const [user] = await db.query<{ stripe_customer_id: string | null }>('select stripe_customer_id from users where id = $1', [userId]);
+  if (!user?.stripe_customer_id) throw new HttpError(404, 'no_customer', 'No purchases on this account yet.');
+  try {
+    const session = await stripe<{ url: string }>('POST', '/billing_portal/sessions', { customer: user.stripe_customer_id, return_url: `${config.appUrl}/` });
+    return json({ url: session.url });
+  } catch (error) {
+    console.error('[billing] portal', error instanceof Error ? error.message : error);
+    return json({ url: null, message: 'Manage your plan from the receipt Stripe emailed you, or at link.com with the email you paid with.' });
+  }
 }
 
 // ---------- Webhook ----------
 
-/** Paddle-Signature: ts=…;h1=… over `${ts}:${rawBody}`, within 5 minutes. */
-export function verifyPaddleSignature(header: string | null, rawBody: string, secret: string, now = Date.now()): boolean {
+/** Stripe-Signature: t=…,v1=… (one or more v1), each an HMAC-SHA256 of `${t}.${rawBody}`, within 5 minutes. */
+export function verifyStripeSignature(header: string | null, rawBody: string, secret: string, now = Date.now()): boolean {
   if (!header) return false;
-  const parts = Object.fromEntries(header.split(';').map(part => part.split('=') as [string, string]));
-  const ts = Number(parts.ts);
-  if (!parts.h1 || !Number.isFinite(ts) || Math.abs(now / 1000 - ts) > 300) return false;
-  const expected = Buffer.from(createHmac('sha256', secret).update(`${parts.ts}:${rawBody}`).digest('hex'));
-  const given = Buffer.from(parts.h1);
-  return expected.length === given.length && timingSafeEqual(expected, given);
+  const parts = header.split(',').map(part => part.split('=') as [string, string]);
+  const t = parts.find(([key]) => key === 't')?.[1];
+  const signatures = parts.filter(([key]) => key === 'v1').map(([, value]) => value);
+  const ts = Number(t);
+  if (!t || !signatures.length || !Number.isFinite(ts) || Math.abs(now / 1000 - ts) > 300) return false;
+  const expected = Buffer.from(createHmac('sha256', secret).update(`${t}.${rawBody}`).digest('hex'));
+  return signatures.some(signature => {
+    const given = Buffer.from(signature);
+    return given.length === expected.length && timingSafeEqual(given, expected);
+  });
 }
 
-interface PaddleEvent {
-  event_id: string;
-  event_type: string;
-  data: {
-    id: string;
-    status?: string;
-    customer_id?: string | null;
-    custom_data?: { user_id?: string } | null;
-    items?: { price?: { id?: string } | null; price_id?: string }[];
-    started_at?: string | null;
-    first_billed_at?: string | null;
-    current_billing_period?: { ends_at?: string } | null;
-    /** Adjustments (refunds, chargebacks): what was done, to which payment. */
-    action?: string;
-    transaction_id?: string | null;
-    subscription_id?: string | null;
-  };
+interface StripeObject {
+  id: string;
+  object?: string;
+  mode?: string;
+  status?: string;
+  payment_status?: string;
+  customer?: string | null;
+  client_reference_id?: string | null;
+  metadata?: Record<string, string> | null;
+  payment_intent?: string | null;
+  charge?: string | null;
+  start_date?: number;
+  current_period_end?: number;
+  items?: { data?: { price?: { id?: string }; current_period_end?: number }[] };
+}
+export interface StripeEvent {
+  id: string;
+  type: string;
+  data: { object: StripeObject };
 }
 
 const productForPrice = (priceId: string | undefined): ProductId | undefined =>
-  (Object.entries(config.paddle.prices) as [ProductId, string | null][]).find(([, id]) => id && id === priceId)?.[0];
+  (Object.entries(config.stripe.prices) as [ProductId, string | null][]).find(([, id]) => id && id === priceId)?.[0];
 
-export async function handlePaddleWebhook(request: Request): Promise<Response> {
-  const secret = config.paddle.webhookSecret;
+export async function handleStripeWebhook(request: Request): Promise<Response> {
+  const secret = config.stripe.webhookSecret;
   if (!secret) throw new HttpError(404, 'not_found');
   const raw = await request.text();
-  if (!verifyPaddleSignature(request.headers.get('paddle-signature'), raw, secret)) {
-    throw new HttpError(401, 'bad_signature');
-  }
-  const event = JSON.parse(raw) as PaddleEvent;
+  if (!verifyStripeSignature(request.headers.get('stripe-signature'), raw, secret)) throw new HttpError(401, 'bad_signature');
+  const event = JSON.parse(raw) as StripeEvent;
   const db = await getDb();
   await db.tx(async t => {
-    const fresh = await t.query('insert into processed_events (id) values ($1) on conflict do nothing returning id', [event.event_id]);
+    const fresh = await t.query('insert into processed_events (id) values ($1) on conflict do nothing returning id', [event.id]);
     if (fresh.length === 0) return; // already handled
-    await applyPaddleEvent(t, event);
+    await applyStripeEvent(t, event);
   });
   return json({ ok: true });
 }
 
-export async function applyPaddleEvent(db: Db, event: PaddleEvent): Promise<void> {
-  const { data } = event;
-  if (event.event_type === 'adjustment.created' || event.event_type === 'adjustment.updated') return applyAdjustment(db, data);
-  const userId = data.custom_data?.user_id;
-  if (!userId) return;
-  const [user] = await db.query('select id from users where id = $1', [userId]);
-  if (!user) return;
-  if (data.customer_id) await db.query('update users set paddle_customer_id = $2 where id = $1', [userId, data.customer_id]);
+const userExists = async (db: Db, id: string | null | undefined) => Boolean(id && (await db.query('select 1 from users where id = $1', [id])).length);
 
-  if (event.event_type === 'transaction.completed') {
-    for (const item of data.items ?? []) {
-      const product = productForPrice(item.price?.id ?? item.price_id);
-      if (product && isPack(product)) await grantPack(db, userId, product, data.id);
-    }
+export async function applyStripeEvent(db: Db, event: StripeEvent, lookup = lookupPurchase): Promise<void> {
+  const object = event.data.object;
+  if (event.type === 'checkout.session.completed' || event.type === 'checkout.session.async_payment_succeeded') {
+    const userId = object.metadata?.user_id ?? object.client_reference_id;
+    if (!(await userExists(db, userId))) return;
+    if (object.customer) await db.query('update users set stripe_customer_id = $2 where id = $1', [userId, object.customer]);
+    // A bank payment that hasn't arrived yet comes back as checkout.session.async_payment_succeeded.
+    if (object.payment_status !== 'paid' && object.payment_status !== 'no_payment_required') return;
+    const product = object.metadata?.product;
+    const purchase = object.metadata?.purchase ?? object.id;
+    if (object.mode === 'payment' && isProduct(product) && isPack(product)) await grantPack(db, userId!, product, purchase);
     // The first payment (a pack or a plan) of an invited account rewards whoever invited it.
-    await rewardReferrer(db, userId, data.id);
+    await rewardReferrer(db, userId!, purchase);
     return;
   }
 
-  if (event.event_type.startsWith('subscription.')) {
-    const product = productForPrice(data.items?.[0]?.price?.id ?? data.items?.[0]?.price_id);
+  if (event.type.startsWith('customer.subscription.')) {
+    const userId = object.metadata?.user_id;
+    if (!(await userExists(db, userId))) return;
+    const item = object.items?.data?.[0];
+    const product = productForPrice(item?.price?.id);
     if (!product || isPack(product)) return;
-    const started = data.started_at ?? data.first_billed_at ?? new Date().toISOString();
+    const status = event.type === 'customer.subscription.deleted' ? 'canceled' : (object.status ?? 'active');
+    const periodEnd = item?.current_period_end ?? object.current_period_end;
     await db.query(
       `insert into subscriptions (id, user_id, plan, status, started_at, current_period_end, updated_at)
        values ($1, $2, $3, $4, $5, $6, now())
        on conflict (id) do update set plan = excluded.plan, status = excluded.status,
          current_period_end = excluded.current_period_end, updated_at = now()`,
-      [data.id, userId, product, data.status ?? 'active', new Date(started), data.current_billing_period?.ends_at ? new Date(data.current_billing_period.ends_at) : null],
+      [object.id, userId, product, status, new Date((object.start_date ?? Date.now() / 1000) * 1000), periodEnd ? new Date(periodEnd * 1000) : null],
     );
+    if (object.customer) await db.query('update users set stripe_customer_id = $2 where id = $1', [userId, object.customer]);
+    return;
+  }
+
+  // A refund (whole or part) or a chargeback: the credits still unused from that payment go.
+  if (event.type === 'charge.refunded' || event.type === 'charge.dispute.created') {
+    const reason = `${event.type === 'charge.refunded' ? 'refund' : 'chargeback'}:${object.id}`;
+    const purchase = object.payment_intent ? await lookup(object.payment_intent) : null;
+    if (purchase) {
+      await revokeGrants(db, `txn:${purchase}:`, reason);
+      return;
+    }
+    // A plan's payment (made by its invoice, so without our purchase id): that customer's plan months go.
+    if (!object.customer) return;
+    const subs = await db.query<{ id: string }>('select s.id from subscriptions s join users u on u.id = s.user_id where u.stripe_customer_id = $1', [object.customer]);
+    for (const sub of subs) await revokeGrants(db, `sub:${sub.id}:`, reason);
   }
 }
 
-/**
- * A refund or chargeback, once approved: the credits still unused from that payment go (its packs, and a refunded plan's
- * months). Adjustments carry no custom data, so the grants are found by the payment they came from (their refs).
- */
-async function applyAdjustment(db: Db, data: PaddleEvent['data']): Promise<void> {
-  if ((data.action !== 'refund' && data.action !== 'chargeback') || data.status !== 'approved') return;
-  const reason = `${data.action}:${data.id}`;
-  if (data.transaction_id) await revokeGrants(db, `txn:${data.transaction_id}:`, reason);
-  if (data.subscription_id) await revokeGrants(db, `sub:${data.subscription_id}:`, reason);
+/** Our purchase id for a payment, from the payment's metadata (set at checkout); null for a plan's invoice payment. */
+async function lookupPurchase(paymentIntent: string): Promise<string | null> {
+  const intent = await stripe<{ metadata?: Record<string, string> }>('GET', `/payment_intents/${encodeURIComponent(paymentIntent)}`);
+  return intent.metadata?.purchase ?? null;
 }

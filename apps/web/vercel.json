@@ -16,13 +16,13 @@
       "destination": "/api?path=:path*"
     },
     {
-      "source": "/((?!api/|assets/|checkout\\.html|sw\\.js|registerSW\\.js|manifest\\.webmanifest|workbox-|.*\\.(?:png|svg|ico|wasm|js|css|webmanifest|json)$).*)",
+      "source": "/((?!api/|assets/|sw\\.js|registerSW\\.js|manifest\\.webmanifest|workbox-|.*\\.(?:png|svg|ico|wasm|js|css|webmanifest|json)$).*)",
       "destination": "/index.html"
     }
   ],
   "headers": [
     {
-      "source": "/((?!checkout\\.html).*)",
+      "source": "/(.*)",
       "headers": [
         {
           "key": "Cross-Origin-Opener-Policy",

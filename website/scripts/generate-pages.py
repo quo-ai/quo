@@ -25,7 +25,7 @@ EMAIL = 'astralabsltd@gmail.com'
 COMPANY = 'Astra Labs Ltd'
 COMPANY_DETAILS = ('a company registered in England and Wales (company number 16558481), '
                    'registered office 82 James Carter Road, Mildenhall, IP28 7DE, United Kingdom')
-UPDATED = '2 November 2026'
+UPDATED = '3 November 2026'
 
 home = (ROOT / 'index.html').read_text()
 SYMBOL = re.search(r'<svg width="0".*?</svg>', home, re.S).group(0)
@@ -116,9 +116,9 @@ privacy = f'''<h1>Privacy Policy</h1>
 <p>If you turn on Quo Sync, each chat and memory is encrypted on your device before it is uploaded, with a key made from a recovery key that you save and that we never receive. We store the encrypted data, a random identifier for each item, its size and when it last changed, and a small encrypted check value that lets a new device confirm your recovery key. The names of attached files are part of the encrypted data; the files, photos and models themselves are never synced.</p>
 <p>We can’t read, search or recover your synced chats and memories, and if you lose your recovery key nobody can open them. We can tell that your account uses Quo Sync, roughly how many items it holds, how big they are and when they changed, but not what they say.</p>
 <h3>Payments</h3>
-<p>Quo Pro and Quo Sync plans bought on the web or in the desktop app are sold by Paddle, our merchant of record, which collects your payment details and handles tax. We receive your email address, your country and the status of your plan, never your card details.</p>
+<p>Quo Pro, Quo Sync and credit packs bought on the web or in the desktop app are sold by Stripe (Stripe Managed Payments), our merchant of record, which collects your payment details and handles tax. We receive your email address and the status of your plan or purchase, never your card details.</p>
 <h3>Deleting your account</h3>
-<p>You can delete your account yourself at any time (<strong>Settings → Sync</strong> in the Android app, <strong>Plan &amp; credits</strong> in Quo Web and the desktop app; see <a href="/delete-account/">how to delete your account</a>), as long as you have no running plan; cancel that first. Deleting it removes your synced chats and memories, your credits and your plan records from our systems. The chats and memories on your devices stay. Paddle keeps its own records of purchases, as the law requires.</p>
+<p>You can delete your account yourself at any time (<strong>Settings → Sync</strong> in the Android app, <strong>Plan &amp; credits</strong> in Quo Web and the desktop app; see <a href="/delete-account/">how to delete your account</a>), as long as you have no running plan; cancel that first. Deleting it removes your synced chats and memories, your credits and your plan records from our systems. The chats and memories on your devices stay. Stripe keeps its own records of purchases, as the law requires.</p>
 
 <h2>Downloads and purchases</h2>
 <p>AI models are downloaded from Hugging Face, a public model host, or, if you add a custom model, from the web address you enter. On Android, the starter model may instead be delivered by Google Play. As with any download, the host receives standard request information such as your IP address and is responsible for it under its own privacy policy.</p>
@@ -157,7 +157,7 @@ privacy = f'''<h1>Privacy Policy</h1>
 </ul>
 
 <h2>Service providers and international transfers</h2>
-<p>This website, Quo Web and our server run on our own server in the UK. Google (Firebase), Cloudflare (which delivers and protects them), Neon (our database, in London) and Resend (sign-in emails) process data for us as service providers, Vercel runs our old web addresses for older versions of the apps, and Paddle sells Quo Pro, Quo Sync and credit packs as merchant of record. When you choose a cloud model, OpenRouter and that model’s provider process those messages to answer them. They may process it outside the UK and EU, including in the United States. Where they do, the transfer is protected by recognised safeguards such as the EU–US Data Privacy Framework and its UK Extension, or Standard Contractual Clauses.</p>
+<p>This website, Quo Web and our server run on our own server in the UK. Google (Firebase), Cloudflare (which delivers and protects them), Neon (our database, in London) and Resend (sign-in emails) process data for us as service providers, Vercel runs our old web addresses for older versions of the apps, and Stripe sells Quo Pro, Quo Sync and credit packs as merchant of record. When you choose a cloud model, OpenRouter and that model’s provider process those messages to answer them. They may process it outside the UK and EU, including in the United States. Where they do, the transfer is protected by recognised safeguards such as the EU–US Data Privacy Framework and its UK Extension, or Standard Contractual Clauses.</p>
 
 <h2>How long we keep data</h2>
 <ul>
@@ -221,7 +221,7 @@ terms = f'''<h1>Terms of Use</h1>
 <h2>Accounts, Quo Pro and Quo Sync</h2>
 <p>You don’t need an account to use Quo. An account (an email address, confirmed with a code) is needed for Quo Sync, and for Quo Pro and paid cloud models. Keep your sign-in secure: you’re responsible for what is done with your account. You can delete your account yourself at any time (<strong>Settings → Sync</strong> in the Android app, <strong>Plan &amp; credits</strong> in Quo Web and the desktop app), once any running plan has been cancelled.</p>
 <h3>Buying a plan or credits</h3>
-<p>Quo Pro, Quo Sync and credit packs are bought on the web or in the desktop app and are sold by Paddle, our merchant of record, which takes the payment and handles tax. The price, renewal and cancellation terms are shown at checkout. Cancelling stops renewal; the plan runs to the end of the period you paid for. Refunds are explained in our <a href="/refunds/">refund policy</a>.</p>
+<p>Quo Pro, Quo Sync and credit packs are bought on the web or in the desktop app and are sold by Stripe, our merchant of record, which takes the payment and handles tax. The price, renewal and cancellation terms are shown at checkout. Cancelling stops renewal; the plan runs to the end of the period you paid for. Refunds are explained in our <a href="/refunds/">refund policy</a>.</p>
 <h3>Quo Pro and credits</h3>
 <p>Paid cloud models and making images use credits. Each model shows what a typical message costs before you choose it. Credits come from:</p>
 <ul>
@@ -358,7 +358,7 @@ delete_account = f'''<h1>Delete your Quo account</h1>
 <li>Your credits, their history and your plan records</li>
 <li>Your invite link, and the record of who invited you and whom you invited</li>
 </ul>
-<p>It happens straight away. <strong>What stays:</strong> the chats and memories on your own devices, which are not touched; Paddle’s own records of any purchases you made, which it keeps as the law requires; and, for a year after your free trial, a one-way keyed hash of your email address, only so the trial can’t be claimed twice (it can’t be turned back into your address).</p>
+<p>It happens straight away. <strong>What stays:</strong> the chats and memories on your own devices, which are not touched; Stripe’s own records of any purchases you made, which it keeps as the law requires; and, for a year after your free trial, a one-way keyed hash of your email address, only so the trial can’t be claimed twice (it can’t be turned back into your address).</p>
 
 <h2>Can’t sign in?</h2>
 <p>Email {MAIL} from the address on the account and ask us to delete it. We’ll check it’s you and do it within 30 days. You can also delete only your synced chats and keep the account, from Quo Sync’s settings (<strong>Delete the cloud copy</strong>).</p>
@@ -367,7 +367,7 @@ delete_account = f'''<h1>Delete your Quo account</h1>
 
 refunds = f'''<h1>Refund policy</h1>
 <p class="meta">Last updated {UPDATED}</p>
-<p>This policy covers what you buy from us on the web and in the Quo desktop app: Quo Pro, Quo Sync and credit packs. These are sold by Paddle, our merchant of record, so your payment and any refund go through Paddle.</p>
+<p>This policy covers what you buy from us on the web and in the Quo desktop app: Quo Pro, Quo Sync and credit packs. These are sold by Stripe, our merchant of record, so your payment and any refund go through Stripe.</p>
 
 <h2>14 days to change your mind</h2>
 <ul>
@@ -378,10 +378,10 @@ refunds = f'''<h1>Refund policy</h1>
 
 <h2>How to ask</h2>
 <ul>
-<li>Use the link in the receipt Paddle emailed you, or look up your order at <a href="https://www.paddle.net/">paddle.net</a>.</li>
+<li>Use the receipt Stripe emailed you: it has a link to your order.</li>
 <li>Or email {MAIL} from the address on your Quo account, with the order number from your receipt.</li>
 </ul>
-<p>Paddle returns the money to the card or account you paid with.</p>
+<p>Stripe returns the money to the card or account you paid with.</p>
 
 <h2>After 14 days</h2>
 <p>You can cancel a plan at any time (<strong>Plan &amp; credits → Manage subscription</strong>). It stops the next renewal, and the plan runs to the end of the period you paid for. We don’t refund the rest of a period after the first 14 days, and credits that have expired aren’t refunded. If something you paid for didn’t work and we couldn’t fix it, tell us and we’ll refund you.</p>
@@ -390,7 +390,7 @@ refunds = f'''<h1>Refund policy</h1>
 <p>Premium bought in the Android or iPhone app is sold by Google Play or the App Store. Ask them for a refund: their own policies apply.</p>
 
 <h2>Your legal rights</h2>
-<p>Nothing in this policy limits your rights under consumer law. Paddle’s <a href="https://www.paddle.com/legal/checkout-buyer-terms">buyer terms</a> also apply to purchases made through it.</p>
+<p>Nothing in this policy limits your rights under consumer law.</p>
 '''
 
 not_found = '''<div>

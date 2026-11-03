@@ -24,7 +24,7 @@ Sales
   credit packs              ${list(s.sales.packs)}
   new plans                 ${list(s.sales.newPlans)}
   plans running now         ${list(s.sales.activePlans)}
-  new sales (list prices)   ${money(s.sales.newSalesUsd)} before tax and Paddle's fee (renewals not counted)
+  new sales (list prices)   ${money(s.sales.newSalesUsd)} before tax and Stripe's fees (renewals not counted)
 Pro allowance used          ${pct(s.allowance.usedShare)} of ${s.allowance.months} finished months
 Trial                       ${s.trial.given} given; ${pct(s.trial.usedShare)} used of ${s.trial.ended} that ended
 Accounts                    ${s.accounts.total} in all, ${s.accounts.new} new, ${s.accounts.paying} have paid (${pct(s.accounts.conversion)})`);
