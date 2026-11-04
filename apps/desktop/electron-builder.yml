@@ -112,7 +112,7 @@ nsis:
   runAfterFinish: true
   # Keep downloaded models (several GB) if the app is uninstalled and reinstalled.
   deleteAppDataOnUninstall: false
-  # Shown before installing: what Quo contacts by itself and how to turn it off (SignPath Foundation's terms ask for it).
+  # Shown before installing: what Quo contacts by itself and how to turn it off.
   license: build/installer-notice.txt
 
 linux:

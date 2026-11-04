@@ -234,25 +234,9 @@ You can also run the workflow manually (Actions → Desktop release → Run work
 
 `electron-updater` checks GitHub Releases once at startup in packaged builds. The person can turn that off in the Help menu (Check for Updates at Start-up, saved in `updates.json` in the profile); `QUO_DISABLE_UPDATES=1` also turns it off. It downloads in the background, then asks "A new version of Quo is ready. Restart to update?" (Restart / Later). With Later, the update installs the next time Quo quits. Errors, including being offline, are only logged. Supported: the Windows installer, the AppImage, the .deb (asks for the admin password to install), and **signed** macOS builds.
 
-### Signing (free)
+### Signing
 
-**Windows: SignPath Foundation**, which signs open-source projects for free ([terms](https://signpath.org/terms)). Its requirements are met in the repo: the [code signing policy](https://quo.computer/code-signing/) page (linked from the home page, the download section and every release's notes), the installer's privacy notice (`build/installer-notice.txt`, shown before installing) and a way to turn off the one thing the app contacts by itself (Help → Check for Updates at Start-up). Once SignPath accepts the project:
-
-1. In SignPath, create two artifact configurations in the project, named `app` and `installer`:
-   ```xml
-   <!-- app: a zip of win-unpacked; only Quo's own program is signed (llama.cpp's engine is shipped as its makers built it) -->
-   <artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
-     <zip-file><pe-file path="Quo.exe" product-name="Quo"><authenticode-sign/></pe-file></zip-file>
-   </artifact-configuration>
-   <!-- installer: the .exe itself -->
-   <artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
-     <pe-file product-name="Quo"><authenticode-sign/></pe-file>
-   </artifact-configuration>
-   ```
-2. Install the SignPath GitHub App on the repository, and make a CI user with an API token.
-3. In the repository's settings: the secret `SIGNPATH_API_TOKEN`, and the variables `SIGNPATH_ORGANIZATION_ID`, `SIGNPATH_PROJECT_SLUG`, `SIGNPATH_POLICY_SLUG` and `WIN_PUBLISHER_NAME` (the certificate's name, `SignPath Foundation`, which updates then check).
-
-The release workflow then builds the app (`--dir`), has it signed, builds the installer from the signed app (`--prepackaged`), has that signed, and makes `latest.yml` match the signed file (`scripts/finish-signed-windows.js`; updates download the whole installer, as the block map was the unsigned file's). Each signing request is approved by hand in SignPath, and the workflow waits up to an hour for each. Without these settings the installer is built unsigned, as before (or with `WIN_CSC_LINK` / `WIN_CSC_KEY_PASSWORD`, a `.pfx` certificate, if one is ever set).
+**Windows: unsigned for now.** SignPath Foundation, which signs open-source projects for free, turned Quo down in November 2026 until the project is better known (stars, forks, contributors, articles and discussions elsewhere); it can apply again then. Until it is signed, Windows says the publisher is unknown (More info → Run anyway), and the website and release notes say so. A certificate can be added at any time with the secrets `WIN_CSC_LINK` (a `.pfx`, base64) and `WIN_CSC_KEY_PASSWORD`, with no other change. The installer's privacy notice (`build/installer-notice.txt`) and Help → Check for Updates at Start-up stay: they tell people what the app contacts by itself and let them turn it off.
 
 **macOS: no free option.** Notarisation needs the paid Apple Developer Program, so the Mac app is ad-hoc signed (it launches on Apple silicon; Gatekeeper asks once, and the website says how to open it). If the program is ever joined, these secrets switch on signing and notarisation with no other change: `CSC_LINK` (Developer ID Application certificate, `.p12`, base64), `CSC_KEY_PASSWORD`, and `APPLE_API_KEY` (the `.p8`'s contents), `APPLE_API_KEY_ID`, `APPLE_API_ISSUER`.
 

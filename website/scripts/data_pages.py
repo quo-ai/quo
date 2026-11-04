@@ -100,31 +100,3 @@ def changelog_page(path: Path, updated: str) -> str:
             close()
     close()
     return f'<h1>What’s new in Quo</h1>\n<p class="meta">Last updated {updated}. Also on <a href="https://github.com/quo-ai/quo/blob/master/CHANGELOG.md">GitHub</a>.</p>\n' + '\n'.join(out) + '\n'
-
-
-def code_signing_page(privacy_link: str) -> str:
-    """The code signing policy SignPath Foundation's terms ask for (signpath.org/terms), linked from the home page,
-    the download section and every desktop release."""
-    return f'''<h1>Code signing policy</h1>
-<p><strong>Free code signing provided by <a href="https://signpath.io">SignPath.io</a>, certificate by <a href="https://signpath.org">SignPath Foundation</a>.</strong></p>
-<p class="meta">Signing starts with the first desktop release after SignPath Foundation accepts Quo. Until then, the Windows installer is unsigned.</p>
-
-<h2>What is signed</h2>
-<ul>
-<li>The Quo desktop app for Windows (<code>Quo.exe</code>) and its installer, for each release. Both are built from the source code at <a href="https://github.com/quo-ai/quo">github.com/quo-ai/quo</a> by GitHub Actions (<a href="https://github.com/quo-ai/quo/blob/master/.github/workflows/desktop-release.yml">the release workflow</a>), and every release is approved by hand before it is signed.</li>
-<li>Parts made by others that Quo ships unchanged, such as llama.cpp’s engine, are not signed by us.</li>
-<li>The Mac app is not notarised, because that needs a paid Apple account: <a href="/support/">Support</a> says how to open it the first time. The Android app is signed by Google Play.</li>
-</ul>
-
-<h2>Who does what</h2>
-<ul>
-<li><strong>Committers and reviewers:</strong> the members of the <a href="https://github.com/orgs/quo-ai/people">quo-ai organisation on GitHub</a>. Changes from anyone else are reviewed in pull requests before they are merged.</li>
-<li><strong>Approvers:</strong> the owners of the quo-ai organisation, who approve each release before it is signed.</li>
-</ul>
-
-<h2>Privacy</h2>
-<p>Quo runs AI models on your computer. What you type stays on it unless you choose a cloud model or a model you reach with your own account, and every reply shows where it ran. Without being asked, the desktop app contacts only GitHub, once when it starts, to check for a new version (turn this off in the Help menu: Check for Updates at Start-up), and Quo’s server, for the list of cloud models. The installer says the same before it installs. Everything else is in the {privacy_link}.</p>
-
-<h2>Security problems</h2>
-<p>Report them privately, as <a href="https://github.com/quo-ai/quo/blob/master/.github/SECURITY.md">SECURITY.md</a> describes.</p>
-'''
