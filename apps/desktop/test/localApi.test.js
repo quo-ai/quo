@@ -53,6 +53,16 @@ const call = (pathname, { method = 'GET', headers = {}, body } = {}) => new Prom
   req.end();
 });
 const key = () => ({ authorization: `Bearer ${api.state().key}` });
+/** Says it will send more than the server takes, and sends none of it: the answer comes from the headers alone. */
+const declaredTooLarge = () => new Promise((resolve, reject) => {
+  const port = api.server.address().port;
+  const req = http.request({ host: '127.0.0.1', port, path: '/v1/completions', method: 'POST', headers: { host: `127.0.0.1:${port}`, ...key(), 'content-length': String(17 * 1024 * 1024) } }, res => {
+    res.resume();
+    res.on('end', () => resolve({ status: res.statusCode }));
+  });
+  req.on('error', reject);
+  req.flushHeaders();
+});
 
 describe('the local server for other apps', () => {
   it('answers an app with the key: the loaded model, and chat forwarded with llama-server’s own key', async () => {
@@ -81,7 +91,11 @@ describe('the local server for other apps', () => {
     for (const [pathname, method] of [['/v1/embeddings', 'POST'], ['/slots', 'GET'], ['/props', 'POST'], ['/v1/chat/completions', 'GET'], ['/../v1/models', 'DELETE']]) {
       assert.equal((await call(pathname, { method, headers: key() })).status, 404, pathname);
     }
-    assert.equal((await call('/v1/completions', { method: 'POST', headers: { ...key(), 'content-length': String(17 * 1024 * 1024) }, body: 'x'.repeat(17 * 1024 * 1024) }).catch(error => ({ status: error.code }))).status, 413);
+    // A body said to be too large is refused before it is sent; one that just keeps coming is cut off. The server closes
+    // the connection either way, so a client still sending may see the connection reset (macOS, Windows) instead of
+    // reading the 413: what matters is that nothing of it reaches llama-server.
+    assert.equal((await declaredTooLarge()).status, 413);
+    assert.ok([413, 'ECONNRESET', 'EPIPE'].includes((await call('/v1/completions', { method: 'POST', headers: { ...key(), 'transfer-encoding': 'chunked' }, body: 'x'.repeat(17 * 1024 * 1024) }).catch(error => ({ status: error.code }))).status));
     loaded = false;
     assert.equal((await call('/v1/chat/completions', { method: 'POST', headers: key(), body: '{}' })).status, 503);
     assert.deepEqual(JSON.parse((await call('/v1/models', { headers: key() })).text).data, []);
