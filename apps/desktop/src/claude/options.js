@@ -20,6 +20,12 @@ const TURNED_OFF = {
   CLAUDE_CODE_DISABLE_ADVISOR_TOOL: '1',
   // Quo's own limits on tool output apply instead.
   MAX_MCP_OUTPUT_TOKENS: '200000',
+  // Quo decides what the model keeps of a long chat; Claude Code's own summary would change it without Quo knowing.
+  DISABLE_AUTO_COMPACT: '1',
+  // A stream that breaks is retried without streaming, and the page would wait for a reply that never streams.
+  CLAUDE_CODE_DISABLE_NONSTREAMING_FALLBACK: '1',
+  // A refused request moves to another model, and the reply would show the wrong model as where it ran.
+  CLAUDE_CODE_DISABLE_REFUSAL_FALLBACK: '1',
 };
 
 // Set in a person's shell, these would get in the way: the first skips the Claude login, the second caps every tool

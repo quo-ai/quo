@@ -28,13 +28,17 @@ test('Claude Code starts with none of its own tools, settings, hooks, skills or 
 });
 
 test('its environment is the person’s own, less Electron’s and the settings that would get in the way', () => {
-  const env = childEnv({ HOME: '/home/a', PATH: '/usr/bin', HTTPS_PROXY: 'http://proxy:3128', ELECTRON_RUN_AS_NODE: '1', NODE_OPTIONS: '--require /tmp/x.js', CLAUDE_CODE_SIMPLE: '1', MCP_TOOL_TIMEOUT: '10', CLAUDE_CODE_EFFORT_LEVEL: 'max' }, '1.6.0');
+  const env = childEnv({ HOME: '/home/a', PATH: '/usr/bin', HTTPS_PROXY: 'http://proxy:3128', ELECTRON_RUN_AS_NODE: '1', NODE_OPTIONS: '--require /tmp/x.js', CLAUDE_CODE_SIMPLE: '1', MCP_TOOL_TIMEOUT: '10', CLAUDE_CODE_EFFORT_LEVEL: 'max', CLAUDE_CODE_DISABLE_REFUSAL_FALLBACK: '0' }, '1.6.0');
   assert.equal(env.HOME, '/home/a');
   assert.equal(env.HTTPS_PROXY, 'http://proxy:3128');
   for (const gone of ['ELECTRON_RUN_AS_NODE', 'NODE_OPTIONS', 'CLAUDE_CODE_SIMPLE', 'MCP_TOOL_TIMEOUT', 'CLAUDE_CODE_EFFORT_LEVEL']) assert.equal(gone in env, false, gone);
   assert.equal(env.CLAUDE_CODE_DISABLE_AUTO_MEMORY, '1');
   assert.equal(env.CLAUDE_CODE_DISABLE_CLAUDE_MDS, '1');
   assert.equal(env.ENABLE_TOOL_SEARCH, 'false');
+  // No compaction, no non-streaming retry and no switch to another model behind Quo's back.
+  assert.equal(env.DISABLE_AUTO_COMPACT, '1');
+  assert.equal(env.CLAUDE_CODE_DISABLE_NONSTREAMING_FALLBACK, '1');
+  assert.equal(env.CLAUDE_CODE_DISABLE_REFUSAL_FALLBACK, '1');
   assert.equal(env.CLAUDE_AGENT_SDK_CLIENT_APP, 'quo-desktop/1.6.0');
 });
 
