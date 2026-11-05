@@ -40,6 +40,20 @@ test('its environment is the person’s own, less Electron’s and the settings 
   assert.equal(env.CLAUDE_CODE_DISABLE_NONSTREAMING_FALLBACK, '1');
   assert.equal(env.CLAUDE_CODE_DISABLE_REFUSAL_FALLBACK, '1');
   assert.equal(env.CLAUDE_AGENT_SDK_CLIENT_APP, 'quo-desktop/1.6.0');
+  assert.equal(env.CLAUDE_CODE_ENTRYPOINT, 'quo-desktop');
+});
+
+test('started from inside a Claude Code session, Quo still says who it is and isn’t part of that session', () => {
+  // What a terminal inside Claude Code (an editor's extension, `claude -p`) hands down, plus the person's own Claude settings.
+  const inherited = { CLAUDECODE: '1', CLAUDE_CODE_ENTRYPOINT: 'claude-vscode', CLAUDE_CODE_CHILD_SESSION: '1', CLAUDE_CODE_SESSION_ID: 'abc', CLAUDE_CODE_SESSION_ATTENDED: '1', CLAUDE_CODE_MESSAGING_SOCKET: '/tmp/s.sock', CLAUDE_CODE_MESSAGING_TOKEN: 'x', CLAUDE_CODE_SSE_PORT: '4123', CLAUDE_CODE_HOST_AUTH_ENV_VAR: 'HOST_TOKEN', CLAUDE_CODE_EXECPATH: '/opt/claude', CLAUDE_PID: '42', CLAUDE_AGENT_SDK_VERSION: '0.0.1', CLAUDE_EFFORT: 'max' };
+  const own = { CLAUDE_CONFIG_DIR: '/home/a/.claude-work', ANTHROPIC_BASE_URL: 'https://gateway.example', CLAUDE_CODE_USE_BEDROCK: '1', HOME: '/home/a' };
+  const env = childEnv({ ...inherited, ...own }, '1.7.0');
+  for (const name of Object.keys(inherited)) if (name !== 'CLAUDE_CODE_ENTRYPOINT') assert.equal(name in env, false, name);
+  // Its own name, never the session's program or Claude Code's own terminal (`cli`), whatever was handed down.
+  assert.equal(env.CLAUDE_CODE_ENTRYPOINT, 'quo-desktop');
+  assert.equal(childEnv({ CLAUDE_CODE_ENTRYPOINT: 'cli' }, '1.7.0').CLAUDE_CODE_ENTRYPOINT, 'quo-desktop');
+  // The person's own sign-in and connection settings still apply.
+  for (const [name, value] of Object.entries(own)) assert.equal(env[name], value, name);
 });
 
 test('only the person’s own claude is found: never through a relative PATH entry, and a chosen one must be absolute', () => {
@@ -84,6 +98,9 @@ test('plan limits: a warning says how much is used and when it resets; a refusal
   assert.match(limitText({ status: 'allowed_warning', rateLimitType: 'five_hour', utilization: 0.8, resetsAt: soon }, now), /^You’ve used 80% of your Claude plan’s 5-hour limit\. It resets at /);
   assert.match(limitText({ status: 'rejected', rateLimitType: 'seven_day', resetsAt: (now + 3 * 86_400_000) / 1000 }, now), /^You’ve reached your Claude plan’s weekly limit\. It resets on \w+ at /);
   assert.equal(limitText({ status: 'allowed', utilization: 0.1 }, now), null);
+  // Past a limit with usage credits on, the person hears that replies are now billed, even while Claude carries on.
+  assert.match(limitText({ status: 'allowed', rateLimitType: 'five_hour', isUsingOverage: true, overageStatus: 'allowed' }, now), /usage credits, which Anthropic bills at API rates/);
+  assert.match(limitText({ status: 'rejected', rateLimitType: 'five_hour', isUsingOverage: true }, now), /^You’ve reached your Claude plan’s 5-hour limit\./);
   const refused = {
     async readStep(emit) {
       emit({ type: 'rate_limit_event', rate_limit_info: { status: 'rejected', rateLimitType: 'five_hour' } });

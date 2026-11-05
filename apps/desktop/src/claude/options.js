@@ -28,19 +28,37 @@ const TURNED_OFF = {
   CLAUDE_CODE_DISABLE_REFUSAL_FALLBACK: '1',
 };
 
-// Set in a person's shell, these would get in the way: the first skips the Claude login, the second caps every tool
-// call, and approvals can take as long as the person likes.
-const CLEARED = ['CLAUDE_CODE_SIMPLE', 'CLAUDE_CODE_EFFORT_LEVEL', 'MCP_TOOL_TIMEOUT'];
+// Set in a person's shell, these would get in the way: the first skips the Claude login, the efforts override the one
+// chosen in Quo, the timeout caps every tool call, and approvals can take as long as the person likes.
+const CLEARED = ['CLAUDE_CODE_SIMPLE', 'CLAUDE_CODE_EFFORT_LEVEL', 'CLAUDE_EFFORT', 'MCP_TOOL_TIMEOUT'];
+
+// What a running Claude Code session gives the programs it starts (Quo opened from a terminal inside Claude Code, say).
+// Passed on, they would make Quo's Claude Code act as part of that session: report that session's program as the one
+// asking, stop saving transcripts (so a stopped conversation couldn't be picked up again), use the host's sign-in or
+// worktree, and connect to the session's socket or the editor's.
+const SESSION_MARKERS = [
+  'CLAUDECODE', 'CLAUDE_CODE_SESSION_ID', 'CLAUDE_CODE_CHILD_SESSION', 'CLAUDE_CODE_SESSION_ATTENDED', 'CLAUDE_CODE_BRIDGE_SESSION_ID',
+  'CLAUDE_CODE_HOST_AUTH_ENV_VAR', 'CLAUDE_CODE_HOST_WORKTREE', 'CLAUDE_CODE_HOST_WORKTREE_FENCE', 'CLAUDE_CODE_EVAL_INTERVIEW_SESSION',
+  'CLAUDE_CODE_CHROME_MCP_ORG_DENIED', 'CLAUDE_BG_GATEWAY_WITHHELD', 'CLAUDE_CODE_FORCE_SESSION_PERSISTENCE', 'CLAUDE_CODE_PLAN_MODE_REQUIRED',
+  'CLAUDE_CODE_EXECPATH', 'CLAUDE_CODE_MESSAGING_SOCKET', 'CLAUDE_CODE_MESSAGING_TOKEN', 'CLAUDE_PID', 'CLAUDE_AGENT_SDK_VERSION',
+  'CLAUDE_CODE_SSE_PORT', 'CLAUDE_CODE_EMIT_STARTUP_TIMING', 'CLAUDE_CODE_STARTUP_FAILURE_RESULTS', 'CLAUDE_CODE_QUESTION_PREVIEW_FORMAT',
+  'CLAUDE_CODE_ENABLE_SDK_FILE_CHECKPOINTING', 'CLAUDE_CODE_ENABLE_TASKS',
+];
+
+// The program asking, as Claude Code labels every request. Quo's own name, never another program's (`cli` is
+// Claude Code in a terminal): the SDK's default, `sdk-ts`, uses up a plan's 5-hour limit about twice as fast for the
+// same work (anthropics/claude-code#97074), and an inherited label would name the session that started Quo.
+const ENTRYPOINT = 'quo-desktop';
 
 /** The environment Claude Code starts with: the person's own (it holds their login settings and proxy), less Electron's, plus the switches above. */
 function childEnv(env, version) {
   const kept = {};
   for (const [name, value] of Object.entries(env)) {
-    if (typeof value !== 'string' || /^(ELECTRON_|CHROME_)/.test(name) || name === 'NODE_OPTIONS' || CLEARED.includes(name)) continue;
+    if (typeof value !== 'string' || /^(ELECTRON_|CHROME_)/.test(name) || name === 'NODE_OPTIONS' || CLEARED.includes(name) || SESSION_MARKERS.includes(name)) continue;
     kept[name] = value;
   }
-  // Says honestly which app is asking (Anthropic's SDK puts this in the request's User-Agent).
-  return { ...kept, CLAUDE_AGENT_SDK_CLIENT_APP: `quo-desktop/${version || 'dev'}`, ...TURNED_OFF };
+  // Says honestly which app is asking: in the label on every request, and in its User-Agent (Anthropic's SDK puts the second there).
+  return { ...kept, CLAUDE_CODE_ENTRYPOINT: ENTRYPOINT, CLAUDE_AGENT_SDK_CLIENT_APP: `quo-desktop/${version || 'dev'}`, ...TURNED_OFF };
 }
 
 /** What every Claude Code process Quo starts has, including the sign-in check. */
@@ -95,4 +113,4 @@ function effortFor(level, supported = []) {
   return null;
 }
 
-module.exports = { childEnv, baseOptions, sessionOptions, effortFor, TURNED_OFF, CLEARED };
+module.exports = { childEnv, baseOptions, sessionOptions, effortFor, TURNED_OFF, CLEARED, SESSION_MARKERS, ENTRYPOINT };

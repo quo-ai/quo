@@ -64,6 +64,8 @@ function planOf(info) {
  * limit is close, or why a reply was refused. Null when there is nothing to say.
  */
 function limitText(info, now = Date.now()) {
+  // Past a plan limit with usage credits on, Claude carries on and Anthropic bills each reply: say so the moment it starts.
+  if (info?.isUsingOverage === true && info.status !== 'rejected') return 'You’ve reached your Claude plan’s limit, so replies now use your usage credits, which Anthropic bills at API rates.';
   if (!info || (info.status !== 'allowed_warning' && info.status !== 'rejected')) return null;
   const window = WINDOWS[info.rateLimitType] ?? '';
   const limit = `your Claude plan’s ${window ? `${window} ` : ''}limit`;
