@@ -33,6 +33,8 @@ describe('Code mode on the free model', () => {
     expect(names).toContain('read_file');
     expect(names).not.toContain('task');
     expect(requests[0].body.max_tokens as number).toBeLessThanOrEqual(4096);
+    // Code mode with a project folder is listed as a programming app on OpenRouter.
+    expect(requests[0].headers['x-openrouter-categories']).toBe('programming-app');
   });
 
   it('does not use up the free chat messages', async () => {
@@ -117,6 +119,8 @@ describe('a chat with no folder yet', () => {
     expect(system).toMatch(/Most messages need no tool\. Answer them directly/);
     expect(system).toContain('You are Claude Haiku 5.5');
     expect(system).not.toMatch(/Project folder:|instead of saying you cannot|inside Quo Desktop/);
+    // For OpenRouter's app rankings it is a chat until a project folder is open.
+    expect(requests[0].headers['x-openrouter-categories']).toBe('general-chat');
   });
 
   it('never adds the project tools, whatever else is asked for alongside it', async () => {

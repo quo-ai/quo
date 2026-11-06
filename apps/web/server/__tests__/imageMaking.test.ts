@@ -59,8 +59,10 @@ describe('making images in the cloud', () => {
     const { config } = await import('../env.js');
     config.openRouterKey = 'test-key';
     const asked: string[] = [];
+    const labels: unknown[] = [];
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (_url, init) => {
       asked.push(JSON.parse(String(init?.body)).model);
+      labels.push((init?.headers as Record<string, string>)['x-openrouter-categories']);
       return new Response(JSON.stringify({ error: { message: 'busy' } }), { status: 503 });
     });
     vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -68,6 +70,8 @@ describe('making images in the cloud', () => {
       const who = randomUUID();
       expect(await errorOf(make({ prompt: 'A red fox' }, who))).toBe('image_failed');
       expect(asked).toEqual(['black-forest-labs/flux-3-image-klein']);
+      // Listed as image making in OpenRouter's app rankings.
+      expect(labels).toEqual(['image-gen']);
       fetchSpy.mockRestore();
       config.openRouterKey = null;
       // Both free images are still there.

@@ -175,6 +175,8 @@ export async function handleChat(request: Request): Promise<Response> {
       try {
         const ask = (web: boolean) => streamChat(model, messages, {
           maxTokens,
+          // Code mode once a project folder is open; a chat (even one that may still ask for a folder) otherwise.
+          category: agent && !agent.folderless ? 'programming-app' : 'general-chat',
           reasoning,
           tools: agent?.tools,
           ...(web ? { web: { maxUses: searchesAllowed } } : {}),

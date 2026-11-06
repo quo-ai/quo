@@ -41,8 +41,19 @@ export interface StreamUsage {
   sources: WebSource[];
 }
 
+/**
+ * What kind of use a request is, as OpenRouter's app categories name it, so Quo is listed where it belongs in
+ * OpenRouter's app rankings (https://openrouter.ai/docs/app-attribution). A fixed label: nothing about the person.
+ */
+export type AppCategory = 'general-chat' | 'programming-app' | 'image-gen';
+
+/** How Quo names itself to OpenRouter on every request: its address, its name and the kind of use. */
+export const appHeaders = (category: AppCategory) => ({ 'http-referer': config.appUrl, 'x-title': 'Quo', 'x-openrouter-categories': category });
+
 export interface StreamOptions {
   maxTokens: number;
+  /** The kind of use (chat or Code mode), for OpenRouter's app rankings. */
+  category: AppCategory;
   /** What to send as `reasoning` (see shared/thinking.ts), or nothing to leave it to the model. */
   reasoning?: Record<string, unknown>;
   signal: AbortSignal;
@@ -74,8 +85,7 @@ export async function streamChat(
     headers: {
       authorization: `Bearer ${config.openRouterKey}`,
       'content-type': 'application/json',
-      'http-referer': config.appUrl,
-      'x-title': 'Quo',
+      ...appHeaders(options.category),
     },
     body: JSON.stringify({
       model: model.id,

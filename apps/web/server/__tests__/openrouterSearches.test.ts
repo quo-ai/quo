@@ -13,13 +13,13 @@ afterEach(() => vi.unstubAllGlobals());
 
 function respond(chunks: unknown[]) {
   const body = chunks.map(c => `data: ${JSON.stringify(c)}\n\n`).join('') + 'data: [DONE]\n\n';
-  const sent: { body: string }[] = [];
-  vi.stubGlobal('fetch', async (_url: string, init: { body: string }) => (sent.push(init), new Response(body, { status: 200 })));
+  const sent: { body: string; headers: Record<string, string> }[] = [];
+  vi.stubGlobal('fetch', async (_url: string, init: { body: string; headers: Record<string, string> }) => (sent.push(init), new Response(body, { status: 200 })));
   return sent;
 }
 
 const started: string[] = [];
-const run = () => streamChat(model, [{ role: 'user', content: 'news?' }], { maxTokens: 50, signal: new AbortController().signal, onDelta: () => {}, onSearch: q => started.push(q), web: { maxUses: 1 } });
+const run = () => streamChat(model, [{ role: 'user', content: 'news?' }], { maxTokens: 50, category: 'general-chat', signal: new AbortController().signal, onDelta: () => {}, onSearch: q => started.push(q), web: { maxUses: 1 } });
 const text = { choices: [{ delta: { content: 'Headline.' } }] };
 
 describe('how many searches a reply made', () => {
@@ -29,6 +29,14 @@ describe('how many searches a reply made', () => {
     const body = JSON.parse(sent[0].body);
     expect(body.tools).toEqual([{ type: 'openrouter:web_search', parameters: { engine: 'exa', max_results: 5, max_uses: 1 } }]);
     expect(body.plugins).toBeUndefined();
+  });
+
+  it('names Quo and the kind of use to OpenRouter, and nothing about the person', async () => {
+    const sent = respond([text]);
+    await run();
+    const { authorization, 'content-type': _type, ...rest } = sent[0].headers;
+    expect(authorization).toMatch(/^Bearer /);
+    expect(rest).toEqual({ 'http-referer': expect.stringMatching(/^https?:\/\//), 'x-title': 'Quo', 'x-openrouter-categories': 'general-chat' });
   });
 
   it('reads the count under either name OpenRouter documents', async () => {

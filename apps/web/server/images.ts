@@ -4,6 +4,7 @@ import { getBalance, reserveCredits, settleCredits } from './credits.js';
 import { getDb } from './db.js';
 import { config, features } from './env.js';
 import { noteCost } from './costs.js';
+import { appHeaders } from './openrouter.js';
 import { FREE_BUDGET_MESSAGE, freeBudgetReached, freeRemaining, refundFreeMessage, takeFree } from './freeTier.js';
 import { HttpError, json, readJson } from './http.js';
 import { freeSubject, identify } from './identity.js';
@@ -146,7 +147,7 @@ async function makeImage(model: string, prompt: string, aspect: ImageAspect, ref
     response = await fetch('https://openrouter.ai/api/v1/images', {
       method: 'POST',
       signal: AbortSignal.any([signal, timeout]),
-      headers: { authorization: `Bearer ${config.openRouterKey}`, 'content-type': 'application/json', 'http-referer': config.appUrl, 'x-title': 'Quo' },
+      headers: { authorization: `Bearer ${config.openRouterKey}`, 'content-type': 'application/json', ...appHeaders('image-gen') },
       body: JSON.stringify({
         model,
         prompt,

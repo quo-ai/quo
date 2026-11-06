@@ -53,9 +53,9 @@ const upstream = (chunks: unknown[]) =>
   new Response(chunks.map(chunk => `data: ${JSON.stringify(chunk)}\n\n`).join('') + 'data: [DONE]\n\n', { status: 200, headers: { 'content-type': 'text/event-stream' } });
 
 export function stubUpstream(chunks: unknown[]) {
-  const requests: { url: string; body: Record<string, unknown> }[] = [];
-  vi.stubGlobal('fetch', async (url: string, init: { body: string }) => {
-    requests.push({ url, body: JSON.parse(init.body) });
+  const requests: { url: string; body: Record<string, unknown>; headers: Record<string, string> }[] = [];
+  vi.stubGlobal('fetch', async (url: string, init: { body: string; headers?: Record<string, string> }) => {
+    requests.push({ url, body: JSON.parse(init.body), headers: init.headers ?? {} });
     return upstream(chunks);
   });
   ctx.config.openRouterKey = 'test-key';
