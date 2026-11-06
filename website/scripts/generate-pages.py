@@ -27,6 +27,8 @@ COMPANY = 'Astra Labs Ltd'
 COMPANY_DETAILS = ('a company registered in England and Wales (company number 16558481), '
                    'registered office 82 James Carter Road, Mildenhall, IP28 7DE, United Kingdom')
 UPDATED = '3 November 2026'
+# The privacy policy's own date: it changes with what the apps send, so it can move on without the other pages.
+PRIVACY_UPDATED = '6 November 2026'
 
 home = (ROOT / 'index.html').read_text()
 SYMBOL = re.search(r'<svg width="0".*?</svg>', home, re.S).group(0)
@@ -75,7 +77,7 @@ def page(title, desc, body, path, main='doc'):
 
 
 privacy = f'''<h1>Privacy Policy</h1>
-<p class="meta">Last updated {UPDATED}. Applies to the Quo apps (phone, web and desktop) and this website.</p>
+<p class="meta">Last updated {PRIVACY_UPDATED}. Applies to the Quo apps (phone, web and desktop) and this website.</p>
 <div class="summary"><p><strong>In short:</strong> Quo runs its AI on your device. Your conversations, files, photos, voice and memories are processed and stored only on your device and are never sent to us or anyone else, unless you choose the optional cloud model in Quo Web or the desktop app; those messages, and any files or photos you attach to them, are sent to the model’s provider to answer, and nobody keeps them. If you choose to turn on Quo Sync (optional, and it needs a Quo account), your chats and memories are uploaded only after being encrypted on your device with a key we never receive, so we still can’t read them. To fix crashes and improve the app, Quo collects limited usage and crash data that never includes your content: in the EU and EEA only if you allow it, and anywhere you can turn it off at any time in Settings.</p></div>
 
 <h2>Who we are</h2>
@@ -133,7 +135,7 @@ privacy = f'''<h1>Privacy Policy</h1>
 <p>This website uses no cookies, trackers or analytics scripts. It runs on our own server in the UK, behind Cloudflare, which delivers it and protects it from attacks. Our server and Cloudflare process standard request information (such as IP address, browser type and the pages requested) to deliver and secure the site.</p>
 
 <h2>Quo Web and Quo for desktop</h2>
-<p>With offline models, everything happens on your computer: your chats are saved only in your browser’s or the app’s storage on that computer, and nothing you type is sent anywhere. Models are downloaded once from Hugging Face, and the desktop app checks GitHub for updates; like any download, these requests show your IP address to those services.</p>
+<p>With offline models, everything happens on your computer: your chats are saved only in your browser’s or the app’s storage on that computer, and nothing you type is sent anywhere. Models are downloaded once from Hugging Face, the desktop app checks GitHub for updates, and when Quo starts it asks our server which cloud models are available, sending nothing you type; like any download, these requests show your IP address to those services.</p>
 <p>Files you attach (PDFs, text files and photos) are read on your computer. With an offline model they stay there. With a cloud model, or a model you reach with your own account (your own API key, or Claude Agent with your own Claude Code login), they go with your message to that model’s provider: documents as text, and photos only to models that read images. Attached files are never synced. Voice input turns your speech into text on your computer: the speech model (about 80 MB) is downloaded once from Hugging Face, and your audio is neither saved nor sent anywhere. Read aloud uses your system’s own voices. The desktop app runs the AI in a separate program on your computer (llama.cpp) that can only be reached from your own computer, with a key that only the app knows.</p>
 <h3>Optional cloud model</h3>
 <p>Quo Web and the desktop app also offer a free cloud model, clearly marked and used only when you pick it. When you do, the messages in that chat are sent through our server to OpenRouter, which passes them to the model’s provider (for example OpenAI) to write the reply. We only use providers that don’t keep or train on your messages, and our server doesn’t store them either.</p>
@@ -422,10 +424,11 @@ for file, path, title, desc, body, main in PAGES:
     out.write_text(page(title, desc, body, path, main))
 
 # The sitemap: the home page and every page above but the 404, dated by when the pages last changed.
-LASTMOD = datetime.strptime(UPDATED, '%d %B %Y').date().isoformat()
+iso = lambda day: datetime.strptime(day, '%d %B %Y').date().isoformat()
+LASTMOD = {'/privacy/': iso(PRIVACY_UPDATED)}
 urls = ['/'] + [path for _, path, *_ in PAGES if path != '/404']
 (ROOT / 'sitemap.xml').write_text('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
-                                  + ''.join(f'  <url><loc>{SITE}{path}</loc><lastmod>{LASTMOD}</lastmod></url>\n' for path in urls) + '</urlset>\n')
+                                  + ''.join(f'  <url><loc>{SITE}{path}</loc><lastmod>{LASTMOD.get(path, iso(UPDATED))}</lastmod></url>\n' for path in urls) + '</urlset>\n')
 
 # llms.txt: a plain summary for AI tools that read it (search engines don't need it). Facts only; prices stay on the
 # pricing page so they can't drift. It says which Quo this is: another company's business phone app is also called Quo.

@@ -37,7 +37,7 @@ Most AI assistants run on someone else's servers. You need an account and a conn
 Quo runs the model on your device instead:
 
 - **Works offline.** On a plane, abroad, anywhere without signal.
-- **Private by design.** Chats, files, photos and voice are processed on your device. No account, no server copy.
+- **Private by design.** Chats, files, photos and voice are processed on your device. No account, no server copy. The [privacy policy](https://quo.computer/privacy/) lists every connection each app makes, including the phone app's usage and crash data, which never includes your content and can be turned off in Settings.
 - **Open source.** “Private” is something you can check, not just a promise.
 - **Free.** Offline models are free and unlimited.
 - **The cloud only when you choose it.** Cloud models are clearly marked and used only when you pick one. Each reply shows where it ran.
