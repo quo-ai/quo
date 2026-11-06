@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { greeting, pickStarters, POOLS } from '../starters';
+import { asImageAsk } from '../../images/tags';
 import { workingLabel } from '../working';
 import { formatElapsed } from '../../ui/elapsed';
 import { planFromText, planToText } from '../../agent/plan';
@@ -9,11 +10,28 @@ describe('what an empty chat suggests', () => {
     const chat = pickStarters('chat', 'a');
     expect(chat).toHaveLength(4);
     expect(new Set(chat.map(s => s.title)).size).toBe(4);
-    expect(chat.every(s => POOLS.EVERYDAY.includes(s))).toBe(true);
+    expect(chat.filter(s => POOLS.PICTURES.includes(s))).toHaveLength(1);
+    expect(chat.filter(s => POOLS.EVERYDAY.includes(s))).toHaveLength(3);
     expect(pickStarters('project', 'a').every(s => POOLS.PROJECT.includes(s))).toBe(true);
     const mixed = pickStarters('mixed', 'a');
+    expect(mixed.filter(s => POOLS.PICTURES.includes(s))).toHaveLength(1);
     expect(mixed.filter(s => POOLS.BUILD.includes(s))).toHaveLength(2);
-    expect(mixed.filter(s => POOLS.EVERYDAY.includes(s))).toHaveLength(2);
+    expect(mixed.filter(s => POOLS.EVERYDAY.includes(s))).toHaveLength(1);
+  });
+
+  it('always offers one picture outside a project, as an /image request any model can make, in different places', () => {
+    const places = new Set<number>();
+    for (let i = 0; i < 40; i++) {
+      for (const mode of ['chat', 'mixed'] as const) {
+        const set = pickStarters(mode, `seed-${i}`);
+        const pictures = set.filter(s => POOLS.PICTURES.includes(s));
+        expect(pictures).toHaveLength(1);
+        expect(asImageAsk(pictures[0].prompt)).toMatch(/^Make an image: \S/);
+        places.add(set.indexOf(pictures[0]));
+      }
+      expect(pickStarters('project', `seed-${i}`).some(s => POOLS.PICTURES.includes(s))).toBe(false);
+    }
+    expect(places.size).toBeGreaterThan(2);
   });
 
   it('stays the same for the same chat and day, and varies between them', () => {
@@ -23,7 +41,7 @@ describe('what an empty chat suggests', () => {
   });
 
   it('has real prompts, and never health or medical topics', () => {
-    for (const s of [...POOLS.EVERYDAY, ...POOLS.PROJECT, ...POOLS.BUILD]) {
+    for (const s of [...POOLS.EVERYDAY, ...POOLS.PROJECT, ...POOLS.BUILD, ...POOLS.PICTURES]) {
       expect(s.prompt.length).toBeGreaterThan(30);
       expect(`${s.title} ${s.detail} ${s.prompt}`).not.toMatch(/health|medical|medicine|diet|symptom|doctor|therapy|illness|disease|weight loss|calorie/i);
     }

@@ -2,7 +2,9 @@
  * What an empty chat suggests, and how it greets. The starters fit where the person is: inside a project they are about
  * the project, on the desktop with room to build they mix ordinary ideas with things to make, and elsewhere they are
  * everyday. A new set each time, but steady while a chat is open (the choice is seeded from the chat and the day), so a
- * re-render never reshuffles what someone is about to click. Never health or medical topics.
+ * re-render never reshuffles what someone is about to click. Outside a project one of them is always a picture to make
+ * (easy to miss otherwise): `/image …` works with every model, and on an offline one only the prompt leaves the device,
+ * or nothing does when the desktop has an image model. Never health or medical topics.
  */
 
 export interface Starter {
@@ -37,6 +39,15 @@ const PROJECT: Starter[] = [
   { title: 'Add some tests', detail: 'For the least-covered part', prompt: 'Find an important part of this project with little or no test coverage and add good tests for it, matching the existing style.' },
   { title: 'Draw the architecture', detail: 'A short written map', prompt: 'Describe the architecture of this project as a short map: the main parts, what each does, and how they talk to each other.' },
   { title: 'Check the dependencies', detail: 'What it relies on', prompt: 'List what this project depends on, and point out anything that looks outdated, unused or surprising.' },
+];
+
+const PICTURES: Starter[] = [
+  { title: 'Make a picture', detail: 'A cabin in the snow at dusk', prompt: '/image a small wooden cabin in deep snow at dusk, warm light glowing in its windows' },
+  { title: 'Make a picture', detail: 'A fox in an autumn forest', prompt: '/image a red fox sitting among golden autumn leaves in a quiet forest, soft morning light' },
+  { title: 'Make a picture', detail: 'A robot watering plants', prompt: '/image a friendly little robot watering potted plants on a sunny city balcony' },
+  { title: 'Make a picture', detail: 'A lighthouse in a storm', prompt: '/image a lighthouse on a rocky coast in a storm, waves crashing and its beam cutting through the rain' },
+  { title: 'Make a picture', detail: 'A cat floating past the moon', prompt: '/image a cat in a tiny spacesuit floating past the moon, stars all around, playful illustration' },
+  { title: 'Make a picture', detail: 'A reading nook on a rainy day', prompt: '/image a cosy reading nook by a rainy window, a cup of tea and a pile of books, warm lamp light' },
 ];
 
 const BUILD: Starter[] = [
@@ -75,12 +86,14 @@ function pick<T>(pool: T[], count: number, random: () => number): T[] {
   return chosen;
 }
 
-/** Four starters for where the person is. */
+/** Four starters for where the person is: about the project inside one, otherwise a picture to make among the rest. */
 export function pickStarters(mode: StarterMode, seed: string, count = 4): Starter[] {
   const random = sequence(`${mode}:${seed}`);
   if (mode === 'project') return pick(PROJECT, count, random);
-  if (mode === 'mixed') return [...pick(EVERYDAY, Math.ceil(count / 2), random), ...pick(BUILD, Math.floor(count / 2), random)];
-  return pick(EVERYDAY, count, random);
+  const picture = pick(PICTURES, 1, random);
+  const rest = mode === 'mixed' ? [...pick(EVERYDAY, Math.ceil(count / 2) - 1, random), ...pick(BUILD, Math.floor(count / 2), random)] : pick(EVERYDAY, count - 1, random);
+  rest.splice(Math.floor(random() * (rest.length + 1)), 0, ...picture);
+  return rest;
 }
 
 const HELLO = {
@@ -99,4 +112,4 @@ export function greeting(now: Date, seed: string, inProject: boolean): string {
   return `${hello} What’s on your mind?`;
 }
 
-export const POOLS = { EVERYDAY, PROJECT, BUILD };
+export const POOLS = { EVERYDAY, PROJECT, BUILD, PICTURES };
