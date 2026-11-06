@@ -105,6 +105,9 @@ jobs:
           cache: npm
           cache-dependency-path: apps/desktop/package-lock.json
       - run: npm ci
+      # Electron fetches its own program the first time something loads it. Fetch it once here, so test files that
+      # load it at the same moment don't race to unpack it (macOS failed with "File exists").
+      - run: npx --no install-electron
       - run: npm test
       - run: npm run fetch:engine
       - run: npm run check:engine -- --version
