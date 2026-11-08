@@ -37,8 +37,21 @@
 </div></header>
 <main id="main" class="doc">
 <h1>What’s new in Quo</h1>
-<p class="meta">Last updated 3 November 2026. Also on <a href="https://github.com/quo-ai/quo/blob/master/CHANGELOG.md">GitHub</a>.</p>
+<p class="meta">Last updated 8 November 2026. Also on <a href="https://github.com/quo-ai/quo/blob/master/CHANGELOG.md">GitHub</a>.</p>
 <p>Notable changes to Quo. Quo Web and the desktop app ship together under the desktop version (<code>desktop-v*</code> tags); the phone app has its own numbers. The format follows <a href="https://keepachangelog.com/en/1.0.0/">Keep a Changelog</a>.</p>
+<h2 id="desktop-1-7-1">Quo Desktop 1.7.1</h2>
+<p class="meta">2026-11-08</p>
+<h3>Improved</h3>
+<ul>
+<li><strong>A newer engine</strong> — llama.cpp's first numbered stable release (v0.9.0). Replies came faster in our tests on the graphics card, Gemma 4 E2B reads long messages faster, and Quo can run 8 more kinds of model from Hugging Face, among them Mistral Large 4, LFM3 and DeepSeek 4.1.</li>
+<li><strong>A picture to make</strong> — a new chat always suggests one picture among its ideas. Click it to make the picture: in an offline chat it's made on this computer once an image model is downloaded.</li>
+<li><strong>Images made on your computer</strong> use the newest stable-diffusion.cpp.</li>
+</ul>
+<h3>Fixed</h3>
+<ul>
+<li><strong>Stable Diffusion 2 files</strong> — adding one as your own image model now says plainly that Quo can't run it, instead of treating it as Stable Diffusion 1.5.</li>
+<li><strong>Security</strong> — the app is built on Electron 44.10, with Chromium's latest fixes.</li>
+</ul>
 <h2 id="desktop-1-7-0">Quo Desktop 1.7.0</h2>
 <p class="meta">2026-11-03</p>
 <h3>Added</h3>

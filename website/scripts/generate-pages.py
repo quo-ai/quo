@@ -29,6 +29,8 @@ COMPANY_DETAILS = ('a company registered in England and Wales (company number 16
 UPDATED = '3 November 2026'
 # The privacy policy's own date: it changes with what the apps send, so it can move on without the other pages.
 PRIVACY_UPDATED = '6 November 2026'
+# The changelog's date: its newest release.
+CHANGELOG_UPDATED = '8 November 2026'
 
 home = (ROOT / 'index.html').read_text()
 SYMBOL = re.search(r'<svg width="0".*?</svg>', home, re.S).group(0)
@@ -412,7 +414,7 @@ PAGES = [
     ('brand/index.html', '/brand/', 'Brand assets — Quo', 'Quo logos, colours, screenshots and how to describe Quo. Free to use when writing about Quo.', brand, 'doc wide'),
     ('pricing/index.html', '/pricing/', 'Pricing — Quo', 'Quo is free on your device. Quo Pro, Quo Sync and credit packs for the cloud models.', PRICING, ''),
     ('models/index.html', '/models/', 'Which AI model runs on my device? — Quo', 'Every open AI model in Quo for phone, browser and desktop: download size, memory it needs, photos, thinking, free or Premium.', models_page(ROOT / 'scripts' / 'models.json'), 'doc wide'),
-    ('changelog/index.html', '/changelog/', 'What’s new — Quo', 'Every release of Quo for desktop, web and phone, with what changed.', changelog_page(ROOT.parent / 'CHANGELOG.md', UPDATED), 'doc'),
+    ('changelog/index.html', '/changelog/', 'What’s new — Quo', 'Every release of Quo for desktop, web and phone, with what changed.', changelog_page(ROOT.parent / 'CHANGELOG.md', CHANGELOG_UPDATED), 'doc'),
     ('refunds/index.html', '/refunds/', 'Refund policy — Quo', 'How to get a refund for Quo Pro, Quo Sync and credit packs.', refunds, 'doc'),
     ('delete-account/index.html', '/delete-account/', 'Delete your Quo account — Quo', 'How to delete your Quo account and the data held for it.', delete_account, 'doc'),
     ('404.html', '/404', 'Page not found — Quo', 'This page doesn’t exist.', not_found, 'not-found'),
@@ -425,7 +427,7 @@ for file, path, title, desc, body, main in PAGES:
 
 # The sitemap: the home page and every page above but the 404, dated by when the pages last changed.
 iso = lambda day: datetime.strptime(day, '%d %B %Y').date().isoformat()
-LASTMOD = {'/privacy/': iso(PRIVACY_UPDATED)}
+LASTMOD = {'/privacy/': iso(PRIVACY_UPDATED), '/changelog/': iso(CHANGELOG_UPDATED)}
 urls = ['/'] + [path for _, path, *_ in PAGES if path != '/404']
 (ROOT / 'sitemap.xml').write_text('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
                                   + ''.join(f'  <url><loc>{SITE}{path}</loc><lastmod>{LASTMOD.get(path, iso(UPDATED))}</lastmod></url>\n' for path in urls) + '</urlset>\n')

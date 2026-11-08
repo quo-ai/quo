@@ -2,6 +2,17 @@
 
 Notable changes to Quo. Quo Web and the desktop app ship together under the desktop version (`desktop-v*` tags); the phone app has its own numbers. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Desktop 1.7.1] - 2026-11-08
+
+### Improved
+- **A newer engine** — llama.cpp's first numbered stable release (v0.9.0). Replies came faster in our tests on the graphics card, Gemma 4 E2B reads long messages faster, and Quo can run 8 more kinds of model from Hugging Face, among them Mistral Large 4, LFM3 and DeepSeek 4.1.
+- **A picture to make** — a new chat always suggests one picture among its ideas. Click it to make the picture: in an offline chat it's made on this computer once an image model is downloaded.
+- **Images made on your computer** use the newest stable-diffusion.cpp.
+
+### Fixed
+- **Stable Diffusion 2 files** — adding one as your own image model now says plainly that Quo can't run it, instead of treating it as Stable Diffusion 1.5.
+- **Security** — the app is built on Electron 44.10, with Chromium's latest fixes.
+
 ## [Desktop 1.7.0] - 2026-11-03
 
 ### Added
