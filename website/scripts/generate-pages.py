@@ -28,7 +28,7 @@ COMPANY_DETAILS = ('a company registered in England and Wales (company number 16
                    'registered office 82 James Carter Road, Mildenhall, IP28 7DE, United Kingdom')
 UPDATED = '3 November 2026'
 # The privacy policy's own date: it changes with what the apps send, so it can move on without the other pages.
-PRIVACY_UPDATED = '6 November 2026'
+PRIVACY_UPDATED = '10 November 2026'
 # The changelog's date: its newest release.
 CHANGELOG_UPDATED = '8 November 2026'
 
@@ -138,6 +138,7 @@ privacy = f'''<h1>Privacy Policy</h1>
 
 <h2>Quo Web and Quo for desktop</h2>
 <p>With offline models, everything happens on your computer: your chats are saved only in your browser’s or the app’s storage on that computer, and nothing you type is sent anywhere. Models are downloaded once from Hugging Face, the desktop app checks GitHub for updates, and when Quo starts it asks our server which cloud models are available, sending nothing you type; like any download, these requests show your IP address to those services.</p>
+<p>Quo also runs as a Space on Hugging Face (huggingface.co/spaces/Quo-AI/quo), with offline models only. That copy is hosted by Hugging Face, which receives standard request information such as your IP address under its own privacy policy, and it never contacts our server. Your chats stay in your browser there too.</p>
 <p>Files you attach (PDFs, text files and photos) are read on your computer. With an offline model they stay there. With a cloud model, or a model you reach with your own account (your own API key, or Claude Agent with your own Claude Code login), they go with your message to that model’s provider: documents as text, and photos only to models that read images. Attached files are never synced. Voice input turns your speech into text on your computer: the speech model (about 80 MB) is downloaded once from Hugging Face, and your audio is neither saved nor sent anywhere. Read aloud uses your system’s own voices. The desktop app runs the AI in a separate program on your computer (llama.cpp) that can only be reached from your own computer, with a key that only the app knows.</p>
 <h3>Optional cloud model</h3>
 <p>Quo Web and the desktop app also offer a free cloud model, clearly marked and used only when you pick it. When you do, the messages in that chat are sent through our server to OpenRouter, which passes them to the model’s provider (for example OpenAI) to write the reply. We only use providers that don’t keep or train on your messages, and our server doesn’t store them either.</p>
