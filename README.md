@@ -7,15 +7,14 @@
 
 # Quo
 
-**Private AI that works offline.**
+**Private AI that runs on your own computer, browser and phone. It works offline.**
 
-A free, open-source AI assistant that runs on your own device: in your browser, on your desktop, and on your phone.<br>
-No account, no internet needed, and nothing you type leaves your device.<br>
-**11,000+ installs on Android.**
+Chat, write code, read documents and make pictures with open models, on your own device.<br>
+Free and open source. No account, and nothing you type leaves your device.
 
-[**Try Quo in your browser →**](https://app.quo.computer/)
+[**Try it in your browser**](https://app.quo.computer/) · [Try it on Hugging Face](https://huggingface.co/spaces/Quo-AI/quo) · [**Download for Mac, Windows and Linux**](https://github.com/quo-ai/quo/releases/latest) · [Google Play](https://play.google.com/store/apps/details?id=com.quo.app)
 
-[Website](https://quo.computer) · [Download for desktop](https://github.com/quo-ai/quo/releases/latest) · [Google Play](https://play.google.com/store/apps/details?id=com.quo.app) · iPhone coming soon
+[Website](https://quo.computer) · iPhone coming soon
 
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-3b2eff)](LICENSE)
 [![CI](https://github.com/quo-ai/quo/actions/workflows/ci.yml/badge.svg)](https://github.com/quo-ai/quo/actions/workflows/ci.yml)
@@ -30,28 +29,7 @@ No account, no internet needed, and nothing you type leaves your device.<br>
 
 </div>
 
-## Why Quo
-
-Most AI assistants run on someone else's servers. You need an account and a connection, and your conversations are stored there.
-
-Quo runs the model on your device instead:
-
-- **Works offline.** On a plane, abroad, anywhere without signal.
-- **Private by design.** Chats, files, photos and voice are processed on your device. No account, no server copy. The [privacy policy](https://quo.computer/privacy/) lists every connection each app makes, including the phone app's usage and crash data, which never includes your content and can be turned off in Settings.
-- **Open source.** “Private” is something you can check, not just a promise.
-- **Free.** Offline models are free and unlimited.
-- **The cloud only when you choose it.** Cloud models are clearly marked and used only when you pick one. Each reply shows where it ran.
-
-## Get Quo
-
-| | How it runs | Get it |
-|---|---|---|
-| **Web** | [wllama](https://github.com/ngxson/wllama) (llama.cpp in WebAssembly), on the graphics card in Chrome and Edge | [app.quo.computer](https://app.quo.computer/) |
-| **Desktop** | llama.cpp on the graphics card (an optional CUDA engine for NVIDIA cards), in an app for macOS, Windows and Linux (x64 and ARM) | [macOS](https://github.com/quo-ai/quo/releases/latest/download/Quo-mac-universal.dmg) · [Windows](https://github.com/quo-ai/quo/releases/latest/download/Quo-windows-x64-setup.exe) · [Linux](https://github.com/quo-ai/quo/releases/latest/download/Quo-linux-x86_64.AppImage) · [all downloads](https://github.com/quo-ai/quo/releases/latest) |
-| **Android** | [llama.rn](https://github.com/mybigday/llama.rn), with a model built in | [Google Play](https://play.google.com/store/apps/details?id=com.quo.app) |
-| **iPhone and iPad** | llama.rn on Metal | Coming soon |
-
-**Desktop app in one line.** It picks the right download for your computer, checks it against the release, and installs it for you only (no admin rights):
+**Install the desktop app in one line.** It picks the right download for your computer, checks it against the release, and installs it for you only (no admin rights):
 
 ```bash
 curl -fsSL https://quo.computer/install.sh | sh     # macOS and Linux
@@ -62,6 +40,27 @@ irm https://quo.computer/install.ps1 | iex          # Windows, in PowerShell
 ```
 
 Run it again to update the Mac app (Windows and Linux update themselves).
+
+## What you can do
+
+- **Chat with no internet.** Open models (Qwen, Gemma, Llama, Phi, Mistral) run on your graphics card or processor. Turn Wi-Fi off and it keeps answering.
+- **Let it write code, and approve every change.** Code mode in the desktop app reads your project, edits files and runs tests with an offline model. Each edit, command, commit and push waits for your OK in a separate window.
+- **Make and change pictures on your own graphics card.** Download an image model once in the desktop app (FLUX.2 klein or Z-Image Turbo). Nothing is sent anywhere, and there's no daily limit.
+- **Run almost any model from Hugging Face.** Search inside the desktop app. Quo checks that the model will load and fits your memory before it downloads.
+- **Ask about your documents and photos.** They're read on your device.
+- **Use the cloud only when you choose.** Cloud models are clearly marked, and each reply shows where it ran.
+- **Check it yourself.** Quo is open source, and the [privacy policy](https://quo.computer/privacy/) lists every connection each app makes, including the phone app's usage and crash data, which never includes your content and can be turned off in Settings.
+
+10,000+ downloads on Google Play.
+
+## Get Quo
+
+| | How it runs | Get it |
+|---|---|---|
+| **Web** | [wllama](https://github.com/ngxson/wllama) (llama.cpp in WebAssembly), on the graphics card in Chrome and Edge | [app.quo.computer](https://app.quo.computer/) |
+| **Desktop** | llama.cpp on the graphics card (an optional CUDA engine for NVIDIA cards), in an app for macOS, Windows and Linux (x64 and ARM) | [macOS](https://github.com/quo-ai/quo/releases/latest/download/Quo-mac-universal.dmg) · [Windows](https://github.com/quo-ai/quo/releases/latest/download/Quo-windows-x64-setup.exe) · [Linux](https://github.com/quo-ai/quo/releases/latest/download/Quo-linux-x86_64.AppImage) · [all downloads](https://github.com/quo-ai/quo/releases/latest) |
+| **Android** | [llama.rn](https://github.com/mybigday/llama.rn), with a model built in | [Google Play](https://play.google.com/store/apps/details?id=com.quo.app) |
+| **iPhone and iPad** | llama.rn on Metal | Coming soon |
 
 In a browser, use Chrome or Edge on a computer: Firefox and Safari run on the processor, which is slower, and phone browsers don't have the memory (use the app).
 
