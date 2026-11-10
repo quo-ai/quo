@@ -51,7 +51,7 @@ Run it again to update the Mac app (Windows and Linux update themselves).
 - **Use the cloud only when you choose.** Cloud models are clearly marked, and each reply shows where it ran.
 - **Check it yourself.** Quo is open source, and the [privacy policy](https://quo.computer/privacy/) lists every connection each app makes, including the phone app's usage and crash data, which never includes your content and can be turned off in Settings.
 
-10,000+ downloads on Google Play.
+11,000+ installs on Android.
 
 ## Get Quo
 
