@@ -27,6 +27,7 @@ The app is static (`dist/`) and must be served with cross-origin isolation heade
 | Dev server | `vite.config.ts` (via `server/node.ts`) |
 | Vercel (now) | `api/index.ts`, with `vercel.json` rewriting `/api/*` to it |
 | Your own server | `npm run build && npm start` (`server/serve.ts`: app + API on `HOST`:`PORT`, default every interface, 3000) |
+| A static host with no API (a Hugging Face Space, say) | `npm run build:standalone` → `dist-standalone/` (`src/standalone.ts`): offline models and your own API keys work; cloud models, sign-in, Quo Sync and pictures say they're in the full app, and Quo's server is never called. Serve it with the same cross-origin isolation headers for multi-threaded models |
 
 **Environment** (`server/env.ts`):
 

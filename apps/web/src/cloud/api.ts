@@ -1,5 +1,7 @@
 /** Calls to Quo's API. Every request carries an anonymous device id (for the free tier). */
 
+import { STANDALONE, STANDALONE_MESSAGE } from '../standalone';
+
 const DEVICE_KEY = 'quo.device';
 
 export function deviceId(): string {
@@ -18,6 +20,8 @@ export class ApiError extends Error {
 }
 
 export async function apiFetch(path: string, init: { method?: string; body?: unknown; signal?: AbortSignal } = {}): Promise<Response> {
+  // A copy built to run without Quo's server never calls it (standalone.ts).
+  if (STANDALONE) throw new ApiError(503, 'setup_required', STANDALONE_MESSAGE);
   let response: Response;
   try {
     response = await fetch(`/api/${path}`, {

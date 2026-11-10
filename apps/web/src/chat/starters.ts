@@ -86,10 +86,14 @@ function pick<T>(pool: T[], count: number, random: () => number): T[] {
   return chosen;
 }
 
-/** Four starters for where the person is: about the project inside one, otherwise a picture to make among the rest. */
-export function pickStarters(mode: StarterMode, seed: string, count = 4): Starter[] {
+/**
+ * Four starters for where the person is: about the project inside one, otherwise a picture to make among the rest (unless
+ * pictures can't be made here: a copy without Quo's server, standalone.ts).
+ */
+export function pickStarters(mode: StarterMode, seed: string, count = 4, pictures = true): Starter[] {
   const random = sequence(`${mode}:${seed}`);
   if (mode === 'project') return pick(PROJECT, count, random);
+  if (!pictures) return mode === 'mixed' ? [...pick(EVERYDAY, Math.ceil(count / 2), random), ...pick(BUILD, Math.floor(count / 2), random)] : pick(EVERYDAY, count, random);
   const picture = pick(PICTURES, 1, random);
   const rest = mode === 'mixed' ? [...pick(EVERYDAY, Math.ceil(count / 2) - 1, random), ...pick(BUILD, Math.floor(count / 2), random)] : pick(EVERYDAY, count - 1, random);
   rest.splice(Math.floor(random() * (rest.length + 1)), 0, ...picture);

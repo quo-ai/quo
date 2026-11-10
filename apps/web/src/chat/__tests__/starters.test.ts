@@ -34,6 +34,16 @@ describe('what an empty chat suggests', () => {
     expect(places.size).toBeGreaterThan(2);
   });
 
+  it('suggests no picture where pictures can’t be made (a copy without Quo’s server), and still gives four', () => {
+    for (let i = 0; i < 20; i++) {
+      for (const mode of ['chat', 'mixed'] as const) {
+        const set = pickStarters(mode, `seed-${i}`, 4, false);
+        expect(set).toHaveLength(4);
+        expect(set.some(s => POOLS.PICTURES.includes(s))).toBe(false);
+      }
+    }
+  });
+
   it('stays the same for the same chat and day, and varies between them', () => {
     expect(pickStarters('chat', 'chat-1:2026-10-19')).toEqual(pickStarters('chat', 'chat-1:2026-10-19'));
     const sets = new Set(Array.from({ length: 40 }, (_, i) => pickStarters('chat', `chat-${i}`).map(s => s.title).join('|')));

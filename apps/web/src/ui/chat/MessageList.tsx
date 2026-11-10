@@ -6,6 +6,7 @@ import type { GeneratedImage, Message } from '../../chat/types';
 import type { ModelChoice } from '../../models';
 import { isClaudeAgent } from '../../providers/claudeAgent';
 import { greeting, pickStarters, type StarterMode } from '../../chat/starters';
+import { STANDALONE } from '../../standalone';
 import { workingLabel } from '../../chat/working';
 import { canSpeak } from '../../voice/readAloud';
 import { AgentSteps } from '../AgentSteps';
@@ -77,7 +78,7 @@ export function MessageList({ conversationId, messages, busy, choice, code, fail
   const mode: StarterMode = code ? 'project' : canBuild ? 'mixed' : 'chat';
   const hello = useMemo(() => {
     const seed = `${conversationId ?? 'new'}:${Math.random().toString(36).slice(2)}`;
-    return { title: greeting(new Date(), seed, Boolean(code)), starters: pickStarters(mode, seed) };
+    return { title: greeting(new Date(), seed, Boolean(code)), starters: pickStarters(mode, seed, 4, !STANDALONE) };
   }, [conversationId, mode, empty]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function copy(message: Message) {
