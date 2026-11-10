@@ -1,16 +1,23 @@
-import { Cloud, Download, Lock, Pause, WifiOff, Zap } from 'lucide-react';
-import { DEFAULT_LOCAL_MODEL_ID, getLocalModel, modelSizeBytes } from '../catalog';
+import { Cloud, Download, ExternalLink, Lock, Pause, WifiOff, Zap } from 'lucide-react';
+import { useState } from 'react';
+import { DEFAULT_LOCAL_MODEL_ID, getLocalModel, LOCAL_MODELS, modelSizeBytes } from '../catalog';
 import type { CloudModel } from '../cloud/catalog';
 import { recommendedModelId, type DeviceProfile } from '../device';
+import { preselectedModelId } from '../models/preselect';
 import { isDesktopApp } from '../platform';
+import { STANDALONE } from '../standalone';
 import { cancelDownload, startDownload, type DownloadState } from '../storage/downloads';
 import { downloadErrorText, formatBytes, percent } from './format';
 import { QuoMark } from './QuoMark';
+
+const SITE = 'https://quo.computer';
 
 /**
  * First run: one action. Download the model that suits this computer; it
  * stays on the device and works offline from then on. While it downloads,
  * the free cloud model is offered as an explicit, clearly labelled opt-in.
+ * A link can ask for one model (`?model=…`, models/preselect.ts). The copy without Quo's server (standalone.ts: the
+ * Hugging Face Space, where people arrive from one model's page) lists every model here, so theirs is in sight.
  */
 export function Welcome({ device, downloads, onBrowseModels, onOpenKeys, cloudModel, onUseCloud }: {
   device: DeviceProfile | null;
@@ -22,7 +29,9 @@ export function Welcome({ device, downloads, onBrowseModels, onOpenKeys, cloudMo
   cloudModel: CloudModel | null;
   onUseCloud: () => void;
 }) {
-  const model = getLocalModel(device ? recommendedModelId(device) : DEFAULT_LOCAL_MODEL_ID)!;
+  const suggested = device ? recommendedModelId(device) : DEFAULT_LOCAL_MODEL_ID;
+  const [chosen, setChosen] = useState<string | null>(() => (isDesktopApp() ? null : preselectedModelId(location.search, LOCAL_MODELS)));
+  const model = getLocalModel(chosen ?? suggested)!;
   // A download already running for any model takes precedence.
   const running = Object.entries(downloads).find(([, s]) => ['downloading', 'waiting', 'verifying', 'moving'].includes(s.status));
   const target = running ? getLocalModel(running[0]) ?? model : model;
@@ -63,6 +72,17 @@ export function Welcome({ device, downloads, onBrowseModels, onOpenKeys, cloudMo
           </div>
         ) : (
           <>
+            {STANDALONE && (
+              <div className="welcome-models" role="radiogroup" aria-label="Model">
+                {LOCAL_MODELS.map(option => (
+                  <button key={option.id} type="button" role="radio" aria-checked={option.id === target.id} className="welcome-model press" onClick={() => setChosen(option.id)}>
+                    <span className="grow"><strong>{option.name}</strong><span>{option.description}</span></span>
+                    {option.id === suggested && <span className="welcome-model-tag">Suggested</span>}
+                    <span className="welcome-model-size">{formatBytes(modelSizeBytes(option))}</span>
+                  </button>
+                ))}
+              </div>
+            )}
             <button className="btn btn-primary btn-lg press" onClick={() => void startDownload(target)}>
               <Download size={19} />
               {status === 'partial' ? `Resume ${target.name} at ${pct}%` : `Download ${target.name}`}
@@ -70,6 +90,11 @@ export function Welcome({ device, downloads, onBrowseModels, onOpenKeys, cloudMo
             <p className="note welcome-meta">
               <span>{formatBytes(total)}</span><span>Free, no account</span><button className="btn-link" onClick={onBrowseModels}>Other models</button><button className="btn-link" onClick={onOpenKeys}>Your own API key</button>
             </p>
+            {STANDALONE && (
+              <p className="note welcome-more">
+                Bigger models, your graphics card, a coding agent and pictures: <a className="btn-link" href={SITE} target="_blank" rel="noreferrer noopener">Get Quo for your computer <ExternalLink size={12} /></a>
+              </p>
+            )}
             {status === 'error' && <p className="error">{downloadErrorText(state?.error)}</p>}
           </>
         )}

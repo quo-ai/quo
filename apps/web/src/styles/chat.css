@@ -86,6 +86,16 @@
 .welcome-progress { text-align: left; }
 /* The facts under Download, each its own item. */
 .welcome-meta { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; }
+/* The copy without Quo's server lists every model to choose from (Welcome.tsx): the chosen one is outlined. */
+.welcome-models { display: grid; gap: 8px; margin: 0 0 18px; }
+.welcome-model { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 14px; text-align: left; color: var(--on-field); background: transparent; border: 1px solid color-mix(in oklab, var(--on-field) 28%, transparent); border-radius: var(--r-card); cursor: pointer; }
+.welcome-model:hover { background: color-mix(in oklab, var(--on-field) 8%, transparent); }
+.welcome-model[aria-checked="true"] { border-color: var(--on-field); background: color-mix(in oklab, var(--on-field) 14%, transparent); }
+.welcome-model .grow { display: grid; gap: 2px; flex: 1; min-width: 0; }
+.welcome-model .grow span { font-size: 0.875rem; color: var(--field-2); }
+.welcome-model-tag { font-size: 0.75rem; padding: 2px 8px; border-radius: var(--r-pill); border: 1px solid color-mix(in oklab, var(--on-field) 45%, transparent); white-space: nowrap; }
+.welcome-model-size { font-size: 0.875rem; color: var(--field-2); white-space: nowrap; }
+.welcome-more a { display: inline-flex; align-items: center; gap: 4px; }
 /* On the indigo background the main action is white, links and notes take its text colours. */
 .welcome .btn-primary { background: var(--on-field); color: var(--field); }
 .welcome .btn-primary:hover:not(:disabled) { background: color-mix(in oklab, var(--on-field) 88%, var(--field)); }
