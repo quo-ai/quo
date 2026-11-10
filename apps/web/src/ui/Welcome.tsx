@@ -10,7 +10,8 @@ import { cancelDownload, startDownload, type DownloadState } from '../storage/do
 import { downloadErrorText, formatBytes, percent } from './format';
 import { QuoMark } from './QuoMark';
 
-const SITE = 'https://quo.computer';
+// Tagged so the weekly figures can count arrivals from this copy (the link sends no referrer). It says nothing about the person.
+const SITE = 'https://quo.computer/?from=hf-space';
 
 /**
  * First run: one action. Download the model that suits this computer; it

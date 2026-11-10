@@ -75,7 +75,7 @@ function phoneModels(): PageModel[] {
 }
 
 export function modelsData() {
-  return { desktop: DESKTOP_MODELS.map(computer), browser: WEB_MODELS.map(computer), phone: phoneModels() };
+  return { desktop: DESKTOP_MODELS.map(computer), browser: WEB_MODELS.map(model => ({ ...computer(model), id: model.id })), phone: phoneModels() };
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {

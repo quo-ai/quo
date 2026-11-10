@@ -86,8 +86,11 @@ def _page(name: str, places: dict, everyone: list) -> tuple:
                      f'<li>Open <strong>Models &amp; storage → Offline</strong> and press <strong>Download</strong> next to {esc(name)}.</li>'
                      '<li>When it’s downloaded, start a chat. It works with Wi-Fi off.</li></ol>')
     if 'browser' in places:
-        steps.append('<h3>In a browser</h3>\n<ol><li>Open <a data-link="webapp" href="https://app.quo.computer/">Quo Web</a> in Chrome or Edge on a computer.</li>'
-                     f'<li>Open <strong>Models &amp; storage → Offline</strong> and download {esc(name)}. It stays in the browser for next time.</li>'
+        # A link that opens Quo Web with this model chosen (apps/web/src/models/preselect.ts); it never starts a download.
+        try_it = f'https://app.quo.computer/?model={places["browser"]["id"]}'
+        steps.append(f'<h3>In a browser</h3>\n<p><a class="btn line" href="{try_it}">Try {esc(name)} in your browser</a></p>\n'
+                     f'<ol><li>That link opens Quo Web with {esc(name)} chosen. Use Chrome or Edge on a computer.</li>'
+                     f'<li>Press <strong>Download {esc(name)}</strong>. It stays in the browser for next time.</li>'
                      '<li>Chat. Nothing you type leaves the computer.</li></ol>')
     if 'phone' in places:
         premium = '' if places['phone'].get('free') else ' It comes with the one-time Premium upgrade.'
