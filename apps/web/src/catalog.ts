@@ -82,6 +82,8 @@ const KV = { qwenMid: 36_864, qwenLarge: 69_632, gemmaE2B: 8_192, gemma12b: 16_3
 // Google's advice for Gemma 4, the same with or without thinking (thinking is the chat template's enable_thinking).
 const GEMMA: Sampling = { temperature: 1.0, top_p: 0.95, top_k: 64, min_p: 0 };
 
+// Microsoft's advice for Phi-4 Mini (the desktop catalog's PHI, defined with the native models below).
+const PHI_WEB: Sampling = { temperature: 0.3, top_p: 0.95, top_k: 40, min_p: 0.05 };
 export const WEB_MODELS: LocalModel[] = [
   {
     id: 'qwen35-0.8b',
@@ -145,6 +147,53 @@ export const WEB_MODELS: LocalModel[] = [
     sampling: GEMMA,
     kvBytesPerToken: KV.gemmaE2B,
     supportsThinking: true,
+    minMemoryGB: 8,
+  },
+  {
+    id: 'smollm3-3b',
+    name: 'SmolLM3 3B',
+    description: 'Hugging Face’s compact model. Writes well in six European languages, and can think first.',
+    files: [{
+      url: `${HF}/ggml-org/SmolLM3-3B-GGUF/resolve/main/SmolLM3-Q4_K_M.gguf`,
+      name: 'model.gguf',
+      sizeBytes: 1915305312,
+    }],
+    contextSize: 8192,
+    maxTokens: 2048,
+    sampling: { temperature: 0.6, top_p: 0.95, top_k: 40, min_p: 0 },
+    supportsThinking: true,
+    minMemoryGB: 8,
+  },
+  {
+    // Text only here: its picture reader (a second file) needs the desktop or phone app.
+    id: 'ministral-3b',
+    name: 'Ministral 3B',
+    description: 'Mistral’s small model. Precise, short answers in many languages.',
+    files: [{
+      url: `${HF}/mistralai/Ministral-3-3B-Instruct-2512-GGUF/resolve/main/Ministral-3-3B-Instruct-2512-Q4_K_M.gguf`,
+      name: 'model.gguf',
+      sizeBytes: 2147023008,
+    }],
+    contextSize: 8192,
+    maxTokens: 2048,
+    sampling: { temperature: 0.1, top_p: 0.9, top_k: 40, min_p: 0 },
+    supportsThinking: false,
+    minMemoryGB: 8,
+  },
+  {
+    id: 'phi4-mini',
+    name: 'Phi-4 Mini',
+    description: 'Microsoft’s compact reasoning model. Strong at maths, logic and structured answers.',
+    files: [{
+      url: `${HF}/unsloth/Phi-4-mini-instruct-GGUF/resolve/main/Phi-4-mini-instruct-Q4_K_M.gguf`,
+      name: 'model.gguf',
+      sizeBytes: 2491874272,
+    }],
+    contextSize: 8192,
+    maxTokens: 2048,
+    sampling: PHI_WEB,
+    kvBytesPerToken: KV.phi4mini,
+    supportsThinking: false,
     minMemoryGB: 8,
   },
 ];

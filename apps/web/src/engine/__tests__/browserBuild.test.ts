@@ -13,18 +13,18 @@ async function browserCatalog(mainBuild: boolean) {
 afterEach(() => vi.doUnmock('../wasm'));
 
 describe('the browser catalog', () => {
-  it('offers Gemma 4 E2B, a file over 2 GiB, where wllama’s main build runs', async () => {
+  it('offers Gemma 4 E2B and Phi-4 Mini, files over 2 GiB, where wllama’s main build runs', async () => {
     const { LOCAL_MODELS } = await browserCatalog(true);
-    expect(LOCAL_MODELS.map(m => m.id)).toEqual(['qwen35-0.8b', 'qwen35-2b', 'llama32-3b', 'gemma4-e2b']);
+    expect(LOCAL_MODELS.map(m => m.id)).toEqual(['qwen35-0.8b', 'qwen35-2b', 'llama32-3b', 'gemma4-e2b', 'smollm3-3b', 'ministral-3b', 'phi4-mini']);
     const gemma = LOCAL_MODELS.find(m => m.id === 'gemma4-e2b')!;
     expect(gemma.files[0].sizeBytes).toBeGreaterThan(2 ** 31);
     expect(gemma.native).toBeUndefined();
     expect(gemma.supportsThinking).toBe(true);
   });
 
-  it('leaves it out where only the compatibility build runs (it can’t load the file there)', async () => {
+  it('leaves them out where only the compatibility build runs (it can’t load the files there)', async () => {
     const { LOCAL_MODELS } = await browserCatalog(false);
-    expect(LOCAL_MODELS.map(m => m.id)).toEqual(['qwen35-0.8b', 'qwen35-2b', 'llama32-3b']);
+    expect(LOCAL_MODELS.map(m => m.id)).toEqual(['qwen35-0.8b', 'qwen35-2b', 'llama32-3b', 'smollm3-3b', 'ministral-3b']);
     for (const m of LOCAL_MODELS) for (const f of m.files) expect(f.sizeBytes, m.id).toBeLessThan(2 ** 31);
   });
 });

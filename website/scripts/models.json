@@ -109,6 +109,33 @@
    "photos": false,
    "thinking": true,
    "codeMode": false
+  },
+  {
+   "name": "SmolLM3 3B",
+   "description": "Hugging Face’s compact model. Writes well in six European languages, and can think first.",
+   "downloadGB": 1.9,
+   "memoryGB": 8,
+   "photos": false,
+   "thinking": true,
+   "codeMode": false
+  },
+  {
+   "name": "Ministral 3B",
+   "description": "Mistral’s small model. Precise, short answers in many languages.",
+   "downloadGB": 2.1,
+   "memoryGB": 8,
+   "photos": false,
+   "thinking": false,
+   "codeMode": false
+  },
+  {
+   "name": "Phi-4 Mini",
+   "description": "Microsoft’s compact reasoning model. Strong at maths, logic and structured answers.",
+   "downloadGB": 2.5,
+   "memoryGB": 8,
+   "photos": false,
+   "thinking": false,
+   "codeMode": false
   }
  ],
  "phone": [
