@@ -6,7 +6,10 @@ import json
 import re
 from pathlib import Path
 
+from structured_data import questions, trail
+
 esc = html.escape
+SITE = 'https://quo.computer'
 
 # Each model's maker, its original repository on Hugging Face, and the licence that page gives.
 FACTS = {
@@ -105,6 +108,15 @@ def _page(name: str, places: dict, everyone: list) -> tuple:
         phone_free = places['phone'].get('free')
         free_answer += ' ' + ('On the phone it’s one of the free models.' if phone_free else 'On the phone it comes with the one-time Premium upgrade.') if free_answer else ('Yes: on the phone it’s one of the free models.' if phone_free else 'It comes with the one-time Premium upgrade in the phone app.')
 
+    # The page's questions, shown on it and given as structured data (structured_data.py).
+    asked = [
+        (f'Does {esc(name)} work without the internet?',
+         f'Yes. Quo needs the internet only to download it. After that, {esc(name)} runs on your device, and your chats, documents and photos stay there.'),
+        ('Is it free?', free_answer),
+        ('Can I use it for my own work?',
+         f'{esc(name)} is released under {esc(licence)}. The full terms are on {source}. Quo itself is open source under Apache 2.0.'),
+    ]
+
     body = f'''<p><a href="/models/">All models</a></p>
 <h1>Run {esc(name)} offline</h1>
 <p>{esc(name)} is an open AI model made by {esc(maker)}. Quo runs it on your own {_list_words(where)}. You download it once. After that it works with no internet, and what you type stays on your device.</p>
@@ -128,18 +140,16 @@ def _page(name: str, places: dict, everyone: list) -> tuple:
 {chr(10).join(steps)}
 
 <h2>Questions</h2>
-<h3>Does {esc(name)} work without the internet?</h3>
-<p>Yes. Quo needs the internet only to download it. After that, {esc(name)} runs on your device, and your chats, documents and photos stay there.</p>
-<h3>Is it free?</h3>
-<p>{free_answer}</p>
-<h3>Can I use it for my own work?</h3>
-<p>{esc(name)} is released under {esc(licence)}. The full terms are on {source}. Quo itself is open source under Apache 2.0.</p>
+{chr(10).join(f'<h3>{q}</h3>{chr(10)}<p>{a}</p>' for q, a in asked)}
 
 <h2>Other models in Quo</h2>
 <ul class="facts-line">
 {chr(10).join(f'<li><a href="{model_href(other)}">{esc(other)}</a></li>' for other in others)}
 </ul>
 <p>See <a href="/models/">every model and what it needs</a>.</p>
+
+{questions(asked)}
+{trail([('Quo', SITE + '/'), ('Models', SITE + '/models/'), (name, f'{SITE}/models/{slug(name)}/')])}
 '''
     size = f'{first["downloadGB"]:g} GB download'
     title = f'Run {name} offline on your {_list_words(where)} — Quo'

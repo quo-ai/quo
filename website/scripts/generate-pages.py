@@ -11,16 +11,17 @@ Keep the privacy policy in step with the app: if a dependency starts sending
 data off the device (analytics events, a new SDK, a network feature), this
 policy and the Play Data safety / App Store privacy answers must change too.
 """
-import json
 import re
+import subprocess
 import sys
-from datetime import datetime
+from datetime import date
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))  # data_pages.py, beside this script
 from data_pages import changelog_page, models_page  # noqa: E402
 from model_pages import model_pages  # noqa: E402
 from markdown_pages import markdown_page  # noqa: E402
+from structured_data import questions  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent  # website/
 SITE = 'https://quo.computer'
@@ -43,6 +44,11 @@ MAIL = f'<a href="mailto:{EMAIL}">{EMAIL}</a>'
 PRICING = re.search(r'<section id="pricing" class="sec">.*?</section>', home, re.S).group(0).replace('<h2>', '<h1>', 1).replace('</h2>', '</h1>', 1)
 
 
+def markdown_link(path):
+    """Tells programs where the page's Markdown copy is (markdown_pages.py). Every page has one but the 404."""
+    return f'\n<link rel="alternate" type="text/markdown" href="{SITE}{path}index.md">' if path.endswith('/') else ''
+
+
 def page(title, desc, body, path, main='doc'):
     return f'''<!doctype html>
 <html lang="en">
@@ -53,7 +59,10 @@ def page(title, desc, body, path, main='doc'):
 <meta name="description" content="{desc}">
 <meta name="theme-color" content="#f9fafd" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0d0f16" media="(prefers-color-scheme: dark)">
-<link rel="canonical" href="{SITE}{path}">
+<link rel="canonical" href="{SITE}{path}">{markdown_link(path)}
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Quo">
+<meta property="og:url" content="{SITE}{path}">
 <meta property="og:title" content="{title}">
 <meta property="og:description" content="{desc}">
 <meta property="og:image" content="{SITE}/assets/og.png">
@@ -309,10 +318,8 @@ faq = [
      'Yes, please. Open an issue on <a href="https://github.com/quo-ai/quo/issues/new/choose">GitHub</a>, or email us.'),
 ]
 faq_html = ''.join(f'<details><summary>{q}</summary><p>{a}</p></details>' for q, a in faq)
-# The same questions as structured data (schema.org FAQPage), so search engines and AI answers can quote them exactly.
-faq_text = lambda html: re.sub(r'\s+', ' ', re.sub(r'<[^>]+>', '', html)).replace('&amp;', '&').replace('&rsquo;', '’').strip()
-faq_data = '<script type="application/ld+json">' + json.dumps({'@context': 'https://schema.org', '@type': 'FAQPage', 'mainEntity': [
-    {'@type': 'Question', 'name': faq_text(q), 'acceptedAnswer': {'@type': 'Answer', 'text': faq_text(a)}} for q, a in faq]}, ensure_ascii=False).replace('</', '<\\/') + '</script>'
+# The same questions as structured data, so search engines and AI answers can quote them exactly (structured_data.py).
+faq_data = questions(faq)
 support = f'''<h1>Support</h1>
 <p class="meta">We’re happy to help.</p>
 <div class="summary"><p>Email {MAIL} and we’ll get back to you. Please mention your device (phone model, or computer and browser) and the version of Quo you have.</p></div>
@@ -419,11 +426,11 @@ not_found = '''<div>
 PAGES = [
     ('privacy/index.html', '/privacy/', 'Privacy Policy — Quo', 'How Quo handles your data: AI runs on your device, and your chats never leave it.', privacy, 'doc'),
     ('terms/index.html', '/terms/', 'Terms of Use — Quo', 'The terms for using Quo, the private AI assistant: your licence, AI models, accounts, Quo Pro, Quo Sync and credits.', terms, 'doc'),
-    ('support/index.html', '/support/', 'Support — Quo', 'Answers to common questions about Quo, the private AI assistant that works offline, and how to reach us.', support, 'doc'),
+    ('support/index.html', '/support/', 'Support and common questions — Quo', 'Answers to common questions about Quo, the private AI assistant that works offline, and how to reach us.', support, 'doc'),
     ('brand/index.html', '/brand/', 'Brand assets — Quo', 'Quo logos, colours, screenshots and how to describe Quo. Free to use when writing about Quo.', brand, 'doc wide'),
-    ('pricing/index.html', '/pricing/', 'Pricing — Quo', 'Quo is free on your device. Quo Pro, Quo Sync and credit packs for the cloud models.', PRICING, ''),
+    ('pricing/index.html', '/pricing/', 'Pricing: free on your device, pay only for the cloud — Quo', 'Quo is free on your device. Quo Pro, Quo Sync and credit packs for the cloud models.', PRICING, ''),
     ('models/index.html', '/models/', 'Which AI model runs on my device? — Quo', 'Every open AI model in Quo for phone, browser and desktop: download size, memory it needs, photos, thinking, free or Premium.', models_page(ROOT / 'scripts' / 'models.json'), 'doc wide'),
-    ('changelog/index.html', '/changelog/', 'What’s new — Quo', 'Every release of Quo for desktop, web and phone, with what changed.', changelog_page(ROOT.parent / 'CHANGELOG.md', CHANGELOG_UPDATED), 'doc'),
+    ('changelog/index.html', '/changelog/', 'What’s new in Quo: every release', 'Every release of Quo for desktop, web and phone, with what changed.', changelog_page(ROOT.parent / 'CHANGELOG.md', CHANGELOG_UPDATED), 'doc'),
     ('refunds/index.html', '/refunds/', 'Refund policy — Quo', 'How to get a refund for Quo Pro, Quo Sync and credit packs.', refunds, 'doc'),
     ('delete-account/index.html', '/delete-account/', 'Delete your Quo account — Quo', 'How to delete your Quo account and the data held for it.', delete_account, 'doc'),
     ('404.html', '/404', 'Page not found — Quo', 'This page doesn’t exist.', not_found, 'not-found'),
@@ -436,16 +443,31 @@ for file, path, title, desc, body, main in PAGES:
     # The same page as Markdown, for AI agents and programs that ask for it (markdown_pages.py).
     if file.endswith('index.html'):
         (out.parent / 'index.md').write_text(markdown_page(title, desc, body, SITE + path, SITE))
+
+# The home page is written by hand; only its questions' structured data is written here, from the questions the page
+# shows, so the two can't drift apart.
+asked = re.search(r'<h2>Questions\.</h2>(.*?)</section>', home, re.S).group(1)
+asked = re.findall(r'<summary>(.*?)</summary><p>(.*?)</p></details>', asked, re.S)
+MARK = ('<!-- questions-data: written by scripts/generate-pages.py -->', '<!-- /questions-data -->')
+assert asked and all(mark in home for mark in MARK), 'the home page lost its questions or their structured-data marks'
+updated_home = re.sub(re.escape(MARK[0]) + '.*?' + re.escape(MARK[1]), lambda _: f'{MARK[0]}\n{questions(asked)}\n{MARK[1]}', home, flags=re.S)
+if updated_home != home:
+    (ROOT / 'index.html').write_text(updated_home)
 home_title = re.search(r'<title>(.*?)</title>', home, re.S).group(1)
 home_desc = re.search(r'<meta name="description" content="([^"]*)"', home).group(1)
 (ROOT / 'index.md').write_text(markdown_page(home_title, home_desc, re.search(r'<main id="main">.*?</main>', home, re.S).group(0), SITE + '/', SITE))
 
-# The sitemap: the home page and every page above but the 404, dated by when the pages last changed.
-iso = lambda day: datetime.strptime(day, '%d %B %Y').date().isoformat()
-LASTMOD = {'/privacy/': iso(PRIVACY_UPDATED), '/changelog/': iso(CHANGELOG_UPDATED)}
-urls = ['/'] + [path for _, path, *_ in PAGES if path != '/404']
+# The sitemap: the home page and every page above but the 404. Each page's date is the day its file last changed: the
+# day of the last commit that changed it, or today when it differs from that commit (search engines trust dates only
+# when they are true, so they are never set by hand).
+def last_changed(file):
+    git = lambda *args: subprocess.run(['git', '-C', str(ROOT), *args, '--', file], capture_output=True, text=True).stdout.strip()
+    return (not git('status', '--porcelain') and git('log', '-1', '--format=%cs')) or date.today().isoformat()
+
+
+urls = [('/', 'index.html')] + [(path, file) for file, path, *_ in PAGES if path != '/404']
 (ROOT / 'sitemap.xml').write_text('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
-                                  + ''.join(f'  <url><loc>{SITE}{path}</loc><lastmod>{LASTMOD.get(path, iso(UPDATED))}</lastmod></url>\n' for path in urls) + '</urlset>\n')
+                                  + ''.join(f'  <url><loc>{SITE}{path}</loc><lastmod>{last_changed(file)}</lastmod></url>\n' for path, file in urls) + '</urlset>\n')
 
 # llms.txt: a plain summary for AI tools that read it (search engines don't need it). Facts only; prices stay on the
 # pricing page so they can't drift. It says which Quo this is: another company's business phone app is also called Quo.

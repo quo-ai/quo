@@ -1,29 +1,29 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://quo.computer/</loc><lastmod>2026-11-03</lastmod></url>
+  <url><loc>https://quo.computer/</loc><lastmod>2026-11-13</lastmod></url>
   <url><loc>https://quo.computer/privacy/</loc><lastmod>2026-11-13</lastmod></url>
-  <url><loc>https://quo.computer/terms/</loc><lastmod>2026-11-03</lastmod></url>
-  <url><loc>https://quo.computer/support/</loc><lastmod>2026-11-03</lastmod></url>
-  <url><loc>https://quo.computer/brand/</loc><lastmod>2026-11-03</lastmod></url>
-  <url><loc>https://quo.computer/pricing/</loc><lastmod>2026-11-03</lastmod></url>
-  <url><loc>https://quo.computer/models/</loc><lastmod>2026-11-03</lastmod></url>
+  <url><loc>https://quo.computer/terms/</loc><lastmod>2026-11-13</lastmod></url>
+  <url><loc>https://quo.computer/support/</loc><lastmod>2026-11-13</lastmod></url>
+  <url><loc>https://quo.computer/brand/</loc><lastmod>2026-11-13</lastmod></url>
+  <url><loc>https://quo.computer/pricing/</loc><lastmod>2026-11-13</lastmod></url>
+  <url><loc>https://quo.computer/models/</loc><lastmod>2026-11-13</lastmod></url>
   <url><loc>https://quo.computer/changelog/</loc><lastmod>2026-11-13</lastmod></url>
-  <url><loc>https://quo.computer/refunds/</loc><lastmod>2026-11-03</lastmod></url>
-  <url><loc>https://quo.computer/delete-account/</loc><lastmod>2026-11-03</lastmod></url>
-  <url><loc>https://quo.computer/models/qwen3.5-4b/</loc><lastmod>2026-11-03</lastmod></url>
-  <url><loc>https://quo.computer/models/qwen3.5-9b/</loc><lastmod>2026-11-03</lastmod></url>
-  <url><loc>https://quo.computer/models/qwen3.8-27b/</loc><lastmod>2026-11-03</lastmod></url>
-  <url><loc>https://quo.computer/models/gemma-4-e2b/</loc><lastmod>2026-11-03</lastmod></url>
-  <url><loc>https://quo.computer/models/gemma-4-12b/</loc><lastmod>2026-11-03</lastmod></url>
-  <url><loc>https://quo.computer/models/gemma-4-26b-a4b/</loc><lastmod>2026-11-03</lastmod></url>
-  <url><loc>https://quo.computer/models/llama-3.2-3b/</loc><lastmod>2026-11-03</lastmod></url>
-  <url><loc>https://quo.computer/models/phi-4-mini/</loc><lastmod>2026-11-03</lastmod></url>
-  <url><loc>https://quo.computer/models/qwen3.5-0.8b/</loc><lastmod>2026-11-03</lastmod></url>
-  <url><loc>https://quo.computer/models/qwen3.5-2b/</loc><lastmod>2026-11-03</lastmod></url>
-  <url><loc>https://quo.computer/models/smollm3-3b/</loc><lastmod>2026-11-03</lastmod></url>
-  <url><loc>https://quo.computer/models/ministral-3b/</loc><lastmod>2026-11-03</lastmod></url>
-  <url><loc>https://quo.computer/models/nanbeige4-thinking-3b/</loc><lastmod>2026-11-03</lastmod></url>
-  <url><loc>https://quo.computer/models/ministral-reasoning-3b/</loc><lastmod>2026-11-03</lastmod></url>
-  <url><loc>https://quo.computer/models/gemma-3-4b/</loc><lastmod>2026-11-03</lastmod></url>
-  <url><loc>https://quo.computer/models/gemma-3-1b/</loc><lastmod>2026-11-03</lastmod></url>
+  <url><loc>https://quo.computer/refunds/</loc><lastmod>2026-11-13</lastmod></url>
+  <url><loc>https://quo.computer/delete-account/</loc><lastmod>2026-11-13</lastmod></url>
+  <url><loc>https://quo.computer/models/qwen3.5-4b/</loc><lastmod>2026-11-13</lastmod></url>
+  <url><loc>https://quo.computer/models/qwen3.5-9b/</loc><lastmod>2026-11-13</lastmod></url>
+  <url><loc>https://quo.computer/models/qwen3.8-27b/</loc><lastmod>2026-11-13</lastmod></url>
+  <url><loc>https://quo.computer/models/gemma-4-e2b/</loc><lastmod>2026-11-13</lastmod></url>
+  <url><loc>https://quo.computer/models/gemma-4-12b/</loc><lastmod>2026-11-13</lastmod></url>
+  <url><loc>https://quo.computer/models/gemma-4-26b-a4b/</loc><lastmod>2026-11-13</lastmod></url>
+  <url><loc>https://quo.computer/models/llama-3.2-3b/</loc><lastmod>2026-11-13</lastmod></url>
+  <url><loc>https://quo.computer/models/phi-4-mini/</loc><lastmod>2026-11-13</lastmod></url>
+  <url><loc>https://quo.computer/models/qwen3.5-0.8b/</loc><lastmod>2026-11-13</lastmod></url>
+  <url><loc>https://quo.computer/models/qwen3.5-2b/</loc><lastmod>2026-11-13</lastmod></url>
+  <url><loc>https://quo.computer/models/smollm3-3b/</loc><lastmod>2026-11-13</lastmod></url>
+  <url><loc>https://quo.computer/models/ministral-3b/</loc><lastmod>2026-11-13</lastmod></url>
+  <url><loc>https://quo.computer/models/nanbeige4-thinking-3b/</loc><lastmod>2026-11-13</lastmod></url>
+  <url><loc>https://quo.computer/models/ministral-reasoning-3b/</loc><lastmod>2026-11-13</lastmod></url>
+  <url><loc>https://quo.computer/models/gemma-3-4b/</loc><lastmod>2026-11-13</lastmod></url>
+  <url><loc>https://quo.computer/models/gemma-3-1b/</loc><lastmod>2026-11-13</lastmod></url>
 </urlset>
