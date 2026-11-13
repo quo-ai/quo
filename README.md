@@ -97,6 +97,7 @@ In a browser, use Chrome or Edge on a computer: Firefox and Safari run on the pr
 | Quo Sync: your chats and memories on every device, end-to-end encrypted | ✓ § | ✓ § | ✓ § |
 | Any model from Hugging Face | | ✓ | |
 | Code mode: a coding agent that asks before every change, commit and push | | ✓ | |
+| Claude Agent: Claude models through your own Claude Code sign-in, on your own Claude plan | | ✓ | |
 
 † Part of the optional one-time Premium upgrade on the phone.<br>
 ‡ With cloud models or your own API key; the offline models in the browser read text.<br>

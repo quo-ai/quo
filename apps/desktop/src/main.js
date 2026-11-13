@@ -175,7 +175,7 @@ function start() {
   const { keys } = setupProviders();
   // Tool servers (MCP) the person added in mcp.json: off until turned on in a native dialog (mcp/).
   setupAgent({ web: setupWeb({ keys }), mcp: setupToolServers() });
-  // Left out of released builds until Anthropic approves (claude/release.js).
+  // Offered while claude/release.js says so (Anthropic's terms for running Claude Code in another product).
   if (claudeAgentOffered(app.isPackaged)) setupClaude();
   hasEngine = engineAvailable();
   if (hasEngine) {

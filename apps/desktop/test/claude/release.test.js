@@ -1,7 +1,7 @@
 'use strict';
 
-// Claude Agent stays out of released builds until Anthropic approves it (src/claude/release.js). Checks the switch, and
-// that packaging agrees with it: no SDK in a release that leaves Claude Agent out.
+// Claude Agent is in released builds while src/claude/release.js says so. Checks the switch, and that packaging agrees
+// with it: the SDK is in a release exactly when Claude Agent is, and Anthropic's own copy of Claude Code never is.
 
 const assert = require('node:assert/strict');
 const fs = require('node:fs');

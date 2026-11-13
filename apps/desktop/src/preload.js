@@ -8,7 +8,7 @@ const arg = name => process.argv.find(value => value.startsWith(`--${name}=`))?.
 const version = arg('quo-version') ?? '';
 const hasEngine = arg('quo-engine') === '1';
 const hasImages = arg('quo-images') === '1';
-// Claude Agent: development builds only, until Anthropic approves it for releases (src/claude/release.js).
+// Claude Agent: where the build offers it (src/claude/release.js).
 const hasClaude = arg('quo-claude') === '1';
 
 const invoke = (channel, payload) => ipcRenderer.invoke(channel, payload);

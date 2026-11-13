@@ -28,9 +28,9 @@ COMPANY_DETAILS = ('a company registered in England and Wales (company number 16
                    'registered office 82 James Carter Road, Mildenhall, IP28 7DE, United Kingdom')
 UPDATED = '3 November 2026'
 # The privacy policy's own date: it changes with what the apps send, so it can move on without the other pages.
-PRIVACY_UPDATED = '10 November 2026'
+PRIVACY_UPDATED = '13 November 2026'
 # The changelog's date: its newest release.
-CHANGELOG_UPDATED = '8 November 2026'
+CHANGELOG_UPDATED = '13 November 2026'
 
 home = (ROOT / 'index.html').read_text()
 SYMBOL = re.search(r'<svg width="0".*?</svg>', home, re.S).group(0)
@@ -151,6 +151,7 @@ privacy = f'''<h1>Privacy Policy</h1>
 <p>When you ask for an image, the model you are chatting with writes a description of it (a prompt). That prompt, and the image you ask to change if you ask for a change, goes through our server to OpenRouter and on to an image model’s provider, which makes the image. Only providers that don’t keep or train on what they receive are used, and our server doesn’t store the prompt or the image. With an offline model, the prompt is written on your device, and Quo asks before it sends the prompt (only the prompt) to make the picture in the cloud, unless you told it not to ask. In the desktop app, if you download an image model (Models &amp; storage), offline chats make their images <strong>on your computer</strong> instead: nothing about them, not the prompt and not the image, leaves it. A change to a picture is made on your computer too: by a model that changes pictures, or made again from the changed prompt. Images you make are kept on your device and are not synced. A few images a day are free (a change to an image counts as two).</p>
 <h3>Your own API keys</h3>
 <p>You can also use models with an API key of your own (from OpenRouter, Anthropic, OpenAI, Google, xAI, DeepSeek, Mistral, Groq, or a server you run yourself), with no Quo account. When you do, the messages in that chat, and in Code mode the files Quo reads, go <strong>straight from your computer to that provider</strong>, under that provider’s terms and privacy policy. They do not go through our servers, and we never see your key or your messages. In the desktop app your key is saved encrypted by your operating system’s secure storage (where it has none, it is kept in memory until you quit) and the app’s pages can never read it back; in a browser it is saved in that browser only. Keys are never synced and never sent to us. Memories are not sent to these models, as with our own cloud model; files you attach go with your message.</p>
+<p><strong>Claude Agent</strong> (desktop app) uses Claude Code, Anthropic’s own program, which you install and sign in to yourself. Quo starts your copy of it on your computer; your messages go from your computer to Anthropic under your own Claude plan or key, and what you use counts against that plan, not ours. They do not go through our servers. Quo never sees, stores or passes on your Claude sign-in, and it turns Claude Code’s own tools off, so in Code mode every change still needs your OK in Quo. Memories are not sent, as with other online models.</p>
 <p>To keep the free allowance fair, our server counts how many cloud messages are sent each day per device and per IP address. It stores these counts under one-way keyed hashes, never the IP address or the app’s random device ID itself, and deletes them after two days. We also keep daily totals of how many cloud requests were made and what they cost, with nothing about who made them.</p>
 
 <h2>Why we use your data (legal bases)</h2>
