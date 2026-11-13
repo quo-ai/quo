@@ -1,4 +1,10 @@
+# Quo's website is open to search engines and AI systems alike.
+# Content Signals (https://contentsignals.org): how this site's content may be used after it is fetched.
+#   search:   building a search index and showing links and short excerpts
+#   ai-input: using pages to answer a person's question (AI answers, assistants, agents)
+#   ai-train: training or fine-tuning AI models
 User-agent: *
+Content-Signal: search=yes, ai-input=yes, ai-train=yes
 Allow: /
 
 Sitemap: https://quo.computer/sitemap.xml

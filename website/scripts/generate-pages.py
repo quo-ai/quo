@@ -19,6 +19,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))  # data_pages.py, beside this script
 from data_pages import changelog_page, models_page  # noqa: E402
 from model_pages import model_pages  # noqa: E402
+from markdown_pages import markdown_page  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent  # website/
 SITE = 'https://quo.computer'
@@ -426,6 +427,12 @@ for file, path, title, desc, body, main in PAGES:
     out = ROOT / file
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(page(title, desc, body, path, main))
+    # The same page as Markdown, for AI agents and programs that ask for it (markdown_pages.py).
+    if file.endswith('index.html'):
+        (out.parent / 'index.md').write_text(markdown_page(title, desc, body, SITE + path, SITE))
+home_title = re.search(r'<title>(.*?)</title>', home, re.S).group(1)
+home_desc = re.search(r'<meta name="description" content="([^"]*)"', home).group(1)
+(ROOT / 'index.md').write_text(markdown_page(home_title, home_desc, re.search(r'<main id="main">.*?</main>', home, re.S).group(0), SITE + '/', SITE))
 
 # The sitemap: the home page and every page above but the 404, dated by when the pages last changed.
 iso = lambda day: datetime.strptime(day, '%d %B %Y').date().isoformat()
@@ -439,6 +446,8 @@ urls = ['/'] + [path for _, path, *_ in PAGES if path != '/404']
 (ROOT / 'llms.txt').write_text(f'''# Quo AI
 
 > Quo is a free, open-source AI assistant that runs on your own device: in the browser, on Mac, Windows and Linux, and on Android. It works offline, needs no account, and nothing you type leaves the device unless you choose a cloud model. Made by {COMPANY} in the United Kingdom. Not related to Quo, the business phone service formerly called OpenPhone.
+
+Every page here is also available as Markdown: ask with `Accept: text/markdown`, or add `index.md` to its address (for example {SITE}/pricing/index.md).
 
 ## Using Quo
 - [Home]({SITE}/): what Quo does, the models it runs, the desktop and phone apps, and common questions
