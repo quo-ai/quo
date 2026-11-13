@@ -156,6 +156,31 @@ describe('making an image', () => {
     await assert.rejects(waiting, { code: 'stopped' });
     await assert.rejects(engine.make({ dir: '/m', prompt: 'NO MEMORY', shape: '1:1', steps: 3, cfg: 1, seed: 1 }), { code: 'out_of_memory' });
   });
+
+  it('keeps an image sd-cli saved before it crashed on the way out, but only a whole one it said it saved', async () => {
+    const dir = tempDir('quo-make3-');
+    const engine = engineFor(dir);
+    const ask = prompt => engine.make({ dir: '/m', prompt, shape: '1:1', steps: 3, cfg: 1, seed: 1 });
+    const warn = console.warn;
+    const warned = [];
+    console.warn = (...args) => warned.push(args.join(' '));
+    try {
+      const png = await ask('CRASH AFTER SAVING');
+      assert.equal(png.subarray(1, 4).toString(), 'PNG');
+      assert.match(warned.join(' '), /after saving the image/);
+      // Half a file, or a crash before it said the image was saved: not an image, whatever is on disk.
+      await assert.rejects(ask('CRASH HALF SAVED'), { code: 'failed' });
+      await assert.rejects(ask('CRASH EARLY'), error => error instanceof ImageError && ['failed', 'stopped'].includes(error.code));
+      // Stopped by the person after it saved: stopped means stopped.
+      const slow = ask('SLOW SAVED');
+      await new Promise(resolve => setTimeout(resolve, 400));
+      engine.cancel();
+      await assert.rejects(slow, { code: 'stopped' });
+    } finally {
+      console.warn = warn;
+    }
+    assert.deepEqual(fs.readdirSync(dir).filter(name => name.endsWith('.png')), []);
+  });
 });
 
 describe('the page’s side', () => {

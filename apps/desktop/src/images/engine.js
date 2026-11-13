@@ -46,6 +46,8 @@ const SHAPES = {
 const MAX_PROMPT = 4000;
 const TIME_LIMIT_MS = 10 * 60_000;
 const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+// How every whole PNG ends: its empty IEND chunk and that chunk's checksum.
+const PNG_END = Buffer.from([0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82]);
 // How sd-cli says the graphics card is full (ggml's allocators, Vulkan, CUDA, and its own model manager).
 const OUT_OF_MEMORY = /out of (device )?memory|ErrorOutOfDeviceMemory|failed to allocate|cudaMalloc failed|alloc\w* (of size \d+ )?fail|cannot make enough memory available|not enough (device |video )?memory/i;
 const isOutOfMemory = text => OUT_OF_MEMORY.test(String(text));
@@ -113,7 +115,7 @@ class ImageEngine {
   }
 
   cancel() {
-    this.child?.kill();
+    this.stop?.();
   }
 
   /** Makes one PNG from the model in `dir` (checked by the caller); onProgress gets { step, steps }. */
@@ -131,16 +133,26 @@ class ImageEngine {
     };
     child.stdout.on('data', read);
     child.stderr.on('data', read);
-    const timer = setTimeout(() => child.kill(), this.timeLimitMs);
+    // Stopped by Quo (the person, or the time limit): whatever is on disk then is not an image to show.
+    let stopped = false;
+    this.stop = () => {
+      stopped = true;
+      child.kill();
+    };
+    const timer = setTimeout(this.stop, this.timeLimitMs);
     return new Promise((resolve, reject) => {
       child.once('error', error => reject(new ImageError('failed', error.message)));
       child.once('exit', async (code, signal) => {
         clearTimeout(timer);
         this.child = null;
+        this.stop = null;
         let image = null;
         let failure = null;
+        // sd-cli sometimes crashes while it exits, after the image is saved (seen with a new shader cache: the first
+        // image on a computer). The image is good then: it said so, and the file is checked to be whole below.
+        const savedThenCrashed = code !== 0 && !stopped && /\b\d+\/\d+ images saved\b/.test(tail);
         try {
-          if (code !== 0) {
+          if (code !== 0 && !savedThenCrashed) {
             // Its error lines (not the prompt) go to the log, so a failure can be understood later.
             const errors = tail.split(/[\r\n]+/).filter(line => line.startsWith('[E]')).slice(-4).map(line => line.slice(0, 200));
             if (errors.length) console.warn('[images] sd-cli:', errors.join(' | '));
@@ -149,6 +161,10 @@ class ImageEngine {
           }
           image = await fsp.readFile(output);
           if (!image.subarray(0, PNG.length).equals(PNG)) throw new ImageError('failed', 'The image couldn’t be made.');
+          if (savedThenCrashed) {
+            if (!image.subarray(-PNG_END.length).equals(PNG_END)) throw new ImageError('failed', 'The image couldn’t be made.');
+            console.warn(`[images] sd-cli ended with ${signal ?? `code ${code}`} after saving the image; the image is whole and is used`);
+          }
         } catch (error) {
           failure = error instanceof ImageError ? error : new ImageError('failed', 'The image couldn’t be made.');
         }
