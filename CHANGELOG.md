@@ -2,6 +2,21 @@
 
 Notable changes to Quo. Quo Web and the desktop app ship together under the desktop version (`desktop-v*` tags); the phone app has its own numbers. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Desktop 1.7.2] - 2026-11-13
+
+### Added
+- **Claude Agent** — use Claude in Quo with your own Claude Code sign-in, on your own Claude plan (or API key). Install Claude Code, run `claude auth login`, then open Models & storage → Your keys → Claude Agent. Your messages go from your computer to Anthropic, not through Quo, and Quo never sees your sign-in. It works in chat and in Code mode, where every change still needs your OK in Quo. The chat bar shows how much of your plan's limits is used.
+
+### Improved
+- **llama.cpp 1.0** — Quo runs the engine's first 1.0 release. Replies came faster in our tests on the graphics card, its server has security fixes, and Quo can run 3 more kinds of model from Hugging Face.
+- **More offline models in Quo Web** — SmolLM3 3B, Ministral 3B and Phi-4 Mini join Qwen3.5, Llama 3.2 and Gemma 4 in the browser, with a newer browser engine.
+- **A link can open Quo Web on one model** — each model's page on the website has "Try it in your browser".
+- **Images made on your computer** use the newest stable-diffusion.cpp.
+
+### Fixed
+- **The first picture on a computer** — it sometimes said "Stopped." although the picture had been made. It shows now.
+- **Security** — the app is built on Electron 44.11, with Chromium's latest fixes.
+
 ## [Desktop 1.7.1] - 2026-11-08
 
 ### Improved
