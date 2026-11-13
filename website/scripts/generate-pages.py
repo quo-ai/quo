@@ -11,6 +11,7 @@ Keep the privacy policy in step with the app: if a dependency starts sending
 data off the device (analytics events, a new SDK, a network feature), this
 policy and the Play Data safety / App Store privacy answers must change too.
 """
+import json
 import re
 import sys
 from datetime import datetime
@@ -308,12 +309,17 @@ faq = [
      'Yes, please. Open an issue on <a href="https://github.com/quo-ai/quo/issues/new/choose">GitHub</a>, or email us.'),
 ]
 faq_html = ''.join(f'<details><summary>{q}</summary><p>{a}</p></details>' for q, a in faq)
+# The same questions as structured data (schema.org FAQPage), so search engines and AI answers can quote them exactly.
+faq_text = lambda html: re.sub(r'\s+', ' ', re.sub(r'<[^>]+>', '', html)).replace('&amp;', '&').replace('&rsquo;', '’').strip()
+faq_data = '<script type="application/ld+json">' + json.dumps({'@context': 'https://schema.org', '@type': 'FAQPage', 'mainEntity': [
+    {'@type': 'Question', 'name': faq_text(q), 'acceptedAnswer': {'@type': 'Answer', 'text': faq_text(a)}} for q, a in faq]}, ensure_ascii=False).replace('</', '<\\/') + '</script>'
 support = f'''<h1>Support</h1>
 <p class="meta">We’re happy to help.</p>
 <div class="summary"><p>Email {MAIL} and we’ll get back to you. Please mention your device (phone model, or computer and browser) and the version of Quo you have.</p></div>
 <h2>Common questions</h2>
 {faq_html}
-'''
+
+{faq_data}'''
 
 brand = '''<h1>Brand assets</h1>
 <p class="meta">Logos, colours, screenshots and how to describe Quo.</p>
