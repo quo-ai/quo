@@ -13,6 +13,13 @@ Every page here is also available as Markdown: ask with `Accept: text/markdown`,
 - [Models](https://quo.computer/models/): every model Quo runs on a computer, in a browser and on a phone, and what each needs
 - [What's new](https://quo.computer/changelog/): every release
 
+## Quo on each device
+- [Windows](https://quo.computer/windows/): Quo runs AI models on your Windows PC, on the graphics card, with no internet and no account. Free and open source. How to install it and which models fit.
+- [Mac](https://quo.computer/mac/): Quo runs AI models on your Mac, on Apple silicon’s graphics, with no internet and no account. Free and open source. How to install it and which models fit.
+- [Linux](https://quo.computer/linux/): Quo runs AI models on your Linux computer with llama.cpp and Vulkan, with no internet and no account. AppImage and .deb for x64 and ARM. Free and open source.
+- [Android](https://quo.computer/android/): Quo runs AI on your Android phone with no internet and no account. A model comes built in, and your documents, photos and voice stay on the phone. Free on Google Play.
+- [In your browser](https://quo.computer/browser/): Quo Web runs AI models in Chrome or Edge on your own computer, on the graphics card with WebGPU. Nothing to install, no account, and it works offline.
+
 ## About
 - [Source code](https://github.com/quo-ai/quo): Apache 2.0
 - [Privacy Policy](https://quo.computer/privacy/): what stays on the device and what is sent when you choose a cloud model

@@ -12,9 +12,7 @@ data off the device (analytics events, a new SDK, a network feature), this
 policy and the Play Data safety / App Store privacy answers must change too.
 """
 import re
-import subprocess
 import sys
-from datetime import date
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))  # data_pages.py, beside this script
@@ -22,6 +20,8 @@ from data_pages import changelog_page, models_page  # noqa: E402
 from model_pages import model_pages  # noqa: E402
 from markdown_pages import markdown_page  # noqa: E402
 from structured_data import questions  # noqa: E402
+from platform_pages import platform_links, platform_pages  # noqa: E402
+from site_files import write_llms, write_sitemap  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent  # website/
 SITE = 'https://quo.computer'
@@ -435,6 +435,7 @@ PAGES = [
     ('delete-account/index.html', '/delete-account/', 'Delete your Quo account — Quo', 'How to delete your Quo account and the data held for it.', delete_account, 'doc'),
     ('404.html', '/404', 'Page not found — Quo', 'This page doesn’t exist.', not_found, 'not-found'),
     *model_pages(ROOT / 'scripts' / 'models.json'),  # one page per model: model_pages.py
+    *platform_pages(ROOT / 'scripts' / 'models.json'),  # one page per place Quo runs: platform_pages.py
 ]
 for file, path, title, desc, body, main in PAGES:
     out = ROOT / file
@@ -457,39 +458,7 @@ home_title = re.search(r'<title>(.*?)</title>', home, re.S).group(1)
 home_desc = re.search(r'<meta name="description" content="([^"]*)"', home).group(1)
 (ROOT / 'index.md').write_text(markdown_page(home_title, home_desc, re.search(r'<main id="main">.*?</main>', home, re.S).group(0), SITE + '/', SITE))
 
-# The sitemap: the home page and every page above but the 404. Each page's date is the day its file last changed: the
-# day of the last commit that changed it, or today when it differs from that commit (search engines trust dates only
-# when they are true, so they are never set by hand).
-def last_changed(file):
-    git = lambda *args: subprocess.run(['git', '-C', str(ROOT), *args, '--', file], capture_output=True, text=True).stdout.strip()
-    return (not git('status', '--porcelain') and git('log', '-1', '--format=%cs')) or date.today().isoformat()
-
-
-urls = [('/', 'index.html')] + [(path, file) for file, path, *_ in PAGES if path != '/404']
-(ROOT / 'sitemap.xml').write_text('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
-                                  + ''.join(f'  <url><loc>{SITE}{path}</loc><lastmod>{last_changed(file)}</lastmod></url>\n' for path, file in urls) + '</urlset>\n')
-
-# llms.txt: a plain summary for AI tools that read it (search engines don't need it). Facts only; prices stay on the
-# pricing page so they can't drift. It says which Quo this is: another company's business phone app is also called Quo.
-(ROOT / 'llms.txt').write_text(f'''# Quo AI
-
-> Quo is a free, open-source AI assistant that runs on your own device: in the browser, on Mac, Windows and Linux, and on Android. It works offline, needs no account, and nothing you type leaves the device unless you choose a cloud model. Made by {COMPANY} in the United Kingdom. Not related to Quo, the business phone service formerly called OpenPhone.
-
-Every page here is also available as Markdown: ask with `Accept: text/markdown`, or add `index.md` to its address (for example {SITE}/pricing/index.md).
-
-## Using Quo
-- [Home]({SITE}/): what Quo does, the models it runs, the desktop and phone apps, and common questions
-- [Quo Web](https://app.quo.computer/): Quo in the browser, with offline models and optional cloud models
-- [Download for desktop](https://github.com/quo-ai/quo/releases/latest): Mac, Windows and Linux
-- [Android app](https://play.google.com/store/apps/details?id=com.quo.app)
-- [Pricing]({SITE}/pricing/): free on the device; Quo Pro, Quo Sync and credit packs for cloud models
-- [Models]({SITE}/models/): every model Quo runs on a computer, in a browser and on a phone, and what each needs
-- [What's new]({SITE}/changelog/): every release
-
-## About
-- [Source code](https://github.com/quo-ai/quo): Apache 2.0
-- [Privacy Policy]({SITE}/privacy/): what stays on the device and what is sent when you choose a cloud model
-- [Terms]({SITE}/terms/), [Refunds]({SITE}/refunds/), [Support]({SITE}/support/), [Brand assets]({SITE}/brand/)
-- Contact: {EMAIL}
-''')
-print('wrote', ', '.join(file for file, *_ in PAGES), '+ sitemap.xml, llms.txt')
+# The sitemap (the home page and every page above but the 404) and llms.txt: site_files.py.
+write_sitemap(ROOT, SITE, [('/', 'index.html')] + [(path, file) for file, path, *_ in PAGES if path != '/404'])
+write_llms(ROOT, SITE, COMPANY, EMAIL, platform_links())
+print('wrote', len(PAGES), 'pages + sitemap.xml, llms.txt')

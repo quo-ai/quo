@@ -204,6 +204,12 @@ main > section { scroll-margin-top: 4rem; }
 .doc th, .doc td { text-align: left; vertical-align: top; padding: var(--s-2) var(--s-4) var(--s-2) 0; border-bottom: var(--bw) solid var(--rule); color: var(--ink-2); }
 .doc th { color: var(--ink); border-bottom-color: var(--rule-strong); }
 .doc code { padding: 0.05em 0.35em; border-radius: 0.3rem; background: var(--sunken); border: 1px solid var(--rule); font-size: 0.9em; }
+/* Document pages with actions, facts and pictures: the pages for each device (scripts/platform_pages.py). */
+.doc .actions { margin: var(--s-6) 0 var(--s-4); }
+.doc .facts-line { padding: 0; margin: var(--s-4) 0; }
+.doc .facts-line li + li { margin-top: 0; }
+.doc .frame-img, .doc .shots { margin: var(--s-8) 0; }
+.doc .install-row code { padding: 0; border: 0; background: none; }
 .summary { margin: 0 0 var(--s-8); padding: var(--s-5) var(--s-6); border-radius: var(--r-card); background: var(--indigo-wash); }
 .summary p { color: var(--ink); }
 

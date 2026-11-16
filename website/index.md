@@ -118,9 +118,9 @@ For Mac, Windows and Linux. Models run on your graphics card, so replies are muc
 
 [Download for **macOS**](https://github.com/quo-ai/quo/releases/latest/download/Quo-mac-universal.dmg) [Download for **Windows**](https://github.com/quo-ai/quo/releases/latest/download/Quo-windows-x64-setup.exe) [Download for **Linux**](https://github.com/quo-ai/quo/releases/latest/download/Quo-linux-x86_64.AppImage)
 
-- Apple silicon and Intel Macs
-- Windows 10 and 11
-- Linux AppImage and [.deb](https://github.com/quo-ai/quo/releases/latest)
+- [Apple silicon and Intel Macs](https://quo.computer/mac/)
+- [Windows 10 and 11](https://quo.computer/windows/)
+- [Linux AppImage and .deb](https://quo.computer/linux/)
 
 Or install it in one line: it picks the right download, checks it, and needs no admin rights.
 
