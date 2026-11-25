@@ -20,6 +20,11 @@ Every page here is also available as Markdown: ask with `Accept: text/markdown`,
 - [Android](https://quo.computer/android/): Quo runs AI on your Android phone with no internet and no account. A model comes built in, and your documents, photos and voice stay on the phone. Free on Google Play.
 - [In your browser](https://quo.computer/browser/): Quo Web runs AI models in Chrome or Edge on your own computer, on the graphics card with WebGPU. Nothing to install, no account, and it works offline.
 
+## In the desktop app
+- [Claude Agent](https://quo.computer/claude-agent/): Use Claude in the Quo desktop app through your own Claude Code sign-in, on your own Claude plan.
+- [Code mode](https://quo.computer/code-mode/): A coding agent in the desktop app: it reads, changes and tests your code, and you approve every step. Offline or cloud models.
+- [Any model from Hugging Face](https://quo.computer/models/hugging-face/): Search Hugging Face from the desktop app and run almost any GGUF model offline.
+
 ## About
 - [Source code](https://github.com/quo-ai/quo): Apache 2.0
 - [Privacy Policy](https://quo.computer/privacy/): what stays on the device and what is sent when you choose a cloud model

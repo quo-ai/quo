@@ -39,7 +39,7 @@ def models_page(path: Path) -> str:
 <p>Memory decides which models run well. A bigger model gives better answers but needs more memory, and a model that doesn’t fit runs slowly or not at all.</p>
 
 <h2>On a computer: the desktop app</h2>
-<p>The desktop app runs models on your graphics card with llama.cpp, on Mac, Windows and Linux. It can also search Hugging Face and run almost any GGUF model. “Memory it needs” is the computer’s memory, or the graphics card’s own memory when the model runs there. The download includes the file for reading photos.</p>
+<p>The desktop app runs models on your graphics card with llama.cpp, on Mac, Windows and Linux. It can also <a href="/models/hugging-face/">search Hugging Face and run almost any GGUF model</a>. “Memory it needs” is the computer’s memory, or the graphics card’s own memory when the model runs there. The download includes the file for reading photos.</p>
 {_table(data["desktop"], [name, good, size, memory, photos, thinks, code])}
 
 <h2>In a browser: Quo Web</h2>

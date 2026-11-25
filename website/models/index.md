@@ -6,7 +6,7 @@ Memory decides which models run well. A bigger model gives better answers but ne
 
 ## On a computer: the desktop app
 
-The desktop app runs models on your graphics card with llama.cpp, on Mac, Windows and Linux. It can also search Hugging Face and run almost any GGUF model. “Memory it needs” is the computer’s memory, or the graphics card’s own memory when the model runs there. The download includes the file for reading photos.
+The desktop app runs models on your graphics card with llama.cpp, on Mac, Windows and Linux. It can also [search Hugging Face and run almost any GGUF model](https://quo.computer/models/hugging-face/). “Memory it needs” is the computer’s memory, or the graphics card’s own memory when the model runs there. The download includes the file for reading photos.
 
 | Model | Good at | Download | Memory it needs | Reads photos | Thinks first | Code mode |
 | --- | --- | --- | --- | --- | --- | --- |

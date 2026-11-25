@@ -33,10 +33,10 @@ In Terminal `curl -fsSL https://quo.computer/install.sh | sh`
 - **Works offline.** Models run on your computer. After a model downloads, Quo needs no internet, and your chats, documents and photos stay on the computer.
 - **Runs on your graphics card.** On x64, Quo uses llama.cpp with Vulkan, so most NVIDIA, AMD and Intel graphics work. On an NVIDIA card you can add llama.cpp’s CUDA engine in Models & storage. ARM64 computers run models on the processor; NVIDIA ARM machines can add the CUDA engine.
 - **Reads documents and photos, and listens.** Ask about a PDF or a photo, or talk instead of typing. Your voice is turned into text on the computer.
-- **Any GGUF model from Hugging Face.** Search Hugging Face in Models & storage, or use models you already downloaded with LM Studio or Ollama.
-- **Code mode.** A model works in a project folder: it reads the code, makes changes, runs tests, commits and pushes. You approve every step.
-- **Makes pictures on your computer** with an image model you download.
-- **Cloud models only when you choose them:** Quo’s own, your own API key, or Claude Agent with your own Claude Code sign-in. Each is clearly marked.
+- **[Any GGUF model from Hugging Face](https://quo.computer/models/hugging-face/).** Search Hugging Face in Models & storage, or use models you already downloaded with LM Studio or Ollama.
+- **[Code mode](https://quo.computer/code-mode/).** A model works in a project folder: it reads the code, makes changes, runs tests, commits and pushes. You approve every step.
+- **Makes pictures on x64 computers** with an image model you download.
+- **Cloud models only when you choose them:** Quo’s own, your own API key, or [Claude Agent](https://quo.computer/claude-agent/) with your own Claude Code sign-in. Each is clearly marked.
 
 ## Models that run on it
 

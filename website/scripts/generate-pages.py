@@ -21,6 +21,7 @@ from model_pages import model_pages  # noqa: E402
 from markdown_pages import markdown_page  # noqa: E402
 from structured_data import questions  # noqa: E402
 from platform_pages import platform_links, platform_pages  # noqa: E402
+from feature_pages import feature_links, feature_pages  # noqa: E402
 from site_files import write_llms, write_sitemap  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent  # website/
@@ -436,6 +437,7 @@ PAGES = [
     ('404.html', '/404', 'Page not found — Quo', 'This page doesn’t exist.', not_found, 'not-found'),
     *model_pages(ROOT / 'scripts' / 'models.json'),  # one page per model: model_pages.py
     *platform_pages(ROOT / 'scripts' / 'models.json'),  # one page per place Quo runs: platform_pages.py
+    *feature_pages(ROOT / 'scripts' / 'models.json'),  # Claude Agent, Code mode, Hugging Face: feature_pages.py
 ]
 for file, path, title, desc, body, main in PAGES:
     out = ROOT / file
@@ -460,5 +462,5 @@ home_desc = re.search(r'<meta name="description" content="([^"]*)"', home).group
 
 # The sitemap (the home page and every page above but the 404) and llms.txt: site_files.py.
 write_sitemap(ROOT, SITE, [('/', 'index.html')] + [(path, file) for file, path, *_ in PAGES if path != '/404'])
-write_llms(ROOT, SITE, COMPANY, EMAIL, platform_links())
+write_llms(ROOT, SITE, COMPANY, EMAIL, platform_links(), feature_links())
 print('wrote', len(PAGES), 'pages + sitemap.xml, llms.txt')

@@ -19,10 +19,11 @@ def write_sitemap(root: Path, site: str, pages: list) -> None:
                                       + '</urlset>\n')
 
 
-def write_llms(root: Path, site: str, company: str, email: str, places: list) -> None:
+def write_llms(root: Path, site: str, company: str, email: str, places: list, features: list) -> None:
     """Facts only; prices stay on the pricing page so they can't drift. It says which Quo this is: another company's
-    business phone app is also called Quo. `places` holds (name, address, one line) for each place Quo runs."""
+    business phone app is also called Quo. `places` and `features` hold (name, address, one line) for each page."""
     get = ''.join(f'- [{name}]({url}): {line}\n' for name, url, line in places)
+    does = ''.join(f'- [{name}]({url}): {line}\n' for name, url, line in features)
     (root / 'llms.txt').write_text(f'''# Quo AI
 
 > Quo is a free, open-source AI assistant that runs on your own device: in the browser, on Mac, Windows and Linux, and on Android. It works offline, needs no account, and nothing you type leaves the device unless you choose a cloud model. Made by {company} in the United Kingdom. Not related to Quo, the business phone service formerly called OpenPhone.
@@ -40,6 +41,8 @@ Every page here is also available as Markdown: ask with `Accept: text/markdown`,
 
 ## Quo on each device
 {get}
+## In the desktop app
+{does}
 ## About
 - [Source code](https://github.com/quo-ai/quo): Apache 2.0
 - [Privacy Policy]({site}/privacy/): what stays on the device and what is sent when you choose a cloud model

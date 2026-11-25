@@ -59,16 +59,17 @@ def _table(entries, place):
             + '</tr></thead>\n<tbody>\n' + '\n'.join(row(m) for m in entries) + '\n</tbody></table></div>')
 
 
-def _desktop_does(graphics):
-    """What the desktop app does, the same on every system but for how it uses the graphics card."""
+def _desktop_does(graphics, pictures='<strong>Makes pictures on your computer</strong> with an image model you download.'):
+    """What the desktop app does, the same on every system but for how it uses the graphics card and where it makes
+    pictures (stable-diffusion.cpp is bundled for Windows, Linux x64 and Apple silicon only)."""
     return f'''<ul>
 <li><strong>Works offline.</strong> Models run on your computer. After a model downloads, Quo needs no internet, and your chats, documents and photos stay on the computer.</li>
 <li>{graphics}</li>
 <li><strong>Reads documents and photos, and listens.</strong> Ask about a PDF or a photo, or talk instead of typing. Your voice is turned into text on the computer.</li>
-<li><strong>Any GGUF model from Hugging Face.</strong> Search Hugging Face in Models &amp; storage, or use models you already downloaded with LM Studio or Ollama.</li>
-<li><strong>Code mode.</strong> A model works in a project folder: it reads the code, makes changes, runs tests, commits and pushes. You approve every step.</li>
-<li><strong>Makes pictures on your computer</strong> with an image model you download.</li>
-<li><strong>Cloud models only when you choose them:</strong> Quo’s own, your own API key, or Claude Agent with your own Claude Code sign-in. Each is clearly marked.</li>
+<li><strong><a href="/models/hugging-face/">Any GGUF model from Hugging Face</a>.</strong> Search Hugging Face in Models &amp; storage, or use models you already downloaded with LM Studio or Ollama.</li>
+<li><strong><a href="/code-mode/">Code mode</a>.</strong> A model works in a project folder: it reads the code, makes changes, runs tests, commits and pushes. You approve every step.</li>
+<li>{pictures}</li>
+<li><strong>Cloud models only when you choose them:</strong> Quo’s own, your own API key, or <a href="/claude-agent/">Claude Agent</a> with your own Claude Code sign-in. Each is clearly marked.</li>
 </ul>'''
 
 
@@ -120,7 +121,8 @@ def _pages(models):
 <li>Quo suggests a model that fits your Mac. Download it once; after that it works offline.</li>
 </ol>
 {_install('Or install it in one line in Terminal. It checks the download against the release’s checksum and puts Quo in Applications. Run it again to update Quo.', *UNIX)}''',
-             does=_desktop_does('<strong>Runs on Apple silicon’s graphics.</strong> On Macs with Apple silicon, Quo runs models with llama.cpp on the graphics (Metal), using the Mac’s shared memory. Intel Macs run them on the processor.'),
+             does=_desktop_does('<strong>Runs on Apple silicon’s graphics.</strong> On Macs with Apple silicon, Quo runs models with llama.cpp on the graphics (Metal), using the Mac’s shared memory. Intel Macs run them on the processor.',
+                                 '<strong>Makes pictures on Macs with Apple silicon</strong> with an image model you download.'),
              models=('In the desktop app', desktop, 'desktop'),
              asked=[
                  ('Why does macOS ask before it opens Quo?',
@@ -150,7 +152,8 @@ def _pages(models):
 <li>Download <a href="{DOWNLOAD}Quo-linux-amd64.deb">Quo-linux-amd64.deb</a>, or <a href="{DOWNLOAD}Quo-linux-arm64.deb">the ARM64 build</a>.</li>
 <li>Install it: <code>sudo apt install ./Quo-linux-amd64.deb</code></li>
 </ol>''',
-             does=_desktop_does('<strong>Runs on your graphics card.</strong> On x64, Quo uses llama.cpp with Vulkan, so most NVIDIA, AMD and Intel graphics work. On an NVIDIA card you can add llama.cpp’s CUDA engine in Models &amp; storage. ARM64 computers run models on the processor; NVIDIA ARM machines can add the CUDA engine.'),
+             does=_desktop_does('<strong>Runs on your graphics card.</strong> On x64, Quo uses llama.cpp with Vulkan, so most NVIDIA, AMD and Intel graphics work. On an NVIDIA card you can add llama.cpp’s CUDA engine in Models &amp; storage. ARM64 computers run models on the processor; NVIDIA ARM machines can add the CUDA engine.',
+                                 '<strong>Makes pictures on x64 computers</strong> with an image model you download.'),
              models=('In the desktop app', desktop, 'desktop'),
              asked=[
                  ('AppImage or .deb?',

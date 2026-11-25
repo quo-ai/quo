@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://quo.computer/</loc><lastmod>2026-11-16</lastmod></url>
+  <url><loc>https://quo.computer/</loc><lastmod>2026-11-25</lastmod></url>
   <url><loc>https://quo.computer/privacy/</loc><lastmod>2026-11-16</lastmod></url>
   <url><loc>https://quo.computer/terms/</loc><lastmod>2026-11-16</lastmod></url>
   <url><loc>https://quo.computer/support/</loc><lastmod>2026-11-16</lastmod></url>
   <url><loc>https://quo.computer/brand/</loc><lastmod>2026-11-16</lastmod></url>
   <url><loc>https://quo.computer/pricing/</loc><lastmod>2026-11-16</lastmod></url>
-  <url><loc>https://quo.computer/models/</loc><lastmod>2026-11-16</lastmod></url>
+  <url><loc>https://quo.computer/models/</loc><lastmod>2026-11-25</lastmod></url>
   <url><loc>https://quo.computer/changelog/</loc><lastmod>2026-11-16</lastmod></url>
   <url><loc>https://quo.computer/refunds/</loc><lastmod>2026-11-16</lastmod></url>
   <url><loc>https://quo.computer/delete-account/</loc><lastmod>2026-11-16</lastmod></url>
@@ -26,9 +26,12 @@
   <url><loc>https://quo.computer/models/ministral-reasoning-3b/</loc><lastmod>2026-11-16</lastmod></url>
   <url><loc>https://quo.computer/models/gemma-3-4b/</loc><lastmod>2026-11-16</lastmod></url>
   <url><loc>https://quo.computer/models/gemma-3-1b/</loc><lastmod>2026-11-16</lastmod></url>
-  <url><loc>https://quo.computer/windows/</loc><lastmod>2026-11-16</lastmod></url>
-  <url><loc>https://quo.computer/mac/</loc><lastmod>2026-11-16</lastmod></url>
-  <url><loc>https://quo.computer/linux/</loc><lastmod>2026-11-16</lastmod></url>
+  <url><loc>https://quo.computer/windows/</loc><lastmod>2026-11-25</lastmod></url>
+  <url><loc>https://quo.computer/mac/</loc><lastmod>2026-11-25</lastmod></url>
+  <url><loc>https://quo.computer/linux/</loc><lastmod>2026-11-25</lastmod></url>
   <url><loc>https://quo.computer/android/</loc><lastmod>2026-11-16</lastmod></url>
   <url><loc>https://quo.computer/browser/</loc><lastmod>2026-11-16</lastmod></url>
+  <url><loc>https://quo.computer/claude-agent/</loc><lastmod>2026-11-25</lastmod></url>
+  <url><loc>https://quo.computer/code-mode/</loc><lastmod>2026-11-25</lastmod></url>
+  <url><loc>https://quo.computer/models/hugging-face/</loc><lastmod>2026-11-25</lastmod></url>
 </urlset>

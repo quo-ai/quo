@@ -114,7 +114,7 @@ The phone apps and Quo Web also offer SmolLM3, and the phone apps Gemma 3 and ot
 
 For Mac, Windows and Linux. Models run on your graphics card, so replies are much faster than in a browser and bigger models fit.
 
-**Code mode** lets a model work in your project folder: it reads the code, makes changes, runs tests, commits and pushes. You approve every step.
+**[Code mode](https://quo.computer/code-mode/)** lets a model work in your project folder: it reads the code, makes changes, runs tests, commits and pushes. You approve every step.
 
 [Download for **macOS**](https://github.com/quo-ai/quo/releases/latest/download/Quo-mac-universal.dmg) [Download for **Windows**](https://github.com/quo-ai/quo/releases/latest/download/Quo-windows-x64-setup.exe) [Download for **Linux**](https://github.com/quo-ai/quo/releases/latest/download/Quo-linux-x86_64.AppImage)
 
