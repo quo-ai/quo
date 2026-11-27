@@ -10,6 +10,7 @@ const { EventEmitter } = require('node:events');
 const { McpClient } = require('./client');
 const { readConfig, readApprovals, writeApprovals } = require('./config');
 const { redactSecrets, scrubbedEnv } = require('../agent/safety');
+const { baseEnv } = require('../flatpak');
 
 const MAX_TOOLS = 40;
 const MAX_DESCRIPTION = 1000;
@@ -35,7 +36,7 @@ function resultText(result, maxChars = MAX_RESULT) {
 
 class McpManager extends EventEmitter {
   /** @param {{ configFile: string, approvalsFile: string, version: string, env?: NodeJS.ProcessEnv, platform?: string, spawnImpl?: Function }} options */
-  constructor({ configFile, approvalsFile, version, env = process.env, platform = process.platform, spawnImpl }) {
+  constructor({ configFile, approvalsFile, version, env = baseEnv(), platform = process.platform, spawnImpl }) {
     super();
     Object.assign(this, { configFile, approvalsFile, version, env, platform, spawnImpl });
     this.entries = [];

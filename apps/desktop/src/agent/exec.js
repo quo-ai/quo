@@ -1,6 +1,7 @@
 'use strict';
 
 const { spawn } = require('node:child_process');
+const { forProject, inFlatpak } = require('../flatpak');
 
 /**
  * Runs one shell command the user has approved: in the project folder, with a
@@ -29,7 +30,9 @@ function runCommand({ command, cwd, env, timeoutMs = 120_000, signal, headChars 
   return new Promise(resolve => {
     // On Windows, cmd.exe looks in the project folder before anywhere else; this stops a `git.bat` there from replacing git.
     const safeEnv = process.platform === 'win32' ? { ...env, NoDefaultCurrentDirectoryInExePath: '1' } : env;
-    const child = spawn(command, { shell: true, cwd, env: safeEnv, detached: process.platform !== 'win32', windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
+    const options = { cwd, env: safeEnv, detached: process.platform !== 'win32', windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] };
+    // In the Flathub build the command runs on the computer, outside the sandbox (../flatpak.js).
+    const child = inFlatpak() ? spawn(...forProject('/bin/sh', ['-c', command], options)) : spawn(command, { shell: true, ...options });
     let head = '';
     let tail = '';
     let total = 0;

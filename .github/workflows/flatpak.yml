@@ -1,0 +1,66 @@
+name: Flatpak
+
+# The Flathub build (apps/desktop/flatpak): built from source in Flathub's own container, checked with Flathub's
+# linter, then installed and started with the smoke test, which inside Flatpak also runs a command on the computer and
+# checks that one ignoring signals is stopped. Slow (llama.cpp and stable-diffusion.cpp are compiled), so it runs when
+# the Flatpak's own files change, for desktop releases, and by hand.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [master]
+    tags: ['desktop-v*']
+    paths:
+      - apps/desktop/flatpak/**
+      - apps/desktop/src/flatpak.js
+      - .github/workflows/flatpak.yml
+  pull_request:
+    paths:
+      - apps/desktop/flatpak/**
+      - apps/desktop/src/flatpak.js
+      - .github/workflows/flatpak.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: flatpak-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  flatpak:
+    name: Build and start the Flatpak
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:freedesktop-26.08
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Write the npm sources
+        run: |
+          python3 -m venv /tmp/generator
+          /tmp/generator/bin/pip install --quiet "git+https://github.com/flatpak/flatpak-builder-tools.git@9d86d336a39b9af38b86f114b6ce5820fe260f91#subdirectory=node"
+          PATH="/tmp/generator/bin:$PATH" apps/desktop/flatpak/sources.sh
+
+      - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
+        with:
+          manifest-path: apps/desktop/flatpak/computer.quo.Quo.yml
+          bundle: quo.flatpak
+          cache-key: flatpak-builder-${{ hashFiles('apps/desktop/flatpak/computer.quo.Quo.yml', 'apps/desktop/engine.lock.json') }}
+
+      - name: Check the listing and the build with Flathub's linter
+        run: |
+          flatpak install -y --noninteractive flathub org.flatpak.Builder
+          lint() { flatpak run --command=flatpak-builder-lint org.flatpak.Builder "$@"; }
+          lint appstream apps/desktop/flatpak/computer.quo.Quo.metainfo.xml
+          lint repo repo
+
+      - name: Start it (smoke test)
+        run: |
+          flatpak install -y --noninteractive --system --bundle quo.flatpak
+          useradd -m tester
+          runtime="/run/user/$(id -u tester)"
+          install -d -o tester -m 700 "$runtime"
+          su tester -c "XDG_RUNTIME_DIR=$runtime dbus-run-session -- xvfb-run -a flatpak run --env=QUO_EXPECT_ENGINE=1 computer.quo.Quo --smoke"

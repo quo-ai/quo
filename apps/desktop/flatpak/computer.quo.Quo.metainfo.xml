@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>computer.quo.Quo</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>Apache-2.0</project_license>
+
+  <name>Quo</name>
+  <summary>Private AI that works offline</summary>
+  <developer id="computer.quo">
+    <name>Astra Labs Ltd</name>
+  </developer>
+
+  <description>
+    <p>
+      Quo is an AI assistant that runs open models on your own computer. Once a model is downloaded, Quo works with no
+      internet and needs no account. Nothing you type leaves your computer unless you choose a cloud model.
+    </p>
+    <ul>
+      <li>Chat, ask about documents and photos, and talk instead of typing</li>
+      <li>Open models from Qwen, Gemma, Llama, Phi and Ministral, chosen to fit your computer’s memory</li>
+      <li>Runs on your graphics card with Vulkan, or on the processor</li>
+      <li>Search Hugging Face and run almost any GGUF model, or use the models you already have from LM Studio or Ollama</li>
+      <li>Make and change pictures on your own graphics card</li>
+      <li>Code mode: a coding agent that works in a project folder you choose</li>
+      <li>Cloud models when you want them, always marked, with one free every day</li>
+    </ul>
+    <p>
+      Code mode runs commands and git on your computer, outside Flatpak’s sandbox, and only after you approve each one
+      in a window of its own. Quo is free and open source.
+    </p>
+  </description>
+
+  <launchable type="desktop-id">computer.quo.Quo.desktop</launchable>
+
+  <url type="homepage">https://quo.computer</url>
+  <url type="bugtracker">https://github.com/quo-ai/quo/issues</url>
+  <url type="help">https://quo.computer/support/</url>
+  <url type="vcs-browser">https://github.com/quo-ai/quo</url>
+
+  <screenshots>
+    <screenshot type="default">
+      <caption>Chat with a model on your own computer, with Wi-Fi off</caption>
+      <image>https://raw.githubusercontent.com/quo-ai/quo/master/apps/desktop/flatpak/screenshots/chat.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Code mode works in a project folder and asks before it commits</caption>
+      <image>https://raw.githubusercontent.com/quo-ai/quo/master/apps/desktop/flatpak/screenshots/code-mode.png</image>
+    </screenshot>
+  </screenshots>
+
+  <branding>
+    <color type="primary" scheme_preference="light">#e4e1ff</color>
+    <color type="primary" scheme_preference="dark">#221c5c</color>
+  </branding>
+
+  <content_rating type="oars-1.1">
+    <content_attribute id="money-purchasing">mild</content_attribute>
+    <content_attribute id="social-info">mild</content_attribute>
+  </content_rating>
+
+  <supports>
+    <control>keyboard</control>
+    <control>pointing</control>
+  </supports>
+  <recommends>
+    <memory>8192</memory>
+  </recommends>
+
+  <keywords>
+    <keyword>AI</keyword>
+    <keyword>LLM</keyword>
+    <keyword>offline</keyword>
+    <keyword>local</keyword>
+    <keyword>private</keyword>
+    <keyword>chat</keyword>
+    <keyword>llama.cpp</keyword>
+    <keyword>GGUF</keyword>
+    <keyword>coding agent</keyword>
+  </keywords>
+
+  <releases>
+    <release version="1.7.2" date="2026-11-13">
+      <url type="details">https://github.com/quo-ai/quo/releases/tag/desktop-v1.7.2</url>
+      <description>
+        <ul>
+          <li>Claude Agent: use Claude with your own Claude Code sign-in</li>
+          <li>llama.cpp 1.0, with faster replies on the graphics card</li>
+          <li>Pictures made on your computer use the newest stable-diffusion.cpp</li>
+        </ul>
+      </description>
+    </release>
+  </releases>
+</component>

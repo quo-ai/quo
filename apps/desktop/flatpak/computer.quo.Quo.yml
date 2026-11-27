@@ -1,0 +1,174 @@
+# Quo for Flathub. Everything is built from source, offline: llama.cpp and stable-diffusion.cpp at the releases
+# engine.lock.json pins, then Quo Web and the desktop app from npm's lockfiles (generated-sources.json). How to update
+# and check it: apps/desktop/flatpak/README.md in https://github.com/quo-ai/quo.
+id: computer.quo.Quo
+runtime: org.freedesktop.Platform
+runtime-version: '26.08'
+sdk: org.freedesktop.Sdk
+base: org.electronjs.Electron2.BaseApp
+base-version: '26.08'
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.node24
+command: quo
+separate-locales: false
+
+finish-args:
+  - --share=ipc
+  - --socket=wayland
+  - --socket=fallback-x11
+  # The graphics card, for the models (Vulkan) and the window.
+  - --device=dri
+  # Voice input and read aloud.
+  - --socket=pulseaudio
+  # Downloading models, and the cloud models, web search and other apps' local API when the person uses them.
+  - --share=network
+  # Code mode's project folders (chosen in a dialog, or made under Documents/Quo Projects), and models already
+  # downloaded with LM Studio or Ollama, used where they are.
+  - --filesystem=home
+  # Code mode's approved commands, git and the person's tool servers run on the computer (src/flatpak.js).
+  - --talk-name=org.freedesktop.Flatpak
+  # API keys are kept in the system keyring (Electron's safeStorage).
+  - --talk-name=org.freedesktop.secrets
+  - --talk-name=org.kde.kwalletd6
+  - --talk-name=org.kde.kwalletd5
+  - --talk-name=org.freedesktop.Notifications
+
+cleanup:
+  - /include
+  - /lib/cmake
+  - /lib/pkgconfig
+  - /share/pkgconfig
+  - '*.a'
+
+modules:
+  # Build only: llama.cpp's Vulkan backend needs newer SPIR-V headers than the SDK's.
+  - name: spirv-headers
+    buildsystem: cmake-ninja
+    builddir: true
+    cleanup:
+      - '*'
+    sources:
+      - type: archive
+        url: https://github.com/KhronosGroup/SPIRV-Headers/archive/refs/tags/vulkan-sdk-1.4.357.0.tar.gz
+        sha256: 4d703067a7e06331ccb37bdfed3f9b7879cc61969a2689ae95c95db34a47ff07
+
+  # llama.cpp's llama-server, built the way its own Linux Vulkan release is (engine.lock.json "release"), into the
+  # folder the app looks in. Without the server's own web page, which Quo doesn't use and which is downloaded otherwise.
+  - name: llama-cpp
+    buildsystem: simple
+    build-commands:
+      - >-
+        cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+        -DCMAKE_INSTALL_RPATH='$ORIGIN' -DCMAKE_BUILD_WITH_INSTALL_RPATH=ON
+        -DGGML_BACKEND_DL=ON -DGGML_NATIVE=OFF -DGGML_CPU_ALL_VARIANTS=ON -DGGML_VULKAN=ON -DGGML_RPC=ON
+        -DLLAMA_BUILD_EXAMPLES=OFF -DLLAMA_BUILD_TESTS=OFF -DLLAMA_BUILD_TOOLS=ON -DLLAMA_BUILD_SERVER=ON
+        -DLLAMA_BUILD_UI=OFF -DLLAMA_USE_PREBUILT_UI=OFF -DLLAMA_CONNECT=OFF
+        -DLLAMA_BUILD_NUMBER=12359 -DLLAMA_BUILD_COMMIT=b1b770d
+      - cmake --build build -j "$FLATPAK_BUILDER_N_JOBS"
+      - |
+        case "$FLATPAK_ARCH" in x86_64) target=linux-x64 ;; aarch64) target=linux-arm64 ;; *) exit 1 ;; esac
+        dest="/app/quo/resources/engine/$target"
+        install -d "$dest"
+        cp -P build/bin/llama-server build/bin/lib*.so* "$dest/"
+        install -m644 LICENSE "$dest/LICENSE"
+    sources:
+      - type: archive
+        url: https://github.com/ggml-org/llama.cpp/archive/refs/tags/b12359.tar.gz
+        sha256: e2eadc0fd06f81abea3b8012584e67bea3b403d91bcd1b3072b656cbcb2fb4bb
+
+  # stable-diffusion.cpp's sd-cli, for making pictures on the device (engine.lock.json "images"), built as its Linux
+  # Vulkan release is, into engine/<target>/images. Only the parts sd-cli uses: its ggml and libwebp (pictures to
+  # change may be WebP); not the server's web page, video output or the CUDA library.
+  - name: stable-diffusion-cpp
+    buildsystem: simple
+    build-commands:
+      - >-
+        cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+        -DCMAKE_INSTALL_RPATH='$ORIGIN' -DCMAKE_BUILD_WITH_INSTALL_RPATH=ON
+        -DSD_BUILD_SHARED_LIBS=ON -DSD_BUILD_SHARED_GGML_LIB=ON -DSD_VULKAN=ON
+        -DGGML_BACKEND_DL=ON -DGGML_NATIVE=OFF -DGGML_CPU_ALL_VARIANTS=ON
+        -DSD_SERVER_BUILD_FRONTEND=OFF -DSD_WEBM=OFF
+      - cmake --build build -j "$FLATPAK_BUILDER_N_JOBS"
+      - |
+        case "$FLATPAK_ARCH" in x86_64) target=linux-x64 ;; aarch64) target=linux-arm64 ;; *) exit 1 ;; esac
+        dest="/app/quo/resources/engine/$target/images"
+        install -d "$dest"
+        cp -P build/bin/sd-cli build/bin/lib*.so* "$dest/"
+        install -m644 ggml/LICENSE "$dest/ggml.txt"
+        install -m644 LICENSE "$dest/stable-diffusion.cpp.txt"
+    sources:
+      - type: archive
+        url: https://github.com/leejet/stable-diffusion.cpp/archive/b9d7176bf88fe465576e0aafbe47ba253ffcfc2c.tar.gz
+        sha256: a795e095e94a2359839d3969fb37cda8d23a9ea77cc12077f11effb605efb4c6
+      - type: archive
+        url: https://github.com/leejet/ggml/archive/d803c238f67915fb825a9aa4df27b99356d51597.tar.gz
+        sha256: 62079311d2538531a7286075bf73061cbf2288e84981b0589e1563ce8939fbed
+        dest: ggml
+      - type: archive
+        url: https://github.com/webmproject/libwebp/archive/0c9546f7efc61eac7f79ae115c3f99c91c21c443.tar.gz
+        sha256: 6cb433070b4461179067b0901a682e4e14b220354fc35884c1b1315adedefc99
+        dest: thirdparty/libwebp
+
+  # Quo Web (the page the app shows) and the desktop app, from npm's offline cache, then electron-builder's unpacked
+  # Linux build into /app/quo beside the engines.
+  - name: quo
+    buildsystem: simple
+    build-options:
+      append-path: /usr/lib/sdk/node24/bin
+      env:
+        XDG_CACHE_HOME: /run/build/quo/flatpak-node/cache
+        npm_config_cache: /run/build/quo/flatpak-node/npm-cache
+        npm_config_offline: 'true'
+        npm_config_audit: 'false'
+        npm_config_fund: 'false'
+    build-commands:
+      - npm ci --prefix apps/web --ignore-scripts
+      - npm run --prefix apps/web build
+      # No optional packages: the only ones are pdf.js's canvas (left out of the app) and the Agent SDK's copies of
+      # Claude Code, which Quo never ships (it runs the person's own).
+      - npm ci --prefix apps/desktop --ignore-scripts --omit=optional
+      # The .desktop file and the Wayland app_id are the app ID here.
+      - >-
+        node -e "const fs = require('fs'), f = 'apps/desktop/package.json', p = JSON.parse(fs.readFileSync(f));
+        p.desktopName = 'computer.quo.Quo.desktop'; fs.writeFileSync(f, JSON.stringify(p, null, 2))"
+      # The engines are already in /app/quo (built above); electron-builder only needs the folders to exist.
+      - mkdir -p apps/desktop/engine/linux-x64 apps/desktop/engine/linux-arm64
+      - >-
+        . ./flatpak-node/electron-builder-arch-args.sh &&
+        cd apps/desktop && node_modules/.bin/electron-builder --linux dir $ELECTRON_BUILDER_ARCH_ARGS
+        --publish never -c.npmRebuild=false
+      - cp -a apps/desktop/dist/linux*unpacked/. /app/quo/
+      # Flatpak's sandbox replaces Chromium's setuid helper (zypak, from the BaseApp).
+      - rm -f /app/quo/chrome-sandbox
+      - install -Dm755 quo.sh /app/bin/quo
+      - install -Dm644 apps/desktop/flatpak/computer.quo.Quo.desktop -t /app/share/applications
+      - install -Dm644 apps/desktop/flatpak/computer.quo.Quo.metainfo.xml -t /app/share/metainfo
+      - install -Dm644 website/assets/brand/quo-app-icon.svg /app/share/icons/hicolor/scalable/apps/computer.quo.Quo.svg
+    sources:
+      # quo-source-begin: this checkout. The copy for Flathub (flathub.sh) names a release's tag and commit instead.
+      - type: dir
+        path: ../../..
+        skip:
+          - .git
+          - ops
+          - apps/mobile
+          - apps/web/node_modules
+          - apps/web/dist
+          - apps/desktop/node_modules
+          - apps/desktop/dist
+          - apps/desktop/engine
+          # flatpak-builder's own folders, wherever it was started (here or at the top, as CI does).
+          - .flatpak-builder
+          - flatpak_app
+          - repo
+          - apps/desktop/flatpak/.flatpak-builder
+          - apps/desktop/flatpak/build
+          - apps/desktop/flatpak/repo
+      # quo-source-end
+      - generated-sources.json
+      - type: script
+        dest-filename: quo.sh
+        commands:
+          # One temporary folder for every Quo window, so a quo:// link reaches the Quo that is already open.
+          - export TMPDIR="$XDG_RUNTIME_DIR/app/$FLATPAK_ID"
+          - exec zypak-wrapper /app/quo/quo-desktop "$@"

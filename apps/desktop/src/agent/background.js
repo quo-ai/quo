@@ -2,6 +2,7 @@
 
 const { spawn } = require('node:child_process');
 const { killTree } = require('./exec');
+const { forProject, inFlatpak } = require('../flatpak');
 const { AgentError, redactSecrets, scrubbedEnv } = require('./safety');
 
 /**
@@ -39,7 +40,8 @@ class BackgroundCommands {
     this.assertRoom();
     const id = `bg${this.next++}`;
     const safeEnv = process.platform === 'win32' ? { ...scrubbedEnv(this.env), NoDefaultCurrentDirectoryInExePath: '1' } : scrubbedEnv(this.env);
-    const child = spawn(command, { shell: true, cwd: this.cwd, env: safeEnv, detached: process.platform !== 'win32', windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
+    const options = { cwd: this.cwd, env: safeEnv, detached: process.platform !== 'win32', windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] };
+    const child = inFlatpak() ? spawn(...forProject('/bin/sh', ['-c', command], options)) : spawn(command, { shell: true, ...options });
     const job = { id, command, child, status: 'running', exitCode: null, buffer: '', dropped: 0, total: 0, read: 0, waiters: new Set(), stoppedByUs: false };
     const wake = () => {
       for (const waiter of job.waiters) waiter();

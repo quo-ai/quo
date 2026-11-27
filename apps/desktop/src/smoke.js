@@ -6,6 +6,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { app } = require('electron');
+const { inFlatpak } = require('./flatpak');
 
 const TIMEOUT_MS = 90_000;
 
@@ -34,6 +35,29 @@ async function checkDocuments() {
   const result = { pdf: await read('pdf'), docx: await read('docx') };
   reader.stop();
   return result;
+}
+
+/**
+ * The Flathub build (src/flatpak.js): an approved command runs on the computer, outside the sandbox, and one that
+ * ignores signals is still stopped, with everything it started, when its time is up.
+ */
+async function checkHostCommands() {
+  const { runCommand } = require('./agent/exec');
+  const { scrubbedEnv } = require('./agent/safety');
+  const { baseEnv } = require('./flatpak');
+  const dir = fs.mkdtempSync(path.join(app.getPath('userData'), 'smoke-'));
+  try {
+    const env = scrubbedEnv(baseEnv());
+    const where = await runCommand({ command: 'test -e /.flatpak-info && echo inside || echo outside', cwd: dir, env, timeoutMs: 20_000 });
+    if (where.output.trim() !== 'outside') return `ran ${where.output.trim() || `nowhere (exit ${where.exitCode})`}`.slice(0, 200);
+    const started = Date.now();
+    const stuck = await runCommand({ command: 'trap "" INT TERM HUP; sleep 4; touch survived', cwd: dir, env, timeoutMs: 1000 });
+    if (!stuck.timedOut || Date.now() - started > 3000) return 'a command outlived its time limit';
+    await new Promise(resolve => setTimeout(resolve, 5000));
+    return fs.existsSync(path.join(dir, 'survived')) ? 'a stopped command kept running' : true;
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
 }
 
 // Runs in the page. `wasmPath` is a bundled .wasm file to check its MIME type.
@@ -144,7 +168,8 @@ async function runSmoke(createWindow, webRoot) {
         probeWindow.destroy();
       }
     })();
-    const ok = (result.link === undefined || result.link === true) && result.documents.pdf === true && result.documents.docx === true && result.approvalPage === true && result.desktop?.toolServers === true &&
+    if (inFlatpak()) result.hostCommands = await checkHostCommands().catch(error => String(error?.message ?? error).slice(0, 200));
+    const ok = (result.link === undefined || result.link === true) && (result.hostCommands === undefined || result.hostCommands === true) && result.documents.pdf === true && result.documents.docx === true && result.approvalPage === true && result.desktop?.toolServers === true &&
       result.crossOriginIsolated && result.sab === 'function' && result.jspi && result.rendered && result.opfs &&
       /Quo/.test(result.title) &&
       result.desktop?.platform === process.platform && result.desktop?.version === app.getVersion() &&

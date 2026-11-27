@@ -2,6 +2,7 @@
 
 const { execFile } = require('node:child_process');
 const { scrubbedEnv } = require('./safety');
+const { baseEnv, forProject } = require('../flatpak');
 
 /**
  * Git as the app itself runs it for git_commit and git_push: fixed arguments the app chose, never a command the model
@@ -14,7 +15,7 @@ const { scrubbedEnv } = require('./safety');
 const SIGNING_AGENTS = ['SSH_AUTH_SOCK', 'GPG_AGENT_INFO', 'GPG_TTY', 'GNUPGHOME'];
 const TIMEOUT_MS = 60_000;
 
-function gitEnv(env = process.env) {
+function gitEnv(env = baseEnv()) {
   const kept = scrubbedEnv(env);
   for (const name of SIGNING_AGENTS) if (typeof env[name] === 'string' && env[name]) kept[name] = env[name];
   return { ...kept, GIT_TERMINAL_PROMPT: '0', GIT_EDITOR: 'true' };
@@ -22,7 +23,7 @@ function gitEnv(env = process.env) {
 
 const git = (cwd, args, env, { timeoutMs = TIMEOUT_MS } = {}) =>
   new Promise(resolve => {
-    execFile('git', ['--literal-pathspecs', '-c', 'core.fsmonitor=false', ...args], { cwd, timeout: timeoutMs, maxBuffer: 1024 * 1024, windowsHide: true, env: gitEnv(env) }, (error, stdout, stderr) =>
+    execFile(...forProject('git', ['--literal-pathspecs', '-c', 'core.fsmonitor=false', ...args], { cwd, timeout: timeoutMs, maxBuffer: 1024 * 1024, windowsHide: true, env: gitEnv(env) }), (error, stdout, stderr) =>
       resolve({ code: error ? (typeof error.code === 'number' ? error.code : -1) : 0, stdout: String(stdout ?? ''), stderr: String(stderr ?? '') }),
     );
   });

@@ -6,6 +6,7 @@ const os = require('node:os');
 const path = require('node:path');
 const { app, BrowserWindow, dialog, ipcMain, shell } = require('electron');
 const { trusted } = require('../trust');
+const { inFlatpak } = require('../flatpak');
 const lock = require('../../engine.lock.json');
 const { startWithCache, startWithFallback } = require('./fallback');
 const { Accelerators, AcceleratorError } = require('./accelerators');
@@ -40,12 +41,13 @@ function setupEngine() {
   const userData = app.getPath('userData');
   const directory = engineDirectory() ?? path.join(userData, 'no-engine');
   const engine = new LlamaEngine({ directory, pidFile: path.join(userData, 'engine.pid') });
-  // A faster build for the graphics card, if the person downloaded one (accelerators.js). Not with a test engine.
+  // A faster build for the graphics card, if the person downloaded one (accelerators.js). Not with a test engine, and not
+  // in the Flathub build: Flathub builds everything it ships from source and doesn't allow downloaded programs.
   const accelerators = new Accelerators({
     root: path.join(userData, 'engines'),
     choiceFile: path.join(userData, 'engine-choice.json'),
     lock,
-    target: process.env.QUO_ENGINE_DIR ? null : engineTarget(),
+    target: process.env.QUO_ENGINE_DIR || inFlatpak() ? null : engineTarget(),
     binaryName: path.basename(binaryIn(directory)),
     listDevices: listDevicesIn,
   });

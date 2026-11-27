@@ -1,0 +1,6 @@
+# Written by sources.sh (the Flathub repository keeps its own copy), and flatpak-builder's folders.
+generated-sources.json
+.flatpak-builder/
+build/
+repo/
+*.flatpak

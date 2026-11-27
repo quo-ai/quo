@@ -6,6 +6,7 @@ const fsp = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
 const { scrubbedEnv } = require('./safety');
+const { baseEnv, forProject } = require('../flatpak');
 
 /**
  * The branch a project is on and how many files have changed, for the chip in the chat bar. Read-only (`git status`), run
@@ -15,7 +16,7 @@ const { scrubbedEnv } = require('./safety');
 
 const run = (cwd, args) =>
   new Promise(resolve => {
-    execFile('git', ['-c', 'core.fsmonitor=false', ...args], { cwd, timeout: 3000, maxBuffer: 1024 * 1024, windowsHide: true, env: { ...scrubbedEnv(), GIT_OPTIONAL_LOCKS: '0', GIT_TERMINAL_PROMPT: '0' } }, (error, stdout) => resolve(error ? null : stdout));
+    execFile(...forProject('git', ['-c', 'core.fsmonitor=false', ...args], { cwd, timeout: 3000, maxBuffer: 1024 * 1024, windowsHide: true, env: { ...scrubbedEnv(baseEnv()), GIT_OPTIONAL_LOCKS: '0', GIT_TERMINAL_PROMPT: '0' } }), (error, stdout) => resolve(error ? null : stdout));
   });
 
 /** Reads `git status -b --porcelain` output: `## main...origin/main [ahead 1]`, then one line per changed file. */

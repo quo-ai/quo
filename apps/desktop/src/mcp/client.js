@@ -5,6 +5,7 @@
 // questions to the person). Started only by manager.js, for a server the person approved.
 
 const { spawn } = require('node:child_process');
+const { forProject } = require('../flatpak');
 const { EventEmitter } = require('node:events');
 
 const PROTOCOL = '2025-06-18';
@@ -51,7 +52,8 @@ class McpClient extends EventEmitter {
 
   async start() {
     const { file, args, verbatim } = launch(this.command, this.args, this.platform);
-    const child = this.spawnImpl(file, args, { cwd: this.cwd, env: this.env, stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true, windowsVerbatimArguments: verbatim, detached: this.platform !== 'win32' });
+    // In the Flathub build the server runs on the computer, outside the sandbox (../flatpak.js).
+    const child = this.spawnImpl(...forProject(file, args, { cwd: this.cwd, env: this.env, stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true, windowsVerbatimArguments: verbatim, detached: this.platform !== 'win32' }));
     this.child = child;
     child.stdout.setEncoding('utf8');
     child.stderr.setEncoding('utf8');

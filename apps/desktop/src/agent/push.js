@@ -4,6 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { AgentError, redactSecrets } = require('./safety');
 const { git } = require('./gitcmd');
+const { baseEnv } = require('../flatpak');
 const { checkHooks, hasHook, parseStatus } = require('./commit');
 
 /**
@@ -59,7 +60,7 @@ function pullRequestUrl(repo, base, head, credit) {
 const lines = output => output.split('\n').map(line => line.trim()).filter(Boolean);
 
 /** Works out what a push would send and checks every rule, changing nothing. Throws AgentError to refuse. */
-async function planPush({ rootReal, env = process.env, credit = true }) {
+async function planPush({ rootReal, env = baseEnv(), credit = true }) {
   if (!fs.existsSync(path.join(rootReal, '.git'))) throw new AgentError('no_repo', 'This project folder isn’t a git repository.');
   const head = await git(rootReal, ['symbolic-ref', '--quiet', '--short', 'HEAD'], env);
   const branch = head.stdout.trim();
@@ -116,7 +117,7 @@ function explain(output, plan) {
 }
 
 /** Pushes exactly what was planned: HEAD to the planned branch of the planned remote, never forced. */
-async function applyPush({ rootReal, env = process.env }, plan) {
+async function applyPush({ rootReal, env = baseEnv() }, plan) {
   const args = ['push', '--no-force-with-lease', ...(plan.setUpstream ? ['--set-upstream'] : []), plan.remote, `HEAD:refs/heads/${plan.remoteBranch}`];
   const result = await git(rootReal, args, env, { timeoutMs: PUSH_TIMEOUT_MS });
   if (result.code !== 0) {

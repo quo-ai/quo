@@ -14,6 +14,7 @@ const { ExternalReads } = require('./external');
 const { planOpen } = require('./open');
 const { ChangeLog } = require('./history');
 const { AgentError, redactSecrets, scrubbedEnv } = require('./safety');
+const { baseEnv } = require('../flatpak');
 const { callWithApproval } = require('../mcp/approve');
 const { PREFIX: MCP_PREFIX } = require('../mcp/manager');
 
@@ -51,7 +52,7 @@ const preview = diff => {
 };
 
 class AgentSession {
-  constructor({ root, name, approve, repos, web = null, webSession = 'code', env = process.env, autoReadOnly = true, compact = false, creditQuo = true, allowPush = true, openExternal = null, mcp = null }) {
+  constructor({ root, name, approve, repos, web = null, webSession = 'code', env = baseEnv(), autoReadOnly = true, compact = false, creditQuo = true, allowPush = true, openExternal = null, mcp = null }) {
     this.mcp = mcp; // the tool servers the person added and turned on (mcp/manager.js), or none
     this.allowedTools = new Set(); // tool-server tools allowed for this session
     this.openExternal = openExternal; // hands an address to the system's browser (the app supplies it; none here means this can't open anything)

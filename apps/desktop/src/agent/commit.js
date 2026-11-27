@@ -4,6 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { AgentError, resolveInside, isSecretPath, isProtectedPath, inside, redactSecrets } = require('./safety');
 const { git } = require('./gitcmd');
+const { baseEnv } = require('../flatpak');
 
 /**
  * The git_commit tool: one commit, made by the app itself with fixed arguments, never by a command the model wrote.
@@ -54,7 +55,7 @@ function parseStatus(output) {
  * Works out what a commit would be and checks every rule, without changing anything. Throws AgentError to refuse.
  * Returns what the dialog shows and what `apply` needs.
  */
-async function planCommit({ rootReal, env = process.env, credit = true }, args) {
+async function planCommit({ rootReal, env = baseEnv(), credit = true }, args) {
   const message = cleanMessage(args.message);
   if (!Array.isArray(args.files) || args.files.length === 0) throw new AgentError('bad_args', 'git_commit needs files: the paths to commit, relative to the project.');
   if (args.files.length > MAX_FILES) throw new AgentError('bad_args', `Commit at most ${MAX_FILES} files at a time.`);
@@ -108,7 +109,7 @@ async function hasHook(rootReal, env, name) {
 }
 
 /** Stages exactly the planned files and commits exactly those, nothing else that happened to be staged. */
-async function applyCommit({ rootReal, env = process.env }, plan) {
+async function applyCommit({ rootReal, env = baseEnv() }, plan) {
   const add = await git(rootReal, ['add', '--', ...plan.files], env);
   if (add.code !== 0) throw new AgentError('git_failed', `git add failed: ${redactSecrets(add.stderr.trim()).slice(0, 400)}`);
   const commit = await git(rootReal, ['commit', '--only', '-m', plan.text, '--', ...plan.files], env);

@@ -8,11 +8,14 @@
 // macOS installs an update only into an app with a Developer ID signature (Squirrel.Mac). The Mac app is ad-hoc signed
 // (no paid Apple membership), so there it downloads nothing: it says once per version that a new Quo is out, with a
 // button to the download page (or run the install command again).
+//
+// The Flathub build never checks: Flathub (and the person's software centre) updates it.
 
 const fs = require('node:fs');
 const path = require('node:path');
 const { execFile } = require('node:child_process');
 const { app, BrowserWindow, dialog, shell } = require('electron');
+const { inFlatpak } = require('./flatpak');
 
 const DOWNLOAD_PAGE = 'https://quo.computer/#desktop';
 
@@ -72,7 +75,7 @@ async function tellAboutUpdate(info) {
 const warn = error => console.warn('[updater]', String(error?.message ?? error).split('\n')[0]);
 
 async function initAutoUpdates() {
-  if (!app.isPackaged || process.env.QUO_DISABLE_UPDATES === '1' || !readUpdateChecks()) return;
+  if (!app.isPackaged || process.env.QUO_DISABLE_UPDATES === '1' || inFlatpak() || !readUpdateChecks()) return;
   try {
     const { autoUpdater } = require('electron-updater');
     autoUpdater.logger = null;

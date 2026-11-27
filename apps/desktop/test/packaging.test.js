@@ -28,3 +28,38 @@ it('ships the document reader with pdf.js’s text build only', () => {
     assert.ok(fs.existsSync(path.join(root, file)), file);
   }
 });
+
+it('keeps the Flatpak in step with the pinned engines, the app’s version and its own files', () => {
+  const root = path.join(__dirname, '..');
+  const read = file => fs.readFileSync(path.join(root, file), 'utf8');
+  const manifest = read('flatpak/computer.quo.Quo.yml');
+  const metainfo = read('flatpak/computer.quo.Quo.metainfo.xml');
+  const desktop = read('flatpak/computer.quo.Quo.desktop');
+  const lock = JSON.parse(read('engine.lock.json'));
+
+  // The engines built from source are the releases engine.lock.json pins (apps/desktop/flatpak/README.md).
+  assert.ok(manifest.includes(`/llama.cpp/archive/refs/tags/${lock.release}.tar.gz`), `llama.cpp ${lock.release}`);
+  assert.ok(manifest.includes(`-DLLAMA_BUILD_NUMBER=${lock.release.replace(/^b/, '')} `), 'llama.cpp build number');
+  const short = lock.images.release.split('-').at(-1);
+  assert.match(manifest, new RegExp(`/stable-diffusion\\.cpp/archive/${short}[0-9a-f]{33}\\.tar\\.gz`), `stable-diffusion.cpp ${short}`);
+
+  // Flathub shows the metainfo's releases: the version being built must be one of them.
+  const { version } = JSON.parse(read('package.json'));
+  assert.ok(metainfo.includes(`<release version="${version}"`), `the metainfo needs a <release version="${version}">`);
+
+  // One app ID everywhere, and the launcher the desktop file starts.
+  assert.match(manifest, /^id: computer\.quo\.Quo$/m);
+  assert.match(manifest, /^command: quo$/m);
+  assert.ok(metainfo.includes('<id>computer.quo.Quo</id>') && metainfo.includes('<launchable type="desktop-id">computer.quo.Quo.desktop</launchable>'));
+  assert.match(desktop, /^Exec=quo %U$/m);
+  assert.match(desktop, /^Icon=computer\.quo\.Quo$/m);
+  assert.match(desktop, /^MimeType=x-scheme-handler\/quo;$/m);
+
+  // The icon and screenshots it names are in git.
+  const screenshots = [...metainfo.matchAll(/apps\/desktop\/flatpak\/screenshots\/[\w-]+\.png/g)].map(match => match[0].replace('apps/desktop/', ''));
+  assert.equal(screenshots.length, 2);
+  const named = ['../../website/assets/brand/quo-app-icon.svg', ...screenshots];
+  assert.ok(manifest.includes('website/assets/brand/quo-app-icon.svg'));
+  const tracked = execFileSync('git', ['ls-files', '--', ...named], { cwd: root, encoding: 'utf8' }).split('\n').filter(Boolean);
+  assert.equal(tracked.length, named.length, `not in git: ${named.join(', ')}`);
+});

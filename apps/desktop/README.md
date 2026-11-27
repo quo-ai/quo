@@ -230,9 +230,11 @@ The GitHub repository must be public for the download links and auto-update to w
 
 You can also run the workflow manually (Actions → Desktop release → Run workflow). By default it only attaches the builds to the run, which is handy for testing. Tick "publish" to upload to a draft release instead.
 
+**Flathub** (`computer.quo.Quo`) gets its own build, made entirely from source: [flatpak/README.md](flatpak/README.md). Before tagging, add the version's `<release>` to `flatpak/computer.quo.Quo.metainfo.xml` (a test checks).
+
 ### Auto-update
 
-`electron-updater` checks GitHub Releases once at startup in packaged builds. The person can turn that off in the Help menu (Check for Updates at Start-up, saved in `updates.json` in the profile); `QUO_DISABLE_UPDATES=1` also turns it off. It downloads in the background, then asks "A new version of Quo is ready. Restart to update?" (Restart / Later). With Later, the update installs the next time Quo quits. Errors, including being offline, are only logged. Supported: the Windows installer, the AppImage, the .deb (asks for the admin password to install), and **signed** macOS builds.
+`electron-updater` checks GitHub Releases once at startup in packaged builds. The person can turn that off in the Help menu (Check for Updates at Start-up, saved in `updates.json` in the profile); `QUO_DISABLE_UPDATES=1` also turns it off. It downloads in the background, then asks "A new version of Quo is ready. Restart to update?" (Restart / Later). With Later, the update installs the next time Quo quits. Errors, including being offline, are only logged. Supported: the Windows installer, the AppImage, the .deb (asks for the admin password to install), and **signed** macOS builds. The Flathub build never checks: Flathub updates it.
 
 ### Signing
 

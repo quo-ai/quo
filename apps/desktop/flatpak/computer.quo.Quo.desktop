@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Quo
+GenericName=AI Assistant
+Comment=Private AI that works offline
+Exec=quo %U
+Icon=computer.quo.Quo
+Terminal=false
+Categories=Utility;Development;
+Keywords=AI;LLM;chat;assistant;offline;local;private;llama.cpp;GGUF;coding agent;
+MimeType=x-scheme-handler/quo;
+StartupNotify=true
