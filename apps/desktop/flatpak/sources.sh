@@ -2,7 +2,8 @@
 # Writes the npm packages the Flatpak build installs offline, for Quo Web and the desktop app, from their
 # package-lock.json files: `sources.sh [git ref] [output]`, by default this checkout's lockfiles into
 # generated-sources.json beside the manifest (not committed here; the Flathub repository keeps its own copy).
-# Needs flatpak-node-generator (flatpak/flatpak-builder-tools, node/); CI installs it.
+# Needs flatpak-node-generator (flatpak/flatpak-builder-tools, node/), or the one $FLATPAK_NODE_GENERATOR names (CI
+# installs the version it pins and names it: Flathub's container has an older one that fails on Electron 44).
 #
 # One file for both apps, each source once: the generator's setup steps are the same for both and fail if run twice.
 # The Agent SDK's copies of Claude Code are left out: optional packages the desktop build omits (npm ci
@@ -21,7 +22,7 @@ for app in web desktop; do
   for file in package.json package-lock.json; do
     if [[ -n $ref ]]; then git -C "$root" show "$ref:apps/$app/$file" >"$work/$app/$file"; else cp "$root/apps/$app/$file" "$work/$app/"; fi
   done
-  flatpak-node-generator npm "$work/$app/package-lock.json" -o "$work/$app.json"
+  "${FLATPAK_NODE_GENERATOR:-flatpak-node-generator}" npm "$work/$app/package-lock.json" -o "$work/$app.json"
 done
 
 python3 -I - "$work/web.json" "$work/desktop.json" "$out" <<'PY'
