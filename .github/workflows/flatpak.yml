@@ -47,6 +47,16 @@ jobs:
           /tmp/generator/bin/python3 -c 'import flatpak_node_generator as g, sys; print(g.__file__); sys.exit(not g.__file__.startswith("/tmp/generator/"))'
           FLATPAK_NODE_GENERATOR=/tmp/generator/bin/flatpak-node-generator bash apps/desktop/flatpak/sources.sh
 
+      # Flatpak can't update the runtimes the container comes with where they are: overlayfs won't rename folders of
+      # the image's own layer ("Invalid cross-device link"). Copied once into the writable layer, they update.
+      - name: Let Flatpak update the container's runtimes
+        run: |
+          if [ -d /var/lib/flatpak ]; then
+            cp -a /var/lib/flatpak /var/lib/flatpak.copy
+            rm -rf /var/lib/flatpak
+            mv /var/lib/flatpak.copy /var/lib/flatpak
+          fi
+
       - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
         with:
           manifest-path: apps/desktop/flatpak/computer.quo.Quo.yml
