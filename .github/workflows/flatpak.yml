@@ -58,9 +58,12 @@ jobs:
           fi
 
       - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
+        id: build
         with:
           manifest-path: apps/desktop/flatpak/computer.quo.Quo.yml
           bundle: quo.flatpak
+          # As Flathub's own build does: the listing's screenshots are copied into the build.
+          mirror-screenshots-url: https://dl.flathub.org/media/
           cache-key: flatpak-builder-${{ hashFiles('apps/desktop/flatpak/computer.quo.Quo.yml', 'apps/desktop/engine.lock.json') }}
 
       - name: Check the listing and the build with Flathub's linter
@@ -70,7 +73,9 @@ jobs:
           lint appstream apps/desktop/flatpak/computer.quo.Quo.metainfo.xml
           lint repo repo
 
+      # Also when the linter complains: whether the app starts is worth knowing either way.
       - name: Start it (smoke test)
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         run: |
           flatpak install -y --noninteractive --system --bundle quo.flatpak
           useradd -m tester
