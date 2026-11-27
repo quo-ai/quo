@@ -40,10 +40,11 @@ jobs:
 
       - name: Write the npm sources
         run: |
-          # The version pinned here, named explicitly: the container has an older one that fails on Electron 44.
+          # The version pinned here: the container has an older one (on its PYTHONPATH) that fails on Electron 44.
+          unset PYTHONPATH
           python3 -m venv /tmp/generator
           /tmp/generator/bin/pip install --quiet --ignore-installed "git+https://github.com/flatpak/flatpak-builder-tools.git@9d86d336a39b9af38b86f114b6ce5820fe260f91#subdirectory=node"
-          test -x /tmp/generator/bin/flatpak-node-generator
+          /tmp/generator/bin/python3 -c 'import flatpak_node_generator as g, sys; print(g.__file__); sys.exit(not g.__file__.startswith("/tmp/generator/"))'
           FLATPAK_NODE_GENERATOR=/tmp/generator/bin/flatpak-node-generator bash apps/desktop/flatpak/sources.sh
 
       - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
