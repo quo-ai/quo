@@ -42,7 +42,7 @@ jobs:
         run: |
           python3 -m venv /tmp/generator
           /tmp/generator/bin/pip install --quiet "git+https://github.com/flatpak/flatpak-builder-tools.git@9d86d336a39b9af38b86f114b6ce5820fe260f91#subdirectory=node"
-          PATH="/tmp/generator/bin:$PATH" apps/desktop/flatpak/sources.sh
+          PATH="/tmp/generator/bin:$PATH" bash apps/desktop/flatpak/sources.sh
 
       - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
         with:

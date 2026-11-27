@@ -28,6 +28,6 @@ text, count = re.subn(r'^      # quo-source-begin.*?^      # quo-source-end\n', 
 assert count == 1, 'quo-source markers not found'
 open(target, 'w').write(text)
 PY
-"$here/sources.sh" "$tag" "$out/generated-sources.json"
+bash "$here/sources.sh" "$tag" "$out/generated-sources.json"
 printf '{\n  "only-arches": ["x86_64"]\n}\n' >"$out/flathub.json"
 echo "Written for $tag ($commit) in $out"
