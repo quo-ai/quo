@@ -230,7 +230,7 @@ The GitHub repository must be public for the download links and auto-update to w
 
 You can also run the workflow manually (Actions → Desktop release → Run workflow). By default it only attaches the builds to the run, which is handy for testing. Tick "publish" to upload to a draft release instead.
 
-**Flathub** (`computer.quo.Quo`) gets its own build, made entirely from source: [flatpak/README.md](flatpak/README.md). Before tagging, add the version's `<release>` to `flatpak/computer.quo.Quo.metainfo.xml` (a test checks).
+**The Flatpak** (`computer.quo.Quo`) is built entirely from source and checked in CI: [flatpak/README.md](flatpak/README.md) (it is not submitted to Flathub: see there). Before tagging, add the version's `<release>` to `flatpak/computer.quo.Quo.metainfo.xml` (a test checks).
 
 ### Auto-update
 

@@ -145,7 +145,7 @@ modules:
       - install -Dm644 apps/desktop/flatpak/computer.quo.Quo.metainfo.xml -t /app/share/metainfo
       - install -Dm644 website/assets/brand/quo-app-icon.svg /app/share/icons/hicolor/scalable/apps/computer.quo.Quo.svg
     sources:
-      # quo-source-begin: this checkout. The copy for Flathub (flathub.sh) names a release's tag and commit instead.
+      # quo-source-begin: this checkout.
       - type: dir
         path: ../../..
         skip:

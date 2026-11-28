@@ -1,6 +1,7 @@
-# Quo on Flathub
+# Quo as a Flatpak
 
-The desktop app as a Flatpak, app ID `computer.quo.Quo` (the reverse of quo.computer, which Flathub verifies).
+The desktop app as a Flatpak, app ID `computer.quo.Quo` (the reverse of quo.computer), built the way Flathub
+requires: entirely from source, with no network during the build.
 
 ## How it's built
 
@@ -31,8 +32,7 @@ When `engine.lock.json` changes, change the archive URLs, checksums and build nu
   install aren't shared.
 - **Home folder access** (`--filesystem=home`) for Code mode's projects and for models already downloaded with LM
   Studio or Ollama.
-- **x86_64 only** for now (`flathub.json`, written by `flathub.sh`): the ARM build hasn't been tried on an ARM
-  computer.
+- **x86_64 only** so far: the ARM build hasn't been tried on an ARM computer.
 
 ## Checking it
 
@@ -56,14 +56,11 @@ podman run --rm --privileged -v ./quo.flatpak:/quo.flatpak:ro -v ./apps/desktop/
 
 `--privileged` lets the container see this computer's graphics card: the smoke test only lists it (no model loads).
 
-## Releasing to Flathub
+## Not for submitting to Flathub
 
-1. Add a `<release>` for the new version to `computer.quo.Quo.metainfo.xml` before tagging (the packaging test fails
-   until it's there).
-2. After the `desktop-v*` tag's Flatpak workflow passes, write Flathub's copy:
-   `apps/desktop/flatpak/flathub.sh desktop-vX.Y.Z <clone of github.com/flathub/computer.quo.Quo>`.
-3. Open a pull request there. Flathub's bot builds it; merging publishes it.
-
-The first submission is a pull request to `flathub/flathub` (branch `new-pr`) with the same three files. After it's
-accepted, verify the app on Flathub's developer page by putting its token in
-`website/.well-known/org.flathub.VerifiedApps.txt`.
+This manifest was written with an AI assistant, so it can't go to Flathub. Flathub's
+[Generative AI policy](https://docs.flathub.org/docs/for-app-authors/requirements#generative-ai-policy) says manifests
+must not contain AI-generated or AI-assisted content (disclosing it doesn't help), AI tools must not open or automate
+submission pull requests or write their text, comments or replies, and AI-generated code in the app must be disclosed
+(reviewers may reject on its extent). It is Quo's own build, checked in CI. A Flathub submission would need a manifest
+the maintainer writes themselves, by hand, and a pull request they make and answer themselves.
