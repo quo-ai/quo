@@ -40,11 +40,11 @@
   <screenshots>
     <screenshot type="default">
       <caption>Chat with a model on your own computer, with Wi-Fi off</caption>
-      <image>https://raw.githubusercontent.com/quo-ai/quo/master/apps/desktop/flatpak/screenshots/chat.png</image>
+      <image>https://raw.githubusercontent.com/quo-ai/quo/desktop-v1.7.3/apps/desktop/flatpak/screenshots/chat.png</image>
     </screenshot>
     <screenshot>
       <caption>Code mode works in a project folder and asks before it commits</caption>
-      <image>https://raw.githubusercontent.com/quo-ai/quo/master/apps/desktop/flatpak/screenshots/code-mode.png</image>
+      <image>https://raw.githubusercontent.com/quo-ai/quo/desktop-v1.7.3/apps/desktop/flatpak/screenshots/code-mode.png</image>
     </screenshot>
   </screenshots>
 
@@ -79,6 +79,12 @@
   </keywords>
 
   <releases>
+    <release version="1.7.3" date="2026-11-28">
+      <url type="details">https://github.com/quo-ai/quo/releases/tag/desktop-v1.7.3</url>
+      <description>
+        <p>The first Flatpak of Quo, built entirely from source.</p>
+      </description>
+    </release>
     <release version="1.7.2" date="2026-11-13">
       <url type="details">https://github.com/quo-ai/quo/releases/tag/desktop-v1.7.2</url>
       <description>

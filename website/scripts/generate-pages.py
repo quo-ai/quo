@@ -34,7 +34,7 @@ UPDATED = '3 November 2026'
 # The privacy policy's own date: it changes with what the apps send, so it can move on without the other pages.
 PRIVACY_UPDATED = '13 November 2026'
 # The changelog's date: its newest release.
-CHANGELOG_UPDATED = '13 November 2026'
+CHANGELOG_UPDATED = '28 November 2026'
 
 home = (ROOT / 'index.html').read_text()
 SYMBOL = re.search(r'<svg width="0".*?</svg>', home, re.S).group(0)

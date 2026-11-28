@@ -2,6 +2,11 @@
 
 Notable changes to Quo. Quo Web and the desktop app ship together under the desktop version (`desktop-v*` tags); the phone app has its own numbers. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Desktop 1.7.3] - 2026-11-28
+
+### Added
+- **A Flatpak for Flathub** — the Linux app can now be built entirely from source as a Flatpak (`computer.quo.Quo`), the way Flathub requires. Quo appears on Flathub once Flathub has reviewed it. Inside the Flatpak, Code mode's approved commands, git and tool servers run on your computer as in the other Linux downloads, and Flathub keeps the app up to date.
+
 ## [Desktop 1.7.2] - 2026-11-13
 
 ### Added
