@@ -44,6 +44,18 @@ workflow's artifact is an installable bundle: `flatpak install --user quo.flatpa
 Tools like `flatpak-node-generator` and `flatpak-builder` aren't installed on the development computer; run them in a
 container or let CI run them.
 
+**Try the smoke test before pushing a change to it**, in the same image CI uses, on a bundle from a workflow run
+(`gh run download <run> -n quo-x86_64.flatpak`). The first three commands let Flatpak update the image's own runtimes,
+as the workflow does:
+
+```bash
+podman run --rm --privileged -v ./quo.flatpak:/quo.flatpak:ro -v ./apps/desktop/flatpak/smoke.sh:/smoke.sh:ro \
+  --entrypoint bash ghcr.io/flathub-infra/flatpak-github-actions:freedesktop-26.08 -c \
+  'cp -a /var/lib/flatpak /var/lib/flatpak.copy && rm -rf /var/lib/flatpak && mv /var/lib/flatpak.copy /var/lib/flatpak && bash /smoke.sh /quo.flatpak'
+```
+
+`--privileged` lets the container see this computer's graphics card: the smoke test only lists it (no model loads).
+
 ## Releasing to Flathub
 
 1. Add a `<release>` for the new version to `computer.quo.Quo.metainfo.xml` before tagging (the packaging test fails

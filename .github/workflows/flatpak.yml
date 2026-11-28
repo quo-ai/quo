@@ -73,24 +73,8 @@ jobs:
           lint appstream apps/desktop/flatpak/computer.quo.Quo.metainfo.xml
           lint repo repo
 
-      # Also when the linter complains: whether the app starts is worth knowing either way. As an ordinary user, as
-      # people run it (Electron won't start as root with its sandbox on). The container has no useradd or su, so the
-      # user is written into /etc/passwd and Python drops to it. Ubuntu's kernel keeps ordinary users from making the
-      # namespaces Flatpak's sandbox needs unless told otherwise (this runner is thrown away afterwards).
+      # Also when the linter complains: whether the app starts is worth knowing either way. The same script runs locally
+      # in this image (apps/desktop/flatpak/README.md), so a change to it is tried there before it gets here.
       - name: Start it (smoke test)
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
-        run: |
-          flatpak install -y --noninteractive --system --bundle quo.flatpak
-          sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
-          echo 'tester:x:1001:1001:tester:/var/lib/quo-smoke:/bin/sh' >> /etc/passwd
-          echo 'tester:x:1001:' >> /etc/group
-          install -d -o 1001 -g 1001 -m 700 /var/lib/quo-smoke /run/user/1001
-          python3 - <<'PY'
-          import os
-          os.setgroups([])
-          os.setgid(1001)
-          os.setuid(1001)
-          env = {'HOME': '/var/lib/quo-smoke', 'USER': 'tester', 'LOGNAME': 'tester', 'XDG_RUNTIME_DIR': '/run/user/1001', 'PATH': os.environ['PATH'], 'LANG': 'C.UTF-8'}
-          os.chdir('/var/lib/quo-smoke')
-          os.execvpe('dbus-run-session', ['dbus-run-session', '--', 'xvfb-run', '-a', 'flatpak', 'run', '--env=QUO_EXPECT_ENGINE=1', 'computer.quo.Quo', '--smoke'], env)
-          PY
+        run: bash apps/desktop/flatpak/smoke.sh quo.flatpak
